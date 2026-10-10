@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"surface-variant":"#dce2f7","on-tertiary-fixed-variant":"#6e3900","surface-container-low":"#f1f3ff","tertiary-fixed-dim":"#ffb77d","on-surface":"#141b2b","on-tertiary-fixed":"#2f1500","on-secondary-fixed-variant":"#005320","inverse-on-surface":"#edf0ff","error":"#ba1a1a","secondary-container":"#7cf994","surface-container-highest":"#dce2f7","surface-tint":"#0053db","background":"#f9f9ff","on-error":"#ffffff","on-secondary-fixed":"#002109","primary-container":"#2563eb","tertiary-fixed":"#ffdcc3","secondary-fixed-dim":"#62df7d","on-primary-container":"#eeefff","secondary":"#006e2d","surface-bright":"#f9f9ff","inverse-primary":"#b4c5ff","surface-dim":"#d3daef","on-secondary-container":"#007230","inverse-surface":"#293040","on-primary-fixed":"#00174b","surface":"#f9f9ff","on-tertiary":"#ffffff","on-error-container":"#93000a","primary-fixed":"#dbe1ff","primary":"#004ac6","outline":"#737686","surface-container-high":"#e1e8fd","outline-variant":"#c3c6d7","on-surface-variant":"#434655","on-background":"#141b2b","primary-fixed-dim":"#b4c5ff","on-primary":"#ffffff","on-secondary":"#ffffff","tertiary":"#824500","surface-container":"#e9edff","tertiary-container":"#a65900","on-primary-fixed-variant":"#003ea8","error-container":"#ffdad6","on-tertiary-container":"#ffede1","surface-container-lowest":"#ffffff","secondary-fixed":"#7ffc97"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{"space-md":"1rem","space-lg":"1.5rem","space-xl":"2rem","space-xs":"0.25rem","margin":"1rem","space-sm":"0.5rem","gutter":"1rem"},"fontFamily":{"label-lg":["Inter"],"body-sm":["Inter"],"body-md":["Inter"],"label-sm":["Inter"],"label-md":["Inter"],"headline-md":["Inter"],"headline-lg":["Inter"],"currency-compact":["Inter"],"headline-sm":["Inter"],"currency-display":["Inter"],"body-lg":["Inter"]},"fontSize":{"label-lg":["14px",{"lineHeight":"20px","letterSpacing":"0.01em","fontWeight":"600"}],"body-sm":["12px",{"lineHeight":"16px","letterSpacing":"0em","fontWeight":"400"}],"body-md":["14px",{"lineHeight":"20px","letterSpacing":"0em","fontWeight":"400"}],"label-sm":["11px",{"lineHeight":"14px","letterSpacing":"0.02em","fontWeight":"500"}],"label-md":["12px",{"lineHeight":"16px","letterSpacing":"0.01em","fontWeight":"600"}],"headline-md":["20px",{"lineHeight":"28px","letterSpacing":"-0.01em","fontWeight":"600"}],"headline-lg":["24px",{"lineHeight":"32px","letterSpacing":"-0.02em","fontWeight":"700"}],"currency-compact":["16px",{"lineHeight":"24px","letterSpacing":"0em","fontWeight":"700"}],"headline-sm":["16px",{"lineHeight":"24px","letterSpacing":"0em","fontWeight":"600"}],"currency-display":["28px",{"lineHeight":"36px","letterSpacing":"-0.02em","fontWeight":"700"}],"body-lg":["16px",{"lineHeight":"24px","letterSpacing":"0em","fontWeight":"400"}]}}}}</script></head><body class="bg-surface font-body-md text-body-md text-on-surface antialiased min-h-screen"><aside class="fixed left-0 top-0 h-full w-[260px] bg-surface-container-lowest z-50 flex flex-col border-r border-outline-variant"><div class="h-16 px-space-md flex flex-col justify-center border-b border-outline-variant"><div class="flex items-center gap-space-sm"><div class="w-7 h-7 rounded-lg bg-primary-container flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">storefront</span></div><span class="font-headline-sm text-headline-sm text-on-surface">Store BI Admin</span></div><span class="font-label-sm text-label-sm text-on-surface-variant pl-9">Operations portal</span></div><div class="flex-1 px-space-sm py-space-md flex flex-col justify-between overflow-y-auto"><nav class="flex flex-col gap-space-xs" data-active-classes="bg-primary-container text-on-primary-container font-label-lg rounded-lg"><a aria-current="page" class="flex items-center gap-space-sm px-space-md py-space-sm transition-colors bg-primary-container text-on-primary-container font-label-lg rounded-lg" data-path="overview" href="#"><span class="material-symbols-outlined text-[20px]">grid_view</span><span>Overview</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors font-label-md text-label-md" data-path="businesses" href="#"><span class="material-symbols-outlined text-[20px]">store</span><span>Businesses</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors font-label-md text-label-md" data-path="plans-and-prices" href="#"><span class="material-symbols-outlined text-[20px]">sell</span><span>Plans and prices</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors font-label-md text-label-md" data-path="payments" href="#"><span class="material-symbols-outlined text-[20px]">payments</span><span>Payments</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors font-label-md text-label-md" data-path="reports" href="#"><span class="material-symbols-outlined text-[20px]">bar_chart</span><span>Reports</span></a><a class="flex items-center gap-space-sm px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors font-label-md text-label-md" data-path="settings" href="#"><span class="material-symbols-outlined text-[20px]">settings</span><span>Settings</span></a></nav><div class="pt-space-md border-t border-outline-variant flex flex-col gap-space-xs"><div class="px-space-md py-space-xs flex items-center justify-between"><span class="font-label-sm text-label-sm text-on-surface-variant">Environment</span><span class="px-space-sm py-[2px] bg-secondary-container text-on-secondary-container rounded font-label-sm text-label-sm">Production</span></div></div></div></aside><div class="pl-[260px]"><header class="fixed top-0 left-[260px] right-0 h-16 bg-surface-container-lowest border-b border-outline-variant z-40 px-space-lg flex items-center justify-between"><div class="flex items-center gap-space-md w-96"><div class="w-full flex items-center gap-space-sm px-space-md py-space-xs bg-surface border border-outline-variant rounded-lg"><span class="material-symbols-outlined text-on-surface-variant text-[18px]">search</span><span class="font-body-sm text-body-sm text-on-surface-variant flex-1">Search stores, GSTIN, accounts...</span><kbd class="px-space-xs py-[2px] bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm rounded border border-outline-variant">⌘K</kbd></div></div><div class="flex items-center gap-space-md"><div class="flex items-center gap-space-xs px-space-sm py-[2px] bg-secondary-container text-on-secondary-container rounded font-label-sm text-label-sm border border-secondary"><span class="w-2 h-2 rounded-full bg-secondary"></span><span>Production</span></div><button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-colors relative" type="button"><span class="material-symbols-outlined text-[20px]">notifications</span><span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-error"></span></button><div class="h-6 w-[1px] bg-outline-variant"></div><div class="flex items-center gap-space-sm cursor-pointer"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div><div class="hidden sm:flex flex-col text-left"><span class="font-label-md text-label-md text-on-surface leading-tight">Operations Lead</span><span class="font-label-sm text-label-sm text-on-surface-variant leading-tight">Super admin</span></div><span class="material-symbols-outlined text-on-surface-variant text-[18px]">expand_more</span></div></div></header><main class="w-full pt-16 bg-surface px-space-lg py-space-lg min-h-screen"><div class="flex flex-col w-full">
+<!-- Sub-header & Action Bar -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-space-md mb-space-lg">
+<div>
+<div class="flex items-center gap-space-sm mb-1">
+<span class="font-headline-lg text-headline-lg text-on-surface">Overview</span>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary mr-1 animate-pulse"></span>
+          Live sync
+        </span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">Live product metrics, merchant growth, and conversion funnel across India</p>
+</div>
+<div class="flex items-center gap-space-sm">
+<button class="h-10 px-space-md bg-surface-container-lowest text-on-surface rounded-lg shadow-sm hover:bg-surface-container transition-colors flex items-center gap-space-xs font-label-md text-label-md" type="button">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">calendar_today</span>
+<span>Last 30 days: Oct 1 - Oct 31, 2026</span>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant ml-1">expand_more</span>
+</button>
+<button class="h-10 px-space-md bg-primary text-on-primary rounded-lg shadow-sm hover:opacity-95 transition-opacity flex items-center gap-space-xs font-label-md text-label-md" id="refresh-btn" type="button">
+<span class="material-symbols-outlined text-[18px] transition-transform duration-500" id="refresh-icon">refresh</span>
+<span>Refresh live data</span>
+</button>
+</div>
+</div>
+<!-- Top KPI Stat Cards (5 Cards) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-space-md mb-space-lg">
+<!-- Card 1: Registrations -->
+<div class="bg-surface-container-lowest rounded-lg p-space-md shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between mb-space-sm">
+<span class="font-label-md text-label-md text-on-surface-variant">New registrations</span>
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[18px]">person_add</span>
+</div>
+</div>
+<div>
+<div class="font-headline-lg text-headline-lg text-on-surface tracking-tight mb-1">1,428</div>
+<div class="flex items-center gap-1.5">
+<span class="inline-flex items-center px-1.5 py-0.5 rounded bg-secondary-container text-on-secondary-container font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[12px] mr-0.5">trending_up</span>
+            +18.4%
+          </span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">vs last month</span>
+</div>
+</div>
+</div>
+<!-- Card 2: Active Trials -->
+<div class="bg-surface-container-lowest rounded-lg p-space-md shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between mb-space-sm">
+<span class="font-label-md text-label-md text-on-surface-variant">Active trials</span>
+<div class="w-8 h-8 rounded-lg bg-tertiary-fixed flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-[18px]">timelapse</span>
+</div>
+</div>
+<div>
+<div class="font-headline-lg text-headline-lg text-on-surface tracking-tight mb-1">482</div>
+<div class="flex items-center gap-1.5 text-tertiary">
+<span class="material-symbols-outlined text-[14px]">warning</span>
+<span class="font-label-sm text-label-sm">74 ending in next 48h</span>
+</div>
+</div>
+</div>
+<!-- Card 3: Paid Businesses -->
+<div class="bg-surface-container-lowest rounded-lg p-space-md shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between mb-space-sm">
+<span class="font-label-md text-label-md text-on-surface-variant">Paid businesses</span>
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+</div>
+</div>
+<div>
+<div class="font-headline-lg text-headline-lg text-on-surface tracking-tight mb-1">2,890</div>
+<div class="flex items-center gap-1.5">
+<span class="font-label-sm text-label-sm text-secondary font-medium">+126 this mo</span>
+<span class="text-outline text-[12px]">•</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">98.2% retained</span>
+</div>
+</div>
+</div>
+<!-- Card 4: Conversion Rate -->
+<div class="bg-surface-container-lowest rounded-lg p-space-md shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between mb-space-sm">
+<span class="font-label-md text-label-md text-on-surface-variant">Conversion rate</span>
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[18px]">filter_alt</span>
+</div>
+</div>
+<div>
+<div class="font-headline-lg text-headline-lg text-on-surface tracking-tight mb-1">24.6%</div>
+<div class="flex items-center gap-1.5">
+<span class="inline-flex items-center px-1.5 py-0.5 rounded bg-secondary-container text-on-secondary-container font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[12px] mr-0.5">north_east</span>
+            +2.1%
+          </span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">via onboarding</span>
+</div>
+</div>
+</div>
+<!-- Card 5: Monthly Revenue (MRR) -->
+<div class="bg-surface-container-lowest rounded-lg p-space-md shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between mb-space-sm">
+<span class="font-label-md text-label-md text-on-surface-variant">Monthly revenue (MRR)</span>
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[18px]">currency_rupee</span>
+</div>
+</div>
+<div>
+<div class="font-headline-lg text-headline-lg text-on-surface tracking-tight mb-1">₹14,86,500</div>
+<div class="flex items-center gap-1.5">
+<span class="font-label-sm text-label-sm text-secondary font-medium">+15.2% MoM</span>
+<span class="text-outline text-[12px]">•</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">₹514 avg/mo</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Registration vs Paid Conversion Chart Section -->
+<div class="bg-surface-container-lowest rounded-lg p-space-lg shadow-sm mb-space-lg">
+<!-- Chart Header -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-md mb-space-lg pb-space-sm border-b border-surface-container">
+<div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Registrations vs Paid conversion trend (Monthly)</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">10-month performance comparison showing signup velocity vs actual paid tier conversion</p>
+</div>
+<div class="flex items-center gap-space-lg">
+<!-- Legend -->
+<div class="flex items-center gap-space-md">
+<div class="flex items-center gap-1.5">
+<span class="w-3 h-3 rounded-sm bg-primary-fixed"></span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">New registrations</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-3 h-1.5 rounded-full bg-primary"></span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Paid converted</span>
+</div>
+</div>
+<!-- Filter Toggle -->
+<div class="flex bg-surface-container rounded-lg p-0.5 text-on-surface-variant">
+<button class="px-space-sm py-1 rounded bg-surface-container-lowest text-primary font-label-sm text-label-sm shadow-sm" type="button">Monthly</button>
+<button class="px-space-sm py-1 rounded text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm transition-colors" type="button">Weekly</button>
+<button class="px-space-sm py-1 rounded text-on-surface-variant hover:text-on-surface font-label-sm text-label-sm transition-colors" type="button">Daily</button>
+</div>
+</div>
+</div>
+<!-- Chart Canvas Area with SVG -->
+<div class="relative w-full overflow-x-auto">
+<div class="min-w-[760px] h-[320px] relative flex flex-col justify-between">
+<!-- Milestone Tooltip for October 2026 -->
+<div class="absolute right-[5.5%] top-[12px] z-20 bg-inverse-surface text-inverse-on-surface px-space-md py-space-xs rounded-lg shadow-md flex flex-col pointer-events-none transform -translate-x-1/2">
+<div class="font-label-sm text-label-sm font-semibold border-b border-outline/30 pb-1 mb-1">Oct 2026 Milestone</div>
+<div class="flex items-center justify-between gap-4 font-body-sm text-body-sm">
+<span class="text-inverse-primary">Signups:</span>
+<span class="font-semibold">1,428</span>
+</div>
+<div class="flex items-center justify-between gap-4 font-body-sm text-body-sm">
+<span class="text-secondary-fixed">Paid converted:</span>
+<span class="font-semibold">352 (24.6%)</span>
+</div>
+<div class="w-2 h-2 bg-inverse-surface transform rotate-45 absolute -bottom-1 left-1/2 -translate-x-1/2"></div>
+</div>
+<!-- Inline SVG Visualization -->
+<svg class="w-full h-full overflow-visible" preserveaspectratio="none" viewbox="0 0 1000 280">
+<defs>
+<lineargradient id="barGrad" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#b4c5ff" stop-opacity="0.8"></stop>
+<stop offset="100%" stop-color="#dbe1ff" stop-opacity="0.25"></stop>
+</lineargradient>
+<lineargradient id="lineGrad" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#004ac6" stop-opacity="0.2"></stop>
+<stop offset="100%" stop-color="#004ac6" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<!-- Horizontal Grid Lines -->
+<line stroke="#e1e8fd" stroke-dasharray="3 3" stroke-width="1" x1="40" x2="980" y1="30" y2="30"></line>
+<text fill="#737686" font-family="Inter" font-size="11" text-anchor="end" x="32" y="34">1,500</text>
+<line stroke="#e1e8fd" stroke-dasharray="3 3" stroke-width="1" x1="40" x2="980" y1="90" y2="90"></line>
+<text fill="#737686" font-family="Inter" font-size="11" text-anchor="end" x="32" y="94">1,000</text>
+<line stroke="#e1e8fd" stroke-dasharray="3 3" stroke-width="1" x1="40" x2="980" y1="150" y2="150"></line>
+<text fill="#737686" font-family="Inter" font-size="11" text-anchor="end" x="32" y="154">500</text>
+<line stroke="#e1e8fd" stroke-width="1" x1="40" x2="980" y1="210" y2="210"></line>
+<text fill="#737686" font-family="Inter" font-size="11" text-anchor="end" x="32" y="214">0</text>
+<!-- Bars for Registrations (Jan to Oct 2026) -->
+<!-- Jan: 650 -->
+<rect fill="url(#barGrad)" height="78" rx="3" width="34" x="70" y="132"></rect>
+<!-- Feb: 710 -->
+<rect fill="url(#barGrad)" height="85" rx="3" width="34" x="165" y="125"></rect>
+<!-- Mar: 790 -->
+<rect fill="url(#barGrad)" height="95" rx="3" width="34" x="260" y="115"></rect>
+<!-- Apr: 840 -->
+<rect fill="url(#barGrad)" height="101" rx="3" width="34" x="355" y="109"></rect>
+<!-- May: 920 -->
+<rect fill="url(#barGrad)" height="111" rx="3" width="34" x="450" y="99"></rect>
+<!-- Jun: 990 -->
+<rect fill="url(#barGrad)" height="119" rx="3" width="34" x="545" y="91"></rect>
+<!-- Jul: 1080 -->
+<rect fill="url(#barGrad)" height="130" rx="3" width="34" x="640" y="80"></rect>
+<!-- Aug: 1190 -->
+<rect fill="url(#barGrad)" height="143" rx="3" width="34" x="735" y="67"></rect>
+<!-- Sep: 1310 -->
+<rect fill="url(#barGrad)" height="157" rx="3" width="34" x="830" y="53"></rect>
+<!-- Oct: 1428 -->
+<rect fill="#2563eb" fill-opacity="0.35" height="172" rx="3" stroke="#2563eb" stroke-width="1.5" width="34" x="925" y="38"></rect>
+<!-- Converted Paid Area Gradient -->
+<path d="M 87,194 L 182,190 L 277,185 L 372,179 L 467,173 L 562,168 L 657,159 L 752,150 L 847,138 L 942,128 L 942,210 L 87,210 Z" fill="url(#lineGrad)"></path>
+<!-- Converted Paid Trajectory Line (135 to 352) -->
+<path d="M 87,194 L 182,190 L 277,185 L 372,179 L 467,173 L 562,168 L 657,159 L 752,150 L 847,138 L 942,128" fill="none" stroke="#004ac6" stroke-linecap="round" stroke-width="2.5"></path>
+<!-- Trend Data Points -->
+<circle cx="87" cy="194" fill="#004ac6" r="3.5"></circle>
+<circle cx="182" cy="190" fill="#004ac6" r="3.5"></circle>
+<circle cx="277" cy="185" fill="#004ac6" r="3.5"></circle>
+<circle cx="372" cy="179" fill="#004ac6" r="3.5"></circle>
+<circle cx="467" cy="173" fill="#004ac6" r="3.5"></circle>
+<circle cx="562" cy="168" fill="#004ac6" r="3.5"></circle>
+<circle cx="657" cy="159" fill="#004ac6" r="3.5"></circle>
+<circle cx="752" cy="150" fill="#004ac6" r="3.5"></circle>
+<circle cx="847" cy="138" fill="#004ac6" r="3.5"></circle>
+<circle cx="942" cy="128" fill="#ffffff" r="5" stroke="#004ac6" stroke-width="2.5"></circle>
+<!-- X-Axis Labels -->
+<text fill="#434655" font-family="Inter" font-size="12" text-anchor="middle" x="87" y="235">Jan</text>
+<text fill="#434655" font-family="Inter" font-size="12" text-anchor="middle" x="182" y="235">Feb</text>
+<text fill="#434655" font-family="Inter" font-size="12" text-anchor="middle" x="277" y="235">Mar</text>
+<text fill="#434655" font-family="Inter" font-size="12" text-anchor="middle" x="372" y="235">Apr</text>
+<text fill="#434655" font-family="Inter" font-size="12" text-anchor="middle" x="467" y="235">May</text>
+<text fill="#434655" font-family="Inter" font-size="12" text-anchor="middle" x="562" y="235">Jun</text>
+<text fill="#434655" font-family="Inter" font-size="12" text-anchor="middle" x="657" y="235">Jul</text>
+<text fill="#434655" font-family="Inter" font-size="12" text-anchor="middle" x="752" y="235">Aug</text>
+<text fill="#434655" font-family="Inter" font-size="12" text-anchor="middle" x="847" y="235">Sep</text>
+<text fill="#004ac6" font-family="Inter" font-size="12" font-weight="600" text-anchor="middle" x="942" y="235">Oct 26</text>
+</svg>
+</div>
+</div>
+</div>
+<!-- Secondary Insight Grid (2 Columns) -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-space-lg">
+<!-- Col 1: Funnel Drop-off in 5-Day Trial -->
+<div class="bg-surface-container-lowest rounded-lg p-space-lg shadow-sm flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-space-sm">
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Top drop-off points in 5-day trial</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Merchant progression from initial onboarding to subscription unlock</p>
+</div>
+<span class="material-symbols-outlined text-outline">tune</span>
+</div>
+<!-- Funnel Progression Bars -->
+<div class="flex flex-col gap-space-md mt-space-md">
+<!-- Step 1 -->
+<div>
+<div class="flex items-center justify-between mb-1">
+<span class="font-label-md text-label-md text-on-surface">1. Registered merchant account</span>
+<span class="font-label-md text-label-md text-on-surface font-semibold">100% (1,428)</span>
+</div>
+<div class="w-full h-2.5 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 100%"></div>
+</div>
+</div>
+<!-- Step 2 -->
+<div>
+<div class="flex items-center justify-between mb-1">
+<span class="font-label-md text-label-md text-on-surface">2. Added first sale transaction</span>
+<span class="font-label-md text-label-md text-on-surface font-semibold">88.0% (1,256)</span>
+</div>
+<div class="w-full h-2.5 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 88%"></div>
+</div>
+</div>
+<!-- Step 3 -->
+<div>
+<div class="flex items-center justify-between mb-1">
+<div class="flex items-center gap-1.5">
+<span class="font-label-md text-label-md text-on-surface">3. Uploaded bill OCR / purchase</span>
+<span class="text-error font-label-sm text-label-sm flex items-center">-24% drop</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface font-semibold">64.0% (914)</span>
+</div>
+<div class="w-full h-2.5 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 64%"></div>
+</div>
+</div>
+<!-- Step 4 -->
+<div>
+<div class="flex items-center justify-between mb-1">
+<span class="font-label-md text-label-md text-on-surface">4. Reached day 4 engagement</span>
+<span class="font-label-md text-label-md text-on-surface font-semibold">51.0% (728)</span>
+</div>
+<div class="w-full h-2.5 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 51%"></div>
+</div>
+</div>
+<!-- Step 5 -->
+<div>
+<div class="flex items-center justify-between mb-1">
+<span class="font-label-md text-label-md text-primary font-semibold">5. Converted to paid tier</span>
+<span class="font-label-md text-label-md text-secondary font-semibold">24.6% (352)</span>
+</div>
+<div class="w-full h-2.5 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-secondary rounded-full" style="width: 24.6%"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="pt-space-md mt-space-md border-t border-surface-container flex items-center justify-between">
+<div class="flex items-center gap-1.5 text-on-surface-variant font-body-sm text-body-sm">
+<span class="material-symbols-outlined text-[16px] text-tertiary">lightbulb</span>
+<span>Biggest friction: Bill OCR scan camera permission on Android 12</span>
+</div>
+<button class="px-space-md py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-primary font-label-md text-label-md transition-colors flex items-center gap-1" type="button">
+<span>Optimize onboarding</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Col 2: Recent High-Value Conversions -->
+<div class="bg-surface-container-lowest rounded-lg p-space-lg shadow-sm flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-space-sm">
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Recent high-value conversions</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Live feed of verified store merchants migrating to annual plans</p>
+</div>
+<button class="text-primary font-label-sm text-label-sm hover:underline" type="button">View all</button>
+</div>
+<!-- Table Listing -->
+<div class="overflow-x-auto mt-space-sm">
+<table class="w-full text-left">
+<thead>
+<tr class="border-b border-surface-container">
+<th class="py-2.5 font-label-sm text-label-sm text-on-surface-variant">Merchant & city</th>
+<th class="py-2.5 font-label-sm text-label-sm text-on-surface-variant">Subscription plan</th>
+<th class="py-2.5 font-label-sm text-label-sm text-on-surface-variant text-right">Payment</th>
+<th class="py-2.5 font-label-sm text-label-sm text-on-surface-variant text-right">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container">
+<tr>
+<td class="py-3">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded bg-primary-fixed flex items-center justify-center font-label-md text-label-md text-on-primary-fixed">
+                      SG
+                    </div>
+<div>
+<div class="font-label-md text-label-md text-on-surface">Sharma General Store</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant">Pune, Maharashtra</div>
+</div>
+</div>
+</td>
+<td class="py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-on-surface bg-surface-container font-label-sm text-label-sm">
+                    Annual Pro
+                  </span>
+</td>
+<td class="py-3 text-right">
+<div class="font-label-md text-label-md text-on-surface">₹5,999.00</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant">UPI Autopay</div>
+</td>
+<td class="py-3 text-right">
+<span class="inline-flex items-center px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container font-label-sm text-label-sm">
+                    Paid
+                  </span>
+</td>
+</tr>
+<tr>
+<td class="py-3">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded bg-tertiary-fixed flex items-center justify-center font-label-md text-label-md text-on-tertiary-fixed">
+                      GM
+                    </div>
+<div>
+<div class="font-label-md text-label-md text-on-surface">Gupta Medical & Surgical</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant">Mumbai, Maharashtra</div>
+</div>
+</div>
+</td>
+<td class="py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-on-surface bg-surface-container font-label-sm text-label-sm">
+                    Multi-Device Plus
+                  </span>
+</td>
+<td class="py-3 text-right">
+<div class="font-label-md text-label-md text-on-surface">₹8,499.00</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant">NetBanking</div>
+</td>
+<td class="py-3 text-right">
+<span class="inline-flex items-center px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container font-label-sm text-label-sm">
+                    Paid
+                  </span>
+</td>
+</tr>
+<tr>
+<td class="py-3">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center font-label-md text-label-md text-on-surface">
+                      BP
+                    </div>
+<div>
+<div class="font-label-md text-label-md text-on-surface">Balaji Provision Store</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant">Bengaluru, Karnataka</div>
+</div>
+</div>
+</td>
+<td class="py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-on-surface bg-surface-container font-label-sm text-label-sm">
+                    Annual Pro
+                  </span>
+</td>
+<td class="py-3 text-right">
+<div class="font-label-md text-label-md text-on-surface">₹5,999.00</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant">Razorpay QR</div>
+</td>
+<td class="py-3 text-right">
+<span class="inline-flex items-center px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container font-label-sm text-label-sm">
+                    Paid
+                  </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="pt-space-md mt-space-md border-t border-surface-container flex items-center justify-between">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Average upgrade turnaround: <strong>2.8 days</strong> from trial start</span>
+<button class="px-space-md py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md shadow-sm hover:opacity-95 transition-opacity" type="button">
+          Export audit log
+        </button>
+</div>
+</div>
+</div>
+<!-- Operational Alert Banner -->
+<div class="mt-space-lg bg-surface-container-low rounded-lg p-space-md flex flex-col md:flex-row md:items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-sm">
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-[18px]">campaign</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface">Diwali Festive Season Surge Active</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Kirana invoice uploads have spiked by +42% since Oct 20. Cloud sync latencies remain nominal at 112ms.</p>
+</div>
+</div>
+<div class="flex items-center gap-space-sm">
+<span class="font-label-sm text-label-sm text-secondary font-medium">99.98% Service Uptime</span>
+<button class="px-space-sm py-1 rounded bg-surface-container-lowest text-on-surface font-label-sm text-label-sm hover:bg-surface-container transition-colors shadow-sm" type="button">
+        View infrastructure
+      </button>
+</div>
+</div>
+</div>
+<script>
+  (function() {
+    const refreshBtn = document.getElementById('refresh-btn');
+    const refreshIcon = document.getElementById('refresh-icon');
+
+    if (refreshBtn && refreshIcon) {
+      refreshBtn.addEventListener('click', function() {
+        refreshIcon.classList.add('rotate-180');
+        refreshBtn.disabled = true;
+        refreshBtn.style.opacity = '0.75';
+        
+        setTimeout(function() {
+          refreshIcon.classList.remove('rotate-180');
+          refreshBtn.disabled = false;
+          refreshBtn.style.opacity = '1';
+        }, 600);
+      });
+    }
+  })();
+</script></main></div></body></html>
