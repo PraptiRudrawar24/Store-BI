@@ -1,3 +1,18 @@
+/**
+ * ==============================================================================
+ * STORE BI - AUTHENTICATION & TRIAL CONTEXT PROVIDER (AuthContext.tsx)
+ * ==============================================================================
+ * Purpose & Reason for this code:
+ * 1. Centralizes the global merchant authentication lifecycle across the entire application:
+ *    - Session persistence & user state hydration via GET /auth/me
+ *    - OTP dispatch (sendOTP) and verification (login)
+ *    - Stepwise onboarding progression (saveStep)
+ *    - Secure session termination (logout)
+ * 2. Exposes user profile metadata, including trial status (`trial_days_left`),
+ *    shop identity, and admin status to all components and route guards.
+ * ==============================================================================
+ */
+
 import * as React from 'react';
 import { api } from '../api/client';
 import type { Shop } from '../api/client';
@@ -6,7 +21,7 @@ interface AuthContextType {
   user: Shop | null;
   loading: boolean;
   sendOTP: (phone: string) => Promise<{ dev_mode: boolean; dev_otp: string }>;
-  login: (phone: string, otp: string, email?: string) => Promise<{ is_new_user: boolean; onboarding_completed: boolean; shop: Shop }>;
+  login: (phone: string, otp: string, email?: string, store_name?: string, owner_name?: string) => Promise<{ is_new_user: boolean; onboarding_completed: boolean; shop: Shop }>;
   saveStep: (step: number, data: Record<string, unknown>) => Promise<Shop>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -38,8 +53,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { dev_mode: res.dev_mode, dev_otp: res.dev_otp };
   };
 
-  const login = async (phone: string, otp: string, email?: string) => {
-    const res = await api.verifyOTP(phone, otp, email);
+  const login = async (phone: string, otp: string, email?: string, store_name?: string, owner_name?: string) => {
+    const res = await api.verifyOTP(phone, otp, email, store_name, owner_name);
     setUser(res.shop);
     return {
       is_new_user: res.is_new_user,

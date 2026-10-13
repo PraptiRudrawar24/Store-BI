@@ -12,7 +12,7 @@ export function BottomNav() {
 
   return (
     <nav
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface border-t border-border flex items-center justify-around h-16 min-h-[48px] px-2 select-none"
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface dark:bg-surface-low border-t border-border flex items-center justify-around h-16 min-h-[48px] px-2 select-none"
       role="navigation"
       aria-label="Mobile navigation"
     >

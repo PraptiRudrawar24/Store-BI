@@ -4,12 +4,14 @@ import { api, type SalesTrendResponse, type SalesTrendPoint } from '../../api/cl
 import { formatINR } from '../../utils';
 import { cn } from '../ui/utils';
 import { TrendingUp } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
 
 interface SalesTrendCardProps {
   onRecordSaleClick?: () => void;
 }
 
 export function SalesTrendCard({ onRecordSaleClick }: SalesTrendCardProps) {
+  const { isDark } = useTheme();
   const [granularity, setGranularity] = React.useState<'daily' | 'weekly'>('daily');
   const [data, setData] = React.useState<SalesTrendResponse>({
     granularity: 'daily',
@@ -20,6 +22,18 @@ export function SalesTrendCard({ onRecordSaleClick }: SalesTrendCardProps) {
   });
   const [loading, setLoading] = React.useState(true);
   const [activeIndex, setActiveIndex] = React.useState<number | null>(null);
+
+  const gridStroke = isDark ? '#263650' : '#E2E8F0';
+  const baselineStroke = isDark ? '#334155' : '#bdc9c6';
+  const axisFill = isDark ? '#9aa8bd' : '#3e4947';
+
+  const barFillInactive = isDark ? '#1c2b42' : '#80d5cb';
+  const barFillActive = isDark ? '#80d5cb' : '#005c55';
+  const barStrokeInactive = isDark ? '#263650' : 'none';
+  const barStrokeActive = isDark ? '#9cf2e8' : '#004843';
+
+  const profitLineStroke = isDark ? '#a5b4fc' : '#3b3bc9';
+  const profitCircleInner = isDark ? '#131f33' : '#ffffff';
 
   React.useEffect(() => {
     let cancelled = false;
@@ -96,11 +110,11 @@ export function SalesTrendCard({ onRecordSaleClick }: SalesTrendCardProps) {
             {/* Legend */}
             <div className="hidden sm:flex items-center gap-3 text-xs text-text-medium">
               <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-[2px] bg-[#B4C5FF]" />
+                <span className="w-3 h-3 rounded-[2px] bg-[#80d5cb] dark:bg-[#80d5cb]/70 border border-border" />
                 <span>Sales (₹)</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-3 h-1 rounded-full bg-[#004AC6]" />
+                <span className="w-3 h-1 rounded-full bg-[#3b3bc9] dark:bg-[#a5b4fc]" />
                 <span>Profit (₹)</span>
               </div>
             </div>
@@ -250,14 +264,14 @@ export function SalesTrendCard({ onRecordSaleClick }: SalesTrendCardProps) {
                       x2={chartRight}
                       y1={y}
                       y2={y}
-                      stroke={isBaseline ? '#737686' : '#E1E8FD'}
+                      stroke={isBaseline ? baselineStroke : gridStroke}
                       strokeWidth={isBaseline ? 1.5 : 1}
                       strokeDasharray={isBaseline ? undefined : '3 3'}
                     />
                     <text
                       x={chartLeft - 8}
                       y={y + 4}
-                      fill="#737686"
+                      fill={axisFill}
                       fontFamily="Inter"
                       fontSize="10"
                       textAnchor="end"
@@ -301,20 +315,20 @@ export function SalesTrendCard({ onRecordSaleClick }: SalesTrendCardProps) {
                         width={barWidth}
                         height={barH > 0 ? barH : 1}
                         rx={2}
-                        fill={isActive ? '#2563EB' : '#B4C5FF'}
-                        stroke={isActive ? '#1D4ED8' : 'none'}
-                        strokeWidth={isActive ? 1.5 : 0}
+                        fill={isActive ? barFillActive : barFillInactive}
+                        stroke={isActive ? barStrokeActive : barStrokeInactive}
+                        strokeWidth={isActive ? 1.5 : (isDark ? 1 : 0)}
                       />
                     </g>
                   );
                 })}
 
-              {/* Converted Profit Line (Blue Line per Reference Screen) */}
+              {/* Converted Profit Line */}
               {data.has_data && linePoints.length > 1 && (
                 <path
                   d={linePathD}
                   fill="none"
-                  stroke="#004AC6"
+                  stroke={profitLineStroke}
                   strokeWidth="2.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -330,11 +344,11 @@ export function SalesTrendCard({ onRecordSaleClick }: SalesTrendCardProps) {
                     <g key={`pt-${idx}`} className="pointer-events-none">
                       {isActive ? (
                         <>
-                          <circle cx={pt.x} cy={pt.y} r={6} fill="#004AC6" />
-                          <circle cx={pt.x} cy={pt.y} r={3.5} fill="#FFFFFF" />
+                          <circle cx={pt.x} cy={pt.y} r={6} fill={profitLineStroke} />
+                          <circle cx={pt.x} cy={pt.y} r={3.5} fill={profitCircleInner} />
                         </>
                       ) : (
-                        <circle cx={pt.x} cy={pt.y} r={3} fill="#004AC6" />
+                        <circle cx={pt.x} cy={pt.y} r={3} fill={profitLineStroke} />
                       )}
                     </g>
                   );
@@ -359,7 +373,7 @@ export function SalesTrendCard({ onRecordSaleClick }: SalesTrendCardProps) {
                     key={`label-${idx}`}
                     x={xCenter}
                     y={chartBottom + 20}
-                    fill={isActive ? '#004AC6' : '#434655'}
+                    fill={isActive ? (isDark ? '#e6edf7' : '#0b1c30') : axisFill}
                     fontFamily="Inter"
                     fontSize="10"
                     fontWeight={isActive ? '700' : '500'}

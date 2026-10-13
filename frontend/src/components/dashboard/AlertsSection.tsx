@@ -41,8 +41,8 @@ export function AlertsSection() {
           action={
             <div className="flex items-center gap-2">
               {totalAlerts > 0 && (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-destructive-bg text-destructive border border-destructive-border tabular-nums">
-                  <span className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[4px] text-[11px] font-semibold bg-destructive-bg text-destructive border border-destructive-border tabular-nums">
+                  <span className="w-1.5 h-1.5 rounded-full bg-destructive-solid animate-pulse" />
                   {totalAlerts} {totalAlerts === 1 ? 'alert' : 'alerts'}
                 </span>
               )}
@@ -51,7 +51,7 @@ export function AlertsSection() {
                 onClick={() => refreshAlerts()}
                 disabled={loading}
                 title="Refresh alerts"
-                className="h-8 w-8 rounded-[8px] border border-border bg-surface flex items-center justify-center text-text-medium hover:text-text-high hover:bg-canvas transition-colors disabled:opacity-50"
+                className="h-8 w-8 rounded-[6px] border border-border bg-surface flex items-center justify-center text-text-medium hover:text-text-high hover:bg-canvas transition-colors disabled:opacity-50"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
               </button>

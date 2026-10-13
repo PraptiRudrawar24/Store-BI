@@ -37,7 +37,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         )}
         <div className="relative flex items-center w-full">
           {effectivePrefix && (
-            <span className="absolute left-3.5 text-text-medium font-medium select-none pointer-events-none tabular-nums text-sm">
+            <span className="absolute left-3 text-text-medium font-medium select-none pointer-events-none tabular-nums text-xs">
               {effectivePrefix}
             </span>
           )}
@@ -46,10 +46,10 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             inputMode={effectiveInputMode}
             className={cn(
-              'flex h-12 min-h-[48px] w-full rounded-[8px] border border-border bg-surface px-3.5 py-2 text-sm text-text-high placeholder:text-text-low transition-colors',
-              'focus-visible:outline-none focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary',
+              'flex h-12 min-h-[48px] w-full rounded-[6px] border border-border-strong bg-surface dark:bg-surface-low px-3.5 py-2 text-sm text-text-high placeholder:text-text-low transition-colors',
+              'focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring',
               'disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-canvas',
-              effectivePrefix && 'pl-8',
+              effectivePrefix && (className?.includes('pl-') ? undefined : 'pl-7'),
               error && 'border-destructive focus-visible:border-destructive focus-visible:ring-destructive',
               isCurrency && 'tabular-nums',
               className

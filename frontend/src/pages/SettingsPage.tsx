@@ -10,15 +10,15 @@ import { useAuth } from '../context/AuthContext';
 
 export function SettingsPage() {
   const toast = useToast();
-  const { user } = useAuth();
-  const [shop, setShop] = React.useState<Shop | null>(null);
+  const { user, refreshUser } = useAuth();
+  const [shop, setShop] = React.useState<Shop | null>(user);
 
   const [form, setForm] = React.useState({
     name: user?.name || '',
     owner_name: user?.owner_name || '',
     phone: user?.phone || '',
     email: user?.email || '',
-    category: user?.category || '',
+    category: user?.category || 'Grocery & kirana',
     city: user?.city || '',
     state: user?.state || '',
     pincode: user?.pincode || '',
@@ -27,40 +27,55 @@ export function SettingsPage() {
   });
 
   React.useEffect(() => {
-    const fetchShop = async () => {
-      try {
-        const shops = await api.getShops();
-        if (shops.length > 0) {
-          setShop(shops[0]);
+    if (user) {
+      setShop(user);
+      setForm({
+        name: user.name || '',
+        owner_name: user.owner_name || '',
+        phone: user.phone || '',
+        email: user.email || '',
+        category: user.category || 'Grocery & kirana',
+        city: user.city || '',
+        state: user.state || '',
+        pincode: user.pincode || '',
+        gstin: user.gstin || '',
+        language: user.language || 'en',
+      });
+    } else {
+      api.getMe().then((me) => {
+        if (me) {
+          setShop(me);
           setForm({
-            name: shops[0].name || '',
-            owner_name: shops[0].owner_name || '',
-            phone: shops[0].phone || '',
-            email: shops[0].email || '',
-            category: shops[0].category || 'Kirana',
-            city: shops[0].city || '',
-            state: shops[0].state || '',
-            pincode: shops[0].pincode || '',
-            gstin: shops[0].gstin || '',
-            language: shops[0].language || 'en',
+            name: me.name || '',
+            owner_name: me.owner_name || '',
+            phone: me.phone || '',
+            email: me.email || '',
+            category: me.category || 'Grocery & kirana',
+            city: me.city || '',
+            state: me.state || '',
+            pincode: me.pincode || '',
+            gstin: me.gstin || '',
+            language: me.language || 'en',
           });
         }
-      } catch {
-        toast.error('Failed to load shop settings');
-      }
-    };
-    fetchShop();
-  }, [toast]);
+      }).catch(() => {
+        // Unauthenticated or guest mode
+      });
+    }
+  }, [user]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (!shop) {
+      const activeShopId = user?.id || shop?.id;
+      if (activeShopId) {
+        const updated = await api.updateShop(activeShopId, form);
+        setShop(updated);
+        await refreshUser();
+      } else {
         const created = await api.createShop(form);
         setShop(created);
-      } else {
-        const updated = await api.updateShop(shop.id, form);
-        setShop(updated);
+        await refreshUser();
       }
       toast.success('Shop details saved successfully');
     } catch {

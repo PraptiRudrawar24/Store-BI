@@ -214,8 +214,12 @@ export function ManualDataEntry({ onDataSaved, onNavigateToEntered }: ManualData
         await api.updateProduct(editingProductId, payload as any);
         toast.success(`Product "${payload.name}" updated successfully`);
       } else {
-        await api.createProduct(payload as any);
-        toast.success(`Product "${payload.name}" added successfully`);
+        const res = await api.createProduct(payload as any);
+        if (res && res.stock_qty > payload.stock_qty) {
+          toast.success(`Restocked "${payload.name}": +${payload.stock_qty} units added (Current stock: ${res.stock_qty})`);
+        } else {
+          toast.success(`Product "${payload.name}" added successfully`);
+        }
       }
 
       handleResetProductForm();
@@ -762,7 +766,8 @@ export function ManualDataEntry({ onDataSaved, onNavigateToEntered }: ManualData
                     placeholder="22"
                     value={pCostPrice}
                     onChange={(e) => {
-                      setPCostPrice(e.target.value);
+                      const clean = e.target.value.replace(/[^0-9.]/g, '');
+                      setPCostPrice(clean);
                       if (productErrors.costPrice) {
                         setProductErrors((prev) => ({ ...prev, costPrice: '' }));
                       }
@@ -777,7 +782,8 @@ export function ManualDataEntry({ onDataSaved, onNavigateToEntered }: ManualData
                     placeholder="28"
                     value={pSellingPrice}
                     onChange={(e) => {
-                      setPSellingPrice(e.target.value);
+                      const clean = e.target.value.replace(/[^0-9.]/g, '');
+                      setPSellingPrice(clean);
                       if (productErrors.sellingPrice) {
                         setProductErrors((prev) => ({ ...prev, sellingPrice: '' }));
                       }

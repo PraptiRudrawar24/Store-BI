@@ -12,13 +12,17 @@ import {
   ArrowLeft,
   LogOut,
   ExternalLink,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { Button } from '../ui/Button';
 
 export function AdminLayout() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [globalSearch, setGlobalSearch] = React.useState('');
 
   const navLinks = [
@@ -126,9 +130,25 @@ export function AdminLayout() {
               <span>Production</span>
             </div>
 
+            {/* Theme Toggle Button */}
             <button
               type="button"
-              className="w-12 h-12 min-h-[48px] min-w-[48px] rounded-[8px] border border-border flex items-center justify-center text-text-medium hover:bg-canvas transition-colors relative"
+              id="admin-theme-toggle-button"
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              className="w-12 h-12 min-h-[48px] min-w-[48px] rounded-[6px] border border-border flex items-center justify-center text-text-medium hover:bg-canvas transition-colors"
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {theme === 'dark' ? (
+                <Sun className="w-5 h-5 text-warning" />
+              ) : (
+                <Moon className="w-5 h-5 text-text-medium" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              className="w-12 h-12 min-h-[48px] min-w-[48px] rounded-[6px] border border-border flex items-center justify-center text-text-medium hover:bg-canvas transition-colors relative"
               aria-label="Admin notifications"
             >
               <Bell className="w-5 h-5" />

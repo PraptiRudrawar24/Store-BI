@@ -1,4 +1,81 @@
+/**
+ * ==============================================================================
+ * STORE BI - API CLIENT & DUAL-TRANSPORT AUTH INTERCEPTOR (client.ts)
+ * ==============================================================================
+ * Purpose & Reason for this code:
+ * 1. Serves as the centralized HTTP gateway communicating between the React/TypeScript
+ *    frontend and the FastAPI Python backend.
+ * 2. Implements a resilient Dual-Transport Authentication Pattern:
+ *    - Transport 1: httpOnly session cookies (`storebi_session`) sent automatically via `credentials: 'include'`.
+ *    - Transport 2: JWT `Authorization: Bearer <token>` stored in localStorage as a bulletproof fallback.
+ * 3. Patches the browser's global `window.fetch` via an interceptor to guarantee that EVERY
+ *    outgoing API request automatically carries authentication headers and credentials.
+ * 4. Provides strongly typed API methods for all retail operations:
+ *    - Auth & Onboarding (sendOTP, verifyOTP, saveOnboardingStep, getMe)
+ *    - Products & Inventory CRUD
+ *    - POS Billing & Counter Sales
+ *    - AI Multimodal Invoice OCR & Extraction
+ *    - Analytics, Forecasters & Recommendations
+ *    - Super Admin Platform Controls
+ * ==============================================================================
+ */
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
+/**
+ * Retrieves the stored JWT token from localStorage.
+ */
+export function getAuthToken(): string | null {
+  try {
+    return localStorage.getItem('storebi_token');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Persists the active session token into localStorage upon login.
+ */
+export function setAuthToken(token: string) {
+  try {
+    localStorage.setItem('storebi_token', token);
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Removes the session token upon user logout.
+ */
+export function removeAuthToken() {
+  try {
+    localStorage.removeItem('storebi_token');
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Global fetch interceptor to guarantee Authorization Bearer token & credentials on all requests.
+ * Rationale: Ensures seamless multi-tab authentication persistence and prevents 401 Unauthorized errors.
+ */
+if (typeof window !== 'undefined' && window.fetch) {
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+    const token = getAuthToken();
+    const initObj: RequestInit = init ? { ...init } : {};
+    initObj.credentials = 'include';
+
+    if (token) {
+      const headers = new Headers(initObj.headers || {});
+      if (!headers.has('Authorization')) {
+        headers.set('Authorization', `Bearer ${token}`);
+      }
+      initObj.headers = headers;
+    }
+    return originalFetch(input, initObj);
+  };
+}
 
 export interface Shop {
   id: number;
@@ -513,7 +590,9 @@ export const api = {
   verifyOTP: async (
     phone: string,
     otp: string,
-    email?: string
+    email?: string,
+    store_name?: string,
+    owner_name?: string
   ): Promise<{
     success: boolean;
     token: string;
@@ -525,14 +604,18 @@ export const api = {
     const res = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, otp, email }),
+      body: JSON.stringify({ phone, otp, email, store_name, owner_name }),
       credentials: 'include',
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Verification failed' }));
       throw new Error(err.detail || 'Verification failed');
     }
-    return await res.json();
+    const data = await res.json();
+    if (data.token) {
+      setAuthToken(data.token);
+    }
+    return data;
   },
 
   getMe: async (): Promise<Shop | null> => {
@@ -540,7 +623,12 @@ export const api = {
       const res = await fetch(`${API_BASE_URL}/auth/me`, {
         credentials: 'include',
       });
-      if (!res.ok) return null;
+      if (!res.ok) {
+        if (res.status === 401) {
+          removeAuthToken();
+        }
+        return null;
+      }
       return await res.json();
     } catch {
       return null;
@@ -566,10 +654,14 @@ export const api = {
   },
 
   logout: async (): Promise<void> => {
-    await fetch(`${API_BASE_URL}/auth/logout`, {
-      method: 'POST',
-      credentials: 'include',
-    });
+    try {
+      await fetch(`${API_BASE_URL}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } finally {
+      removeAuthToken();
+    }
   },
 
   // --- Summary ---
@@ -1076,9 +1168,14 @@ export const api = {
     formData.append('file', file);
 
     const headers: Record<string, string> = {};
-    const key = apiKey || localStorage.getItem('gemini_api_key') || '';
-    if (key.trim()) {
-      headers['X-Gemini-API-Key'] = key.trim();
+    const rawKey = (apiKey || localStorage.getItem('gemini_api_key') || localStorage.getItem('anthropic_api_key') || '').trim();
+    const key = ['undefined', 'null', 'none', ''].includes(rawKey.toLowerCase()) ? '' : rawKey;
+    if (key) {
+      if (key.startsWith('sk-ant-')) {
+        headers['X-Anthropic-API-Key'] = key;
+      } else {
+        headers['X-Gemini-API-Key'] = key;
+      }
     }
 
     const res = await fetch(`${API_BASE_URL}/api/extract-invoice`, {
@@ -1418,17 +1515,28 @@ export const api = {
 
 export interface ExtractedInvoiceItem {
   name: string;
+  description?: string;
   qty: number;
+  quantity?: number;
   cost_price?: number | null;
+  unit_price?: number | null;
   mrp?: number | null;
   line_total?: number | null;
+  amount?: number | null;
   expiry_date?: string | null;
   confidence: number;
 }
 
 export interface ExtractedInvoiceResponse {
   supplier?: string | null;
+  vendor?: string | null;
+  invoice_number?: string | null;
   invoice_date?: string | null;
+  date?: string | null;
+  currency?: string | null;
+  subtotal?: number | null;
+  tax?: number | null;
+  total?: number | null;
   items: ExtractedInvoiceItem[];
   is_mock: boolean;
   message?: string | null;
@@ -1448,7 +1556,10 @@ export interface ConfirmInvoiceItemPayload {
 
 export interface ConfirmInvoiceRequestPayload {
   supplier?: string | null;
+  vendor?: string | null;
+  invoice_number?: string | null;
   invoice_date?: string | null;
+  currency?: string | null;
   items: ConfirmInvoiceItemPayload[];
 }
 

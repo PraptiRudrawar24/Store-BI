@@ -25,6 +25,8 @@ import {
 } from '../api/client';
 import { useToast } from '../components/ui/Toast';
 import { useAlerts } from '../context/AlertsContext';
+import { useAuth } from '../context/AuthContext';
+import { Badge } from '../components/ui/Badge';
 import { SalesTrendCard } from '../components/dashboard/SalesTrendCard';
 import { CategorySalesCard } from '../components/dashboard/CategorySalesCard';
 import { AlertsSection } from '../components/dashboard/AlertsSection';
@@ -104,12 +106,39 @@ function ComparisonRow({
   );
 }
 
+/**
+ * ==============================================================================
+ * STORE BI - MERCHANT INTELLIGENCE DASHBOARD (DashboardPage.tsx)
+ * ==============================================================================
+ * Purpose & Reason for this code:
+ * 1. Serves as the primary operational cockpit for retail merchants after logging in.
+ * 2. Visualizes key retail metrics:
+ *    - Real-Time KPIs: Gross Sales, Net Profit Margin, Customer Bills / Transaction volume.
+ *    - Intraday Comparison: "Today vs Yesterday" metrics with percentage deltas and progress indicators.
+ *    - Time-series Revenue Trends: Daily trendlines over 7-day and 30-day windows.
+ *    - Category Performance: Pareto department revenue contributions (Kirana, Dairy, FMCG, etc.).
+ *    - Proactive Store Alerts: Low stock warnings, expiring inventory, high-demand surges.
+ * 3. 5-Day Active Trial Banner:
+ *    - Transparently showcases the merchant's store name, registered owner, phone, and trial status.
+ *    - Counts down remaining trial days (1 to 5 days) with visual urgency indicator badges.
+ *    - Provides one-click access to Record Sale modal and AI Bill Upload.
+ * 4. Zero-Start Compliant:
+ *    - Shows clean empty states with helpful zero-data guidance if no sales have been recorded yet.
+ * ==============================================================================
+ */
+
 export function DashboardPage() {
   const navigate = useNavigate();
   const toast = useToast();
+  const { user } = useAuth();
+  
+  // Calculate remaining days on merchant's active 5-day trial period
+  const trialDays = user?.trial_days_left ?? 5;
 
-  // Period toggle state for 3 KPI cards: Today, 7 days, 30 days
+  // Period toggle state for KPI summary cards: 'today' | '7days' | '30days'
   const [period, setPeriod] = React.useState<'today' | '7days' | '30days'>('today');
+  
+  // Main aggregate KPI metrics received from GET /api/dashboard/kpis?period=...
   const [kpis, setKpis] = React.useState<DashboardKpisResponse>({
     period: 'today',
     sales: 0,
@@ -123,7 +152,7 @@ export function DashboardPage() {
     transactions_change_pct: null,
   });
 
-  // Today vs yesterday comparison state
+  // Intraday comparison received from GET /api/dashboard/today-vs-yesterday
   const [todayVsYesterday, setTodayVsYesterday] = React.useState<DashboardTodayVsYesterdayResponse>({
     has_data: false,
     today: { sales: 0, profit: 0, transactions: 0, average_bill: 0 },
@@ -135,6 +164,7 @@ export function DashboardPage() {
     summary: 'No sales recorded yet',
   });
 
+  // Loading state and modal controls
   const [loading, setLoading] = React.useState(true);
   const [isRecordSaleOpen, setIsRecordSaleOpen] = React.useState(false);
   const [refreshKey, setRefreshKey] = React.useState(0);
@@ -219,10 +249,64 @@ export function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* 0. Merchant User 5-Day Trial Status Banner */}
+      <div className="p-4 sm:p-5 rounded-[8px] bg-surface border border-primary/25 shadow-card flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-start sm:items-center gap-3.5">
+          <div className="w-11 h-11 rounded-[8px] bg-primary text-primary-foreground flex items-center justify-center font-bold text-lg shrink-0 shadow-card">
+            <Store className="w-6 h-6" strokeWidth={2} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h2 className="text-base sm:text-lg font-bold text-text-high">
+                {user?.name || 'My Store'}
+              </h2>
+              <Badge
+                variant={trialDays <= 1 ? 'warning' : 'success'}
+                dot
+                className="text-xs font-semibold"
+              >
+                5-Day Trial Active ({trialDays} {trialDays === 1 ? 'day' : 'days'} left)
+              </Badge>
+              {user?.owner_name && (
+                <span className="text-xs text-text-medium font-medium">
+                  • Owner: {user.owner_name}
+                </span>
+              )}
+              {user?.phone && (
+                <span className="text-xs text-text-medium font-mono">
+                  • +91 {user.phone}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-text-medium mt-1">
+              Full enterprise access active. Manage POS billing, AI invoice OCR extraction, SKU net margins, and inventory health.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2.5 shrink-0">
+          <Button
+            variant="secondary"
+            onClick={() => navigate('/upload')}
+            className="text-xs min-h-[44px] h-11 px-3.5"
+          >
+            <Upload className="w-4 h-4" strokeWidth={2} />
+            <span>Upload Bills</span>
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => navigate('/pos')}
+            className="text-xs min-h-[44px] h-11 px-3.5"
+          >
+            <ReceiptText className="w-4 h-4" strokeWidth={2} />
+            <span>POS Counter</span>
+          </Button>
+        </div>
+      </div>
+
       {/* 1. Header & Action Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-text-high">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-text-high">Store Performance Dashboard</h1>
           <p className="text-sm text-text-medium mt-0.5">
             Real-time business performance and retail health indicators.
           </p>
@@ -238,7 +322,7 @@ export function DashboardPage() {
           </Button>
           <Button
             variant="primary"
-            onClick={() => setIsRecordSaleOpen(true)}
+            onClick={() => navigate('/pos')}
             className="text-xs min-h-[48px] px-4"
           >
             <Plus className="w-4 h-4" strokeWidth={2} />
@@ -359,7 +443,7 @@ export function DashboardPage() {
               <div className="pt-2">
                 <Button
                   variant="primary"
-                  onClick={() => setIsRecordSaleOpen(true)}
+                  onClick={() => navigate('/pos')}
                   className="h-12 min-h-[48px] px-6 text-sm font-semibold"
                 >
                   <Plus className="w-4 h-4 mr-2" strokeWidth={2} />
@@ -447,14 +531,14 @@ export function DashboardPage() {
       {/* 4. Sales Trend Card */}
       <SalesTrendCard
         key={`trend-${refreshKey}`}
-        onRecordSaleClick={() => setIsRecordSaleOpen(true)}
+        onRecordSaleClick={() => navigate('/pos')}
       />
 
       {/* 5. Category-wise Sales Card (shares period with KPI section) */}
       <CategorySalesCard
         key={`cat-${period}-${refreshKey}`}
         period={period}
-        onRecordSaleClick={() => setIsRecordSaleOpen(true)}
+        onRecordSaleClick={() => navigate('/pos')}
       />
 
       {/* 6. Alerts Section */}

@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastProvider } from './components/ui/Toast';
+import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AlertsProvider } from './context/AlertsContext';
 import { Layout } from './components/layout/Layout';
@@ -20,7 +21,18 @@ import { AdminBusinessesPage } from './pages/admin/AdminBusinessesPage';
 import { AdminBusinessDetailPage } from './pages/admin/AdminBusinessDetailPage';
 import { AdminPlansPricesPage } from './pages/admin/AdminPlansPricesPage';
 import { AdminPlaceholderPage } from './pages/admin/AdminPlaceholderPage';
+import { LandingPage } from './pages/LandingPage';
+import { PosBillingPage } from './pages/PosBillingPage';
 
+/**
+ * ProtectedLayout: Guards owner app shell routes (/dashboard, /pos, /analytics, etc.)
+ * Reason & Use:
+ * 1. Checks if auth state is currently loading from server.
+ * 2. Unauthenticated visitors are redirected to /login.
+ * 3. Merchants who have not yet completed the 4-step onboarding wizard
+ *    are redirected to /onboarding so all required store details are captured.
+ * 4. Only fully onboarded and authenticated merchants can view the app shell.
+ */
 function ProtectedLayout() {
   const { user, loading } = useAuth();
 
@@ -44,6 +56,13 @@ function ProtectedLayout() {
   return <Layout />;
 }
 
+/**
+ * OnboardingGuard: Guards the 4-step store onboarding wizard (/onboarding).
+ * Reason & Use:
+ * 1. Unauthenticated users cannot view onboarding and are redirected to /login.
+ * 2. If the user already finished onboarding, skips wizard and navigates straight to /dashboard.
+ * 3. Incomplete profiles are shown the OnboardingPage wizard to collect owner and store information.
+ */
 function OnboardingGuard() {
   const { user, loading } = useAuth();
 
@@ -68,54 +87,60 @@ function OnboardingGuard() {
 
 export default function App() {
   return (
-    <ToastProvider>
-      <AuthProvider>
-        <AlertsProvider>
-          <BrowserRouter>
-            <Routes>
-            {/* Public Auth */}
-            <Route path="/login" element={<LoginPage />} />
+    <ThemeProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <AlertsProvider>
+            <BrowserRouter>
+              <Routes>
+              {/* Public Landing Page */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/landing" element={<LandingPage />} />
 
-            {/* 4-Step Onboarding Wizard */}
-            <Route path="/onboarding" element={<OnboardingGuard />} />
+              {/* Public Auth */}
+              <Route path="/login" element={<LoginPage />} />
 
-            {/* Store BI Admin / Operations Portal at /admin guarded by is_admin role */}
-            <Route path="/admin" element={<AdminGuard />}>
-              <Route element={<AdminLayout />}>
-                <Route index element={<Navigate to="/admin/overview" replace />} />
-                <Route path="overview" element={<AdminOverviewPage />} />
-                <Route path="businesses" element={<AdminBusinessesPage />} />
-                <Route path="businesses/:id" element={<AdminBusinessDetailPage />} />
-                <Route path="plans" element={<AdminPlansPricesPage />} />
-                <Route path="plans-and-prices" element={<Navigate to="/admin/plans" replace />} />
-                <Route path="payments" element={<AdminPlaceholderPage />} />
-                <Route path="reports" element={<AdminPlaceholderPage />} />
-                <Route path="settings" element={<AdminPlaceholderPage />} />
+              {/* 4-Step Onboarding Wizard */}
+              <Route path="/onboarding" element={<OnboardingGuard />} />
+
+              {/* Store BI Admin / Operations Portal at /admin guarded by is_admin role */}
+              <Route path="/admin" element={<AdminGuard />}>
+                <Route element={<AdminLayout />}>
+                  <Route index element={<Navigate to="/admin/overview" replace />} />
+                  <Route path="overview" element={<AdminOverviewPage />} />
+                  <Route path="businesses" element={<AdminBusinessesPage />} />
+                  <Route path="businesses/:id" element={<AdminBusinessDetailPage />} />
+                  <Route path="plans" element={<AdminPlansPricesPage />} />
+                  <Route path="plans-and-prices" element={<Navigate to="/admin/plans" replace />} />
+                  <Route path="payments" element={<AdminPlaceholderPage />} />
+                  <Route path="reports" element={<AdminPlaceholderPage />} />
+                  <Route path="settings" element={<AdminPlaceholderPage />} />
+                </Route>
               </Route>
-            </Route>
 
-            {/* Owner App Shell Routes */}
-            <Route path="/" element={<ProtectedLayout />}>
-              <Route index element={<Navigate to="/dashboard" replace />} />
-              <Route path="dashboard" element={<DashboardPage />} />
-              <Route path="upload" element={<DataUploadPage />} />
-              <Route path="analytics" element={<AnalyticsPage />} />
-              <Route path="insights" element={<InsightsPage />} />
-              
-              {/* Secondary operational management */}
-              <Route path="products" element={<ProductsPage />} />
-              <Route path="sales" element={<SalesPage />} />
-              <Route path="expenses" element={<ExpensesPage />} />
-              <Route path="settings" element={<SettingsPage />} />
-            </Route>
+              {/* Owner App Shell Routes */}
+              <Route element={<ProtectedLayout />}>
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/pos" element={<PosBillingPage />} />
+                <Route path="/upload" element={<DataUploadPage />} />
+                <Route path="/analytics" element={<AnalyticsPage />} />
+                <Route path="/insights" element={<InsightsPage />} />
+                
+                {/* Secondary operational management */}
+                <Route path="/products" element={<ProductsPage />} />
+                <Route path="/sales" element={<SalesPage />} />
+                <Route path="/expenses" element={<ExpensesPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+              </Route>
 
-            {/* Catch-all redirect to /dashboard */}
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </BrowserRouter>
-        </AlertsProvider>
-      </AuthProvider>
-    </ToastProvider>
+              {/* Catch-all redirect to / */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </BrowserRouter>
+          </AlertsProvider>
+        </AuthProvider>
+      </ToastProvider>
+    </ThemeProvider>
   );
 }
 

@@ -33,9 +33,9 @@ export function Tabs({ tabs, activeTab, onChange, className }: TabsProps) {
             aria-selected={isActive}
             onClick={() => onChange(tab.id)}
             className={cn(
-              'flex items-center gap-2 h-12 min-h-[48px] px-4 font-semibold text-sm transition-colors border-b-2 -mb-[1px] whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+              'flex items-center gap-2 h-12 min-h-[48px] px-4 font-semibold text-sm transition-colors border-b-2 -mb-[1px] whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               isActive
-                ? 'border-primary text-primary bg-primary/[0.04]'
+                ? 'border-primary text-primary bg-primary/[0.08]'
                 : 'border-transparent text-text-medium hover:text-text-high hover:border-border'
             )}
           >
@@ -44,10 +44,10 @@ export function Tabs({ tabs, activeTab, onChange, className }: TabsProps) {
             {tab.count !== undefined && (
               <span
                 className={cn(
-                  'px-1.5 py-0.5 rounded-[4px] text-xs font-semibold tabular-nums',
+                  'px-1.5 py-0.5 rounded-[4px] text-[11px] font-semibold tabular-nums',
                   isActive
                     ? 'bg-primary text-primary-foreground'
-                    : 'bg-canvas text-text-medium border border-border'
+                    : 'bg-canvas dark:bg-surface-low text-text-medium border border-border'
                 )}
               >
                 {tab.count}

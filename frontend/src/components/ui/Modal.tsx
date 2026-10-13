@@ -48,19 +48,19 @@ export function Modal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      {/* 40% neutral backdrop tint per DESIGN.md */}
+      {/* Backdrop: rgba(15,23,42,0.45) in light / rgba(0,0,0,0.6) in dark */}
       <div
-        className="fixed inset-0 bg-[#111827]/40 transition-opacity"
+        className="fixed inset-0 bg-[#0f172a]/45 dark:bg-black/60 transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Dialog container: bottom sheet on mobile, centered modal on desktop */}
+      {/* Dialog container */}
       <div
         role="dialog"
         aria-modal="true"
         className={cn(
-          'relative w-full bg-surface border border-border z-10 flex flex-col max-h-[90vh] overflow-hidden',
+          'relative w-full bg-surface border border-border shadow-modal z-10 flex flex-col max-h-[90vh] overflow-hidden',
           isBottomSheetOnMobile
             ? 'rounded-t-[8px] sm:rounded-[8px]'
             : 'rounded-[8px]',
@@ -84,7 +84,7 @@ export function Modal({
           </div>
           <button
             onClick={onClose}
-            className="w-12 h-12 -mr-2 flex items-center justify-center rounded-[8px] text-text-medium hover:text-text-high hover:bg-canvas transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="w-12 h-12 -mr-2 flex items-center justify-center rounded-[6px] text-text-medium hover:text-text-high hover:bg-canvas dark:hover:bg-surface-high transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="Close dialog"
           >
             <X className="w-5 h-5" strokeWidth={2} />
@@ -96,7 +96,7 @@ export function Modal({
 
         {/* Footer */}
         {footer && (
-          <div className="px-4 py-3 border-t border-border bg-canvas/40 flex items-center justify-end gap-3 shrink-0 rounded-b-[8px]">
+          <div className="px-4 py-3 border-t border-border bg-canvas/40 dark:bg-surface-low/50 flex items-center justify-end gap-3 shrink-0 rounded-b-[8px]">
             {footer}
           </div>
         )}

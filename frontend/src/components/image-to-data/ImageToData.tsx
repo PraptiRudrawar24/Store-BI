@@ -148,7 +148,12 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
 
   // Extraction results state
   const [supplierName, setSupplierName] = React.useState('');
+  const [invoiceNumber, setInvoiceNumber] = React.useState('');
   const [invoiceDate, setInvoiceDate] = React.useState('');
+  const [currency, setCurrency] = React.useState('INR');
+  const [subtotal, setSubtotal] = React.useState<number | null>(null);
+  const [tax, setTax] = React.useState<number | null>(null);
+  const [total, setTotal] = React.useState<number | null>(null);
   const [isMockResult, setIsMockResult] = React.useState(false);
   const [mockMessage, setMockMessage] = React.useState<string | null>(null);
   const [ocrEngineUsed, setOcrEngineUsed] = React.useState<string | null>(null);
@@ -162,7 +167,7 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
     api.getProducts().then(setExistingProducts).catch(() => {});
     api.getOcrStatus().then(setOcrStatus).catch(() => {});
 
-    const localKey = localStorage.getItem('gemini_api_key');
+    const localKey = localStorage.getItem('gemini_api_key') || localStorage.getItem('anthropic_api_key');
     if (localKey) {
       setApiKeyInput(localKey);
     }
@@ -230,25 +235,33 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
   };
 
 
-  // Save Gemini Key handler
+  // Save Gemini / Claude Key handler
   const handleSaveApiKey = async () => {
     const key = apiKeyInput.trim();
     if (!key) {
-      toast.error('Please enter a valid Gemini API key');
+      toast.error('Please enter a valid API key');
       return;
     }
 
     setIsSavingKey(true);
     try {
-      localStorage.setItem('gemini_api_key', key);
+      if (key.startsWith('sk-ant-')) {
+        localStorage.setItem('anthropic_api_key', key);
+      } else {
+        localStorage.setItem('gemini_api_key', key);
+      }
       await api.saveGeminiKey(key);
       const status = await api.getOcrStatus();
       setOcrStatus(status);
       setShowApiKeyModal(false);
-      toast.success('Gemini API key saved! AI Vision extraction is now enabled.');
+      toast.success('API key saved! AI Vision extraction is now enabled.');
     } catch (err: any) {
       // Even if server save failed, localStorage is set
-      localStorage.setItem('gemini_api_key', key);
+      if (key.startsWith('sk-ant-')) {
+        localStorage.setItem('anthropic_api_key', key);
+      } else {
+        localStorage.setItem('gemini_api_key', key);
+      }
       setShowApiKeyModal(false);
       toast.info('API key saved in browser for your scans.');
     } finally {
@@ -267,19 +280,29 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
     setExtractError(null);
 
     try {
-      const storedKey = localStorage.getItem('gemini_api_key') || undefined;
+      const storedKey =
+        localStorage.getItem('gemini_api_key') ||
+        localStorage.getItem('anthropic_api_key') ||
+        undefined;
       const response: ExtractedInvoiceResponse = await api.extractInvoice(selectedFile, storedKey);
 
-      setSupplierName(response.supplier || 'Wholesale Supplier');
-      setInvoiceDate(response.invoice_date || new Date().toISOString().split('T')[0]);
+      setSupplierName(response.vendor || response.supplier || 'Wholesale Supplier');
+      setInvoiceNumber(response.invoice_number || '');
+      setInvoiceDate(response.date || response.invoice_date || new Date().toISOString().split('T')[0]);
+      setCurrency(response.currency || 'INR');
+      setSubtotal(response.subtotal ?? null);
+      setTax(response.tax ?? null);
+      setTotal(response.total ?? null);
       setIsMockResult(response.is_mock);
       setMockMessage(response.message || null);
       setOcrEngineUsed(response.ocr_engine || (response.is_mock ? 'Sample Demo Mock' : 'AI Vision'));
 
       // Map items with fuzzy matching to existing inventory
       const mappedItems: EditableExtractedItem[] = response.items.map((item, idx) => {
-        const match = fuzzyMatchProduct(item.name, existingProducts);
-        const costPrice = item.cost_price || 0;
+        const itemName = (item.name || item.description || '').trim();
+        const itemQty = item.qty || item.quantity || 1;
+        const match = fuzzyMatchProduct(itemName, existingProducts);
+        const costPrice = item.cost_price ?? item.unit_price ?? 0;
         const mrp = item.mrp || 0;
 
         // Default selling price: if MRP is known, use MRP; else 25% markup on cost
@@ -291,12 +314,16 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
           ? Math.round(costPrice * 1.25)
           : 25;
 
+        const lineTotal = item.line_total ?? item.amount ?? (costPrice > 0 ? Math.round(costPrice * itemQty * 100) / 100 : null);
+
         return {
           ...item,
+          name: itemName,
+          qty: itemQty,
           id: `item-${Date.now()}-${idx}`,
-          cost_price: item.cost_price,
+          cost_price: item.cost_price ?? item.unit_price ?? null,
           mrp: item.mrp || null,
-          line_total: item.line_total || (costPrice > 0 ? Math.round(costPrice * item.qty) : null),
+          line_total: lineTotal,
           selling_price: defaultSelling,
           category: match ? match.product.category : 'Grocery',
           action: match ? 'update' : 'create',
@@ -381,6 +408,23 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
           }
         }
 
+        // If name changes, check if it matches an existing product in inventory
+        if (field === 'name' && typeof value === 'string' && value.trim().length > 1) {
+          const match = fuzzyMatchProduct(value.trim(), existingProducts);
+          if (match && match.score >= 0.75) {
+            updated.action = 'update';
+            updated.matched_product_id = match.product.id;
+            updated.matched_product_name = match.product.name;
+            updated.match_confidence = match.score;
+            if (!updated.selling_price || updated.selling_price <= 0) {
+              updated.selling_price = match.product.selling_price;
+            }
+            if (!updated.category || updated.category === 'Grocery') {
+              updated.category = match.product.category;
+            }
+          }
+        }
+
         // If matched product changed via select
         if (field === 'matched_product_id') {
           const prod = existingProducts.find((p) => p.id === Number(value));
@@ -407,7 +451,12 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
     setMockMessage(null);
     setOcrEngineUsed(null);
     setSupplierName('');
+    setInvoiceNumber('');
     setInvoiceDate('');
+    setCurrency('INR');
+    setSubtotal(null);
+    setTax(null);
+    setTotal(null);
   };
 
   // Confirm and save to database
@@ -444,7 +493,10 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
 
       const res = await api.confirmExtractedInvoice({
         supplier: supplierName.trim() || undefined,
+        vendor: supplierName.trim() || undefined,
+        invoice_number: invoiceNumber.trim() || undefined,
         invoice_date: invoiceDate || undefined,
+        currency: currency || 'INR',
         items: payloadItems,
       });
 
@@ -726,14 +778,22 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                 </div>
               </div>
 
-              {/* Invoice Meta header: Supplier & Date */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-[10px] bg-canvas border border-border">
+              {/* Invoice Meta header: Supplier, Invoice Number & Date */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-[10px] bg-canvas border border-border">
                 <Input
-                  label="Supplier name"
+                  label="Supplier / Vendor"
                   placeholder="e.g. Metro Cash & Carry, Local Wholesaler"
                   value={supplierName}
                   onChange={(e) => setSupplierName(e.target.value)}
-                  helperText="Extracted from invoice header"
+                  helperText="Wholesaler or distributor"
+                />
+
+                <Input
+                  label="Invoice #"
+                  placeholder="e.g. INV-104, Bill #12"
+                  value={invoiceNumber}
+                  onChange={(e) => setInvoiceNumber(e.target.value)}
+                  helperText="Detected invoice or bill number"
                 />
 
                 <Input
@@ -744,6 +804,65 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                   helperText="Extracted invoice or receipt date"
                 />
               </div>
+
+              {/* Financial Totals Ribbon from Invoice */}
+              {(subtotal !== null || total !== null || items.length > 0) && (
+                <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-[10px] bg-surface border border-border text-xs">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-primary shrink-0" />
+                    <span className="font-bold text-text-high">Invoice Summary:</span>
+                    <Badge variant="neutral">{items.length} line items</Badge>
+                    {currency && <Badge variant="neutral">{currency}</Badge>}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-4 text-xs font-mono">
+                    {subtotal !== null && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-text-medium text-[11px] font-sans">Subtotal:</span>
+                        <span className="font-semibold text-text-high">
+                          {currency === 'USD' ? '$' : '₹'}{subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    )}
+
+                    {tax !== null && tax > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-text-medium text-[11px] font-sans">Tax / GST:</span>
+                        <span className="font-semibold text-text-high">
+                          {currency === 'USD' ? '$' : '₹'}{tax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    )}
+
+                    {total !== null && (
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] bg-primary/[0.08] border border-primary/20">
+                        <span className="text-text-medium text-[11px] font-sans">Grand Total:</span>
+                        <span className="font-bold text-primary">
+                          {currency === 'USD' ? '$' : '₹'}{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    )}
+
+                    {(() => {
+                      const calculatedSum = items.reduce((sum, item) => sum + (item.line_total || 0), 0);
+                      const isMatch = total !== null && Math.abs(calculatedSum - total) <= Math.max(2, total * 0.05);
+                      return (
+                        <div className="flex items-center gap-1.5 text-text-medium text-[11px]">
+                          <span className="font-sans">Items sum:</span>
+                          <span className="font-semibold text-text-high">
+                            {currency === 'USD' ? '$' : '₹'}{calculatedSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                          {isMatch && (
+                            <span className="text-emerald-600 flex items-center gap-0.5 font-sans font-semibold ml-1" title="Items line total matches invoice total">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Matched
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
 
               {/* Review Table Header with Action and Counts */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -778,13 +897,13 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                       <TableHead className="w-10 text-center">#</TableHead>
                       <TableHead className="min-w-[190px]">Item Name</TableHead>
                       <TableHead className="w-20">Qty</TableHead>
-                      <TableHead className="w-28">₹ Unit Cost</TableHead>
-                      <TableHead className="w-28">₹ MRP</TableHead>
-                      <TableHead className="w-28">₹ Line Total</TableHead>
-                      <TableHead className="w-28">₹ Sell Price</TableHead>
+                      <TableHead className="w-32 min-w-[130px]">Unit Cost (₹)</TableHead>
+                      <TableHead className="w-32 min-w-[130px]">MRP (₹)</TableHead>
+                      <TableHead className="w-32 min-w-[130px]">Line Total (₹)</TableHead>
+                      <TableHead className="w-32 min-w-[130px]">Sell Price (₹)</TableHead>
                       <TableHead className="w-32">Category</TableHead>
                       <TableHead className="w-32">Expiry</TableHead>
-                      <TableHead className="min-w-[210px]">Inventory Action</TableHead>
+                      <TableHead className="min-w-[220px]">Inventory Action</TableHead>
                       <TableHead className="w-10 text-center"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -848,17 +967,18 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                           </TableCell>
 
                           {/* Unit Cost Price */}
-                          <TableCell>
+                          <TableCell className="px-2 py-2 min-w-[130px]">
                             <div className="flex flex-col gap-1">
                               <Input
                                 isCurrency={true}
                                 placeholder="0"
                                 value={item.cost_price !== null && item.cost_price !== undefined ? item.cost_price : ''}
                                 onChange={(e) => {
-                                  const val = e.target.value ? parseFloat(e.target.value) : null;
+                                  const raw = e.target.value.replace(/[^0-9.]/g, '');
+                                  const val = raw ? parseFloat(raw) : null;
                                   handleUpdateItemField(item.id, 'cost_price', val);
                                 }}
-                                className={`h-11 min-h-[44px] text-xs tabular-nums ${
+                                className={`h-11 min-h-[44px] text-xs tabular-nums pl-6 pr-2 font-medium ${
                                   isMissingPrice ? 'border-amber-500 focus-visible:border-amber-500' : ''
                                 }`}
                               />
@@ -871,31 +991,33 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                           </TableCell>
 
                           {/* MRP */}
-                          <TableCell>
+                          <TableCell className="px-2 py-2 min-w-[130px]">
                             <Input
                               isCurrency={true}
                               placeholder="0"
                               value={item.mrp !== null && item.mrp !== undefined ? item.mrp : ''}
                               onChange={(e) => {
-                                const val = e.target.value ? parseFloat(e.target.value) : null;
+                                const raw = e.target.value.replace(/[^0-9.]/g, '');
+                                const val = raw ? parseFloat(raw) : null;
                                 handleUpdateItemField(item.id, 'mrp', val);
                               }}
-                              className="h-11 min-h-[44px] text-xs tabular-nums"
+                              className="h-11 min-h-[44px] text-xs tabular-nums pl-6 pr-2 font-medium"
                             />
                           </TableCell>
 
                           {/* Line Total */}
-                          <TableCell>
+                          <TableCell className="px-2 py-2 min-w-[130px]">
                             <div className="flex flex-col gap-0.5">
                               <Input
                                 isCurrency={true}
                                 placeholder="0"
                                 value={item.line_total !== null && item.line_total !== undefined ? item.line_total : ''}
                                 onChange={(e) => {
-                                  const val = e.target.value ? parseFloat(e.target.value) : null;
+                                  const raw = e.target.value.replace(/[^0-9.]/g, '');
+                                  const val = raw ? parseFloat(raw) : null;
                                   handleUpdateItemField(item.id, 'line_total', val);
                                 }}
-                                className="h-11 min-h-[44px] text-xs tabular-nums"
+                                className="h-11 min-h-[44px] text-xs tabular-nums pl-6 pr-2 font-medium"
                               />
                               {isMathConsistent && (
                                 <span className="text-[10px] text-emerald-700 font-medium flex items-center gap-0.5">
@@ -907,19 +1029,20 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                           </TableCell>
 
                           {/* Selling Price */}
-                          <TableCell>
+                          <TableCell className="px-2 py-2 min-w-[130px]">
                             <Input
                               isCurrency={true}
                               placeholder="0"
                               value={item.selling_price || ''}
-                              onChange={(e) =>
+                              onChange={(e) => {
+                                const raw = e.target.value.replace(/[^0-9.]/g, '');
                                 handleUpdateItemField(
                                   item.id,
                                   'selling_price',
-                                  parseFloat(e.target.value) || 0
-                                )
-                              }
-                              className="h-11 min-h-[44px] text-xs tabular-nums"
+                                  raw ? parseFloat(raw) : 0
+                                );
+                              }}
+                              className="h-11 min-h-[44px] text-xs tabular-nums pl-6 pr-2 font-medium"
                             />
                           </TableCell>
 
@@ -996,7 +1119,7 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                                     >
                                       {existingProducts.map((p) => (
                                         <option key={p.id} value={p.id}>
-                                          {p.name} (Stock: {p.stock_qty})
+                                          {p.name} (Current: {p.stock_qty})
                                         </option>
                                       ))}
                                     </select>
@@ -1005,9 +1128,15 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                                       No existing products in inventory
                                     </span>
                                   )}
-                                  <span className="text-[10px] text-emerald-700 font-semibold">
-                                    Adds +{item.qty} units to existing stock
-                                  </span>
+                                  {(() => {
+                                    const matched = existingProducts.find((p) => p.id === item.matched_product_id);
+                                    const curr = matched ? matched.stock_qty : 0;
+                                    return (
+                                      <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">
+                                        Adds +{item.qty} units (Stock: {curr} &rarr; {curr + item.qty})
+                                      </span>
+                                    );
+                                  })()}
                                 </div>
                               ) : (
                                 <span className="text-[10px] text-text-medium">
@@ -1121,14 +1250,14 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
         </div>
       )}
 
-      {/* Modal to Configure Gemini API Key */}
+      {/* Modal to Configure Vision AI Key */}
       {showApiKeyModal && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
           <div className="relative bg-surface rounded-[8px] overflow-hidden max-w-md w-full border border-border flex flex-col">
             <div className="px-5 py-4 border-b border-border flex items-center justify-between bg-canvas">
               <div className="flex items-center gap-2">
                 <Key className="w-4 h-4 text-primary" />
-                <h3 className="text-sm font-bold text-text-high">Configure Gemini OCR key</h3>
+                <h3 className="text-sm font-bold text-text-high">Configure Vision AI key</h3>
               </div>
               <button
                 type="button"
@@ -1141,14 +1270,14 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
 
             <div className="p-5 flex flex-col gap-4 text-xs">
               <p className="text-text-medium leading-relaxed">
-                Enter your Google Gemini API key to enable high-accuracy AI extraction for your store bills, wholesaler GST invoices, and handwritten ledger slips.
+                Enter your Google Gemini (<code className="text-primary font-mono">AIza...</code>) or Anthropic Claude (<code className="text-primary font-mono">sk-ant-...</code>) API key to enable high-accuracy multimodal invoice extraction for your printed distributor bills, GST invoices, and handwritten slips.
               </p>
 
               <div className="flex flex-col gap-1.5">
-                <label className="font-semibold text-text-high">Gemini API key</label>
+                <label className="font-semibold text-text-high">AI Vision API key</label>
                 <input
                   type="password"
-                  placeholder="AIzaSy..."
+                  placeholder="AIzaSy... or sk-ant-..."
                   value={apiKeyInput}
                   onChange={(e) => setApiKeyInput(e.target.value)}
                   className="h-12 px-3 rounded-[8px] border border-border bg-surface text-xs text-text-high font-mono focus:outline-none focus:border-primary"
@@ -1158,7 +1287,7 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
               <div className="p-3 rounded-[8px] bg-canvas border border-border flex items-start gap-2 text-text-medium">
                 <HelpCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                 <div className="text-[11px] leading-normal">
-                  <span>Don't have a key? Get one for free from </span>
+                  <span>Get a free key from </span>
                   <a
                     href="https://aistudio.google.com/"
                     target="_blank"
@@ -1167,7 +1296,16 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                   >
                     Google AI Studio
                   </a>
-                  <span>. It takes less than 1 minute.</span>
+                  <span> or from </span>
+                  <a
+                    href="https://console.anthropic.com/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary font-semibold hover:underline"
+                  >
+                    Anthropic Console
+                  </a>
+                  <span>.</span>
                 </div>
               </div>
 

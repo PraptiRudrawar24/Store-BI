@@ -45,29 +45,29 @@ export function StatCard({
   }
 
   return (
-    <Card className={cn('flex flex-col justify-between hover:border-border transition-colors', className)}>
+    <Card className={cn('flex flex-col justify-between hover:border-border-hover dark:hover:border-border-strong hover:shadow-raised transition-all', className)}>
       <CardContent className="p-4 flex flex-col justify-between h-full gap-3">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-text-medium">{label}</span>
           {icon && (
-            <div className="w-8 h-8 rounded-[8px] bg-canvas border border-border flex items-center justify-center text-text-medium shrink-0">
+            <div className="w-8 h-8 rounded-[6px] bg-canvas dark:bg-surface-low border border-border flex items-center justify-center text-text-medium shrink-0">
               {icon}
             </div>
           )}
         </div>
 
         <div>
-          <div className="text-2xl font-bold text-text-high tracking-tight tabular-nums mb-1">
+          <div className="text-[32px] font-bold text-text-high tracking-tight tabular-nums mb-1 leading-tight">
             {value}
           </div>
 
           <div className="flex items-center gap-2 text-xs flex-wrap">
             <span
               className={cn(
-                'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[4px] font-semibold text-xs border tabular-nums',
+                'inline-flex items-center gap-1 px-2 py-0.5 rounded-[4px] font-semibold text-[11px] border tabular-nums',
                 trendType === 'positive' && 'bg-success-bg text-success border-success-border',
                 trendType === 'negative' && 'bg-destructive-bg text-destructive border-destructive-border',
-                trendType === 'neutral' && 'bg-canvas text-text-medium border-border'
+                trendType === 'neutral' && 'bg-canvas dark:bg-surface-low text-text-medium border-border'
               )}
             >
               {trendType === 'positive' && <TrendingUp className="w-3 h-3" strokeWidth={2} />}

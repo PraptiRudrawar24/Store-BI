@@ -60,7 +60,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             key={t.id}
             role="status"
             className={cn(
-              'pointer-events-auto flex items-start gap-3 p-3.5 bg-surface border border-border rounded-[8px] transition-all',
+              'pointer-events-auto flex items-start gap-3 p-3.5 bg-surface border border-border shadow-raised rounded-[8px] transition-all',
               t.type === 'success' && 'border-success-border',
               t.type === 'error' && 'border-destructive-border',
               t.type === 'info' && 'border-border'
@@ -83,7 +83,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             </div>
             <button
               onClick={() => removeToast(t.id)}
-              className="w-10 h-10 -mr-2 -mt-2 flex items-center justify-center rounded-[8px] text-text-medium hover:text-text-high hover:bg-canvas transition-colors"
+              className="w-10 h-10 -mr-2 -mt-2 flex items-center justify-center rounded-[6px] text-text-medium hover:text-text-high hover:bg-canvas dark:hover:bg-surface-high transition-colors"
               aria-label="Dismiss toast"
             >
               <X className="w-4 h-4" strokeWidth={2} />

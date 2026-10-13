@@ -6,26 +6,51 @@ import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import {
   Check,
   ArrowRight,
   ArrowLeft,
+  Sun,
+  Moon,
+  LayoutDashboard,
 } from 'lucide-react';
+
+/**
+ * ==============================================================================
+ * STORE BI - 4-STEP RETAIL ONBOARDING WIZARD (OnboardingPage.tsx)
+ * ==============================================================================
+ * Purpose & Reason for this code:
+ * 1. Upon verifying mobile OTP, every new merchant is guided through this structured
+ *    4-step onboarding experience before accessing the Store BI dashboard:
+ *    - Step 1: Owner Profile (Merchant identity, contact, language preference).
+ *    - Step 2: Store Identity & Location (Shop name, retail category, address, GSTIN).
+ *    - Step 3: Operational Scale (Product count, monthly turnover, current bookkeeping).
+ *    - Step 4: Primary Retail Challenges (Identifies merchant pain points such as dead stock,
+ *      stock-outs, or expiry waste so the BI engine can tailor actionable insights).
+ * 2. Provides stepwise validation ensuring clean, high-integrity data into the database.
+ * 3. On final completion (Step 4), flags `onboarding_completed: true` in backend and
+ *    smoothly navigates the merchant directly to their dedicated Store BI Dashboard.
+ * ==============================================================================
+ */
 
 export function OnboardingPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const { user, saveStep } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
+  // Wizard Step State (1: Owner, 2: Store, 3: Scale, 4: Challenges)
   const [step, setStep] = React.useState<number>(1);
   const [submitting, setSubmitting] = React.useState(false);
 
-  // Form State
+  // Form State: Step 1 - Merchant Owner Profile
   const [ownerName, setOwnerName] = React.useState('');
   const [phone, setPhone] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [language, setLanguage] = React.useState('en');
 
+  // Form State: Step 2 - Store Entity & Location Details
   const [shopName, setShopName] = React.useState('');
   const [category, setCategory] = React.useState('Grocery & kirana');
   const [city, setCity] = React.useState('');
@@ -33,18 +58,20 @@ export function OnboardingPage() {
   const [pincode, setPincode] = React.useState('');
   const [gstin, setGstin] = React.useState('');
 
+  // Form State: Step 3 - Inventory & Financial Turnover Scale
   const [approxProducts, setApproxProducts] = React.useState('100 - 500');
   const [monthlyTurnover, setMonthlyTurnover] = React.useState('₹50,000 - ₹2,00,000');
   const [currentTrackingMethod, setCurrentTrackingMethod] = React.useState('paper khata');
   const [sellsExpiringGoods, setSellsExpiringGoods] = React.useState(false);
 
+  // Form State: Step 4 - Critical Business Pain Points To Solve
   const [challenges, setChallenges] = React.useState<string[]>(['stock-outs', 'profit unknown']);
 
   // Prepopulate from user object if available
   React.useEffect(() => {
     if (user) {
       if (user.onboarding_completed) {
-        navigate('/');
+        navigate('/dashboard', { replace: true });
         return;
       }
       setPhone(user.phone || '');
@@ -57,6 +84,22 @@ export function OnboardingPage() {
       if (user.state) setState(user.state);
       if (user.pincode) setPincode(user.pincode);
       if (user.gstin) setGstin(user.gstin);
+      if (user.approx_products) setApproxProducts(user.approx_products);
+      if (user.monthly_turnover) setMonthlyTurnover(user.monthly_turnover);
+      if (user.current_tracking_method) setCurrentTrackingMethod(user.current_tracking_method);
+      if (user.sells_expiring_goods !== undefined && user.sells_expiring_goods !== null) {
+        setSellsExpiringGoods(Boolean(user.sells_expiring_goods));
+      }
+      if (user.challenges) {
+        try {
+          const parsed = JSON.parse(user.challenges);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setChallenges(parsed);
+          }
+        } catch {
+          // keep existing if parse fails
+        }
+      }
       if (user.onboarding_step && user.onboarding_step > 1) {
         setStep(Math.min(user.onboarding_step, 4));
       }
@@ -147,7 +190,7 @@ export function OnboardingPage() {
         });
         toast.success('Setup complete! Welcome to Store BI.');
         // Landing on empty dashboard per ZERO-START rule
-        navigate('/');
+        navigate('/dashboard');
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to save step';
@@ -187,7 +230,7 @@ export function OnboardingPage() {
   return (
     <div className="min-h-screen bg-canvas flex flex-col items-center justify-center p-4 py-8">
       <div className="w-full max-w-xl flex flex-col gap-6">
-        {/* Header with Progress Indicator */}
+        {/* Header with Progress Indicator & Theme Toggle */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
@@ -198,6 +241,29 @@ export function OnboardingPage() {
             <span className="font-bold text-base text-text-high">Store BI</span>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              className="w-8 h-8 rounded-[6px] border border-border bg-surface flex items-center justify-center text-text-medium hover:text-text-high transition-colors"
+              aria-label="Toggle theme"
+            >
+              {theme === 'dark' ? (
+                <Sun className="w-4 h-4 text-warning" strokeWidth={2} />
+              ) : (
+                <Moon className="w-4 h-4 text-text-medium" strokeWidth={2} />
+              )}
+            </button>
+            {user?.onboarding_completed && (
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard')}
+                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] border border-border bg-surface text-xs font-semibold text-text-medium hover:text-text-high transition-colors"
+              >
+                <LayoutDashboard className="w-3.5 h-3.5" />
+                <span>Dashboard</span>
+              </button>
+            )}
             <span className="text-xs font-semibold text-text-medium">
               Step {step} of 4
             </span>

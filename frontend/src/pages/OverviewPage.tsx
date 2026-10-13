@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   IndianRupee,
   ShoppingBag,
@@ -21,6 +22,7 @@ import type { Product, Sale, AnalyticsSummary } from '../api/client';
 import { useToast } from '../components/ui/Toast';
 
 export function OverviewPage() {
+  const navigate = useNavigate();
   const toast = useToast();
   const [summary, setSummary] = React.useState<AnalyticsSummary>({
     total_revenue: 0,
@@ -158,7 +160,7 @@ export function OverviewPage() {
           </Button>
           <Button
             variant="primary"
-            onClick={() => setIsRecordSaleOpen(true)}
+            onClick={() => navigate('/pos')}
             className="text-xs"
           >
             <Plus className="w-4 h-4" strokeWidth={2} />

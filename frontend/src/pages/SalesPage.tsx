@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Receipt, Plus } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -13,6 +14,7 @@ import type { Sale } from '../api/client';
 import { useToast } from '../components/ui/Toast';
 
 export function SalesPage() {
+  const navigate = useNavigate();
   const toast = useToast();
   const [sales, setSales] = React.useState<Sale[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -75,7 +77,7 @@ export function SalesPage() {
             View transaction logs, billing receipts, and counter payments.
           </p>
         </div>
-        <Button variant="primary" onClick={() => setIsAddOpen(true)}>
+        <Button variant="primary" onClick={() => navigate('/pos')}>
           <Plus className="w-4 h-4" strokeWidth={2} />
           <span>Record sale</span>
         </Button>
@@ -85,9 +87,9 @@ export function SalesPage() {
         <EmptyState
           icon={<Receipt className="w-6 h-6 text-primary" strokeWidth={2} />}
           title="No sales recorded yet"
-          description="Your sales ledger is empty. Record customer counter purchases or scan bills to calculate daily revenue and profitability."
+          description="Your sales ledger is empty. Record customer counter purchases or scan bills in POS Billing to calculate daily revenue and profitability."
           actionLabel="Record first sale"
-          onAction={() => setIsAddOpen(true)}
+          onAction={() => navigate('/pos')}
         />
       ) : (
         <Card>

@@ -1,13 +1,15 @@
 import * as React from 'react';
-import { Search, Bell, LogOut, Settings, Store, ChevronDown, ShieldCheck } from 'lucide-react';
+import { Search, Bell, LogOut, Settings, Store, ChevronDown, ShieldCheck, Sun, Moon } from 'lucide-react';
 import { Badge } from '../ui/Badge';
 import { useAuth } from '../../context/AuthContext';
 import { useAlerts } from '../../context/AlertsContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 
 export function Header() {
   const { user, logout } = useAuth();
   const { alertCount } = useAlerts();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = React.useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
@@ -69,14 +71,30 @@ export function Header() {
 
       {/* Right: Notification Bell & Profile Menu */}
       <div className="flex items-center gap-2 sm:gap-3.5">
-        {/* Trial Days Chip (Mobile and Tablet display) */}
+        {/* Trial: X days left chip in the app header */}
         <Badge
           variant={trialDays <= 1 ? 'warning' : 'success'}
           dot
-          className="text-xs font-semibold lg:hidden"
+          className="text-xs font-semibold"
         >
-          {trialDays}d left
+          Trial: {trialDays} {trialDays === 1 ? 'day' : 'days'} left
         </Badge>
+
+        {/* Theme Toggle Button (Sun / Moon) */}
+        <button
+          type="button"
+          id="theme-toggle-button"
+          onClick={toggleTheme}
+          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          className="w-12 h-12 min-h-[48px] min-w-[48px] rounded-[6px] border border-border bg-surface flex items-center justify-center text-text-medium hover:text-text-high hover:bg-canvas transition-colors"
+          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {theme === 'dark' ? (
+            <Sun className="w-5 h-5 text-warning" strokeWidth={2} />
+          ) : (
+            <Moon className="w-5 h-5 text-text-medium" strokeWidth={2} />
+          )}
+        </button>
 
         {/* Notification Bell with alert count */}
         <button
@@ -90,14 +108,14 @@ export function Header() {
               navigate('/dashboard#alerts');
             }
           }}
-          className="w-12 h-12 min-h-[48px] min-w-[48px] rounded-[8px] border border-border bg-surface flex items-center justify-center text-text-medium hover:text-text-high hover:bg-canvas transition-colors relative"
+          className="w-12 h-12 min-h-[48px] min-w-[48px] rounded-[6px] border border-border bg-surface flex items-center justify-center text-text-medium hover:text-text-high hover:bg-canvas transition-colors relative"
           aria-label={`View alerts (${alertCount})`}
         >
           <Bell className="w-5 h-5" strokeWidth={2} />
           {alertCount > 0 && (
             <span
               id="header-alert-badge"
-              className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-white text-[10px] font-bold flex items-center justify-center leading-none ring-2 ring-surface tabular-nums"
+              className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-destructive-solid text-white text-[10px] font-bold flex items-center justify-center leading-none ring-2 ring-surface tabular-nums"
             >
               {alertCount > 99 ? '99+' : alertCount}
             </span>
