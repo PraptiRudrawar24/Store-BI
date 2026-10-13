@@ -78,6 +78,7 @@ class PlanConfig(Base):
 class Product(Base):
     __tablename__ = "products"
     id = Column(Integer, primary_key=True, index=True)
+    shop_id = Column(Integer, ForeignKey("shops.id"), nullable=True, index=True)
     name = Column(String, index=True)
     category = Column(String)
     cost_price = Column(Float)
@@ -89,6 +90,7 @@ class Product(Base):
 class Sale(Base):
     __tablename__ = "sales"
     id = Column(Integer, primary_key=True, index=True)
+    shop_id = Column(Integer, ForeignKey("shops.id"), nullable=True, index=True)
     date_time = Column(DateTime)
     total_amount = Column(Float)
     total_profit = Column(Float)
@@ -109,6 +111,7 @@ class SaleItem(Base):
 class Expense(Base):
     __tablename__ = "expenses"
     id = Column(Integer, primary_key=True, index=True)
+    shop_id = Column(Integer, ForeignKey("shops.id"), nullable=True, index=True)
     date = Column(Date)
     category = Column(String)
     amount = Column(Float)

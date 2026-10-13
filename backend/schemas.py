@@ -21,6 +21,8 @@ class VerifyOTPRequest(BaseModel):
     phone: str
     otp: str
     email: Optional[str] = None
+    store_name: Optional[str] = None
+    owner_name: Optional[str] = None
 
     @field_validator('phone')
     @classmethod
@@ -137,6 +139,7 @@ class ProductBase(BaseModel):
     stock_qty: int
     reorder_level: int = 10
     expiry_date: Optional[date] = None
+    shop_id: Optional[int] = None
 
 class ProductCreate(ProductBase):
     pass
@@ -149,6 +152,7 @@ class ProductUpdate(BaseModel):
     stock_qty: Optional[int] = None
     reorder_level: Optional[int] = None
     expiry_date: Optional[date] = None
+    shop_id: Optional[int] = None
 
 class ProductResponse(ProductBase):
     id: int
@@ -177,6 +181,7 @@ class SaleBase(BaseModel):
     total_amount: float
     total_profit: float
     payment_mode: str = "Cash"
+    shop_id: Optional[int] = None
 
 class SaleCreate(SaleBase):
     items: List[SaleItemCreate] = []
@@ -199,6 +204,7 @@ class ExpenseBase(BaseModel):
     category: str
     amount: float
     note: Optional[str] = ""
+    shop_id: Optional[int] = None
 
 class ExpenseCreate(ExpenseBase):
     pass
@@ -240,16 +246,27 @@ class ExpensePaginatedResponse(BaseModel):
 # --- Invoice Extraction Schemas ---
 class ExtractedInvoiceItem(BaseModel):
     name: str
+    description: Optional[str] = None
     qty: int = 1
+    quantity: Optional[int] = None
     cost_price: Optional[float] = None
+    unit_price: Optional[float] = None
     expiry_date: Optional[str] = None
     confidence: float = 0.9
     mrp: Optional[float] = None
     line_total: Optional[float] = None
+    amount: Optional[float] = None
 
 class ExtractedInvoiceResponse(BaseModel):
     supplier: Optional[str] = None
+    vendor: Optional[str] = None
+    invoice_number: Optional[str] = None
     invoice_date: Optional[str] = None
+    date: Optional[str] = None
+    currency: Optional[str] = "INR"
+    subtotal: Optional[float] = None
+    tax: Optional[float] = None
+    total: Optional[float] = None
     items: List[ExtractedInvoiceItem] = []
     is_mock: bool = False
     message: Optional[str] = None
@@ -267,7 +284,11 @@ class ConfirmInvoiceItem(BaseModel):
 
 class ConfirmInvoiceRequest(BaseModel):
     supplier: Optional[str] = None
+    vendor: Optional[str] = None
+    invoice_number: Optional[str] = None
     invoice_date: Optional[str] = None
+    date: Optional[str] = None
+    currency: Optional[str] = "INR"
     items: List[ConfirmInvoiceItem]
 
 

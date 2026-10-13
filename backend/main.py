@@ -7,6 +7,7 @@ import httpx
 from datetime import datetime, timedelta, date
 from typing import List, Optional, Union, Dict, Any
 from fastapi import FastAPI, Depends, HTTPException, status, Response, File, UploadFile, Header, Query, Request
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
@@ -26,6 +27,7 @@ from database import engine, get_db, migrate_db, SessionLocal
 from auth import (
     create_access_token,
     get_current_shop,
+    get_current_shop_optional,
     get_current_admin,
     ensure_admin_account,
     calculate_trial_days_left,
@@ -105,6 +107,7 @@ def verify_otp(
         trial_end = now + timedelta(days=5)
 
         shop = models.Shop(
+            name="My Store",
             phone=payload.phone,
             email=payload.email,
             trial_start_date=now,
@@ -169,13 +172,26 @@ def get_me(current_shop: models.Shop = Depends(get_current_shop)):
     return shop_dict
 
 
-# Onboarding Step 1
+# ------------------------------------------------------------------------------
+# ONBOARDING WIZARD STEP ENDPOINTS
+# Reason & Purpose:
+# Guides a newly registered merchant through 4 structured onboarding checkpoints.
+# Each checkpoint captures essential operational parameters, sets progressive
+# milestone tracking (onboarding_step 1 -> 4), and on Step 4 marks
+# `onboarding_completed = True` to grant full dashboard access.
+# ------------------------------------------------------------------------------
+
+# Onboarding Step 1: Merchant Owner Profile
 @app.post("/auth/onboarding/step-1")
 def save_onboarding_step_1(
     data: schemas.OnboardingStep1Request,
     current_shop: models.Shop = Depends(get_current_shop),
     db: Session = Depends(get_db),
 ):
+    """
+    Step 1: Captures owner's legal/display name, contact phone, email, and preferred language.
+    Updates onboarding_step to at least 2 upon success.
+    """
     current_shop.owner_name = data.owner_name
     if data.phone:
         current_shop.phone = data.phone
@@ -197,13 +213,18 @@ def save_onboarding_step_1(
     }
 
 
-# Onboarding Step 2
+# Onboarding Step 2: Store Entity, Category & Location
 @app.post("/auth/onboarding/step-2")
 def save_onboarding_step_2(
     data: schemas.OnboardingStep2Request,
     current_shop: models.Shop = Depends(get_current_shop),
     db: Session = Depends(get_db),
 ):
+    """
+    Step 2: Captures official store trading name, primary category (Kirana, Pharmacy, etc.),
+    city, state, pincode, and optional GSTIN for GST-compliant invoicing.
+    Updates onboarding_step to at least 3 upon success.
+    """
     current_shop.name = data.name
     current_shop.category = data.category
     current_shop.city = data.city
@@ -225,13 +246,18 @@ def save_onboarding_step_2(
     }
 
 
-# Onboarding Step 3
+# Onboarding Step 3: Inventory Scale & Operational Bookkeeping
 @app.post("/auth/onboarding/step-3")
 def save_onboarding_step_3(
     data: schemas.OnboardingStep3Request,
     current_shop: models.Shop = Depends(get_current_shop),
     db: Session = Depends(get_db),
 ):
+    """
+    Step 3: Captures retail catalog volume (approx SKU count), monthly revenue bracket,
+    current tracking method (paper khata, Excel, etc.), and whether store sells perishable/expiring goods.
+    Updates onboarding_step to at least 4 upon success.
+    """
     current_shop.approx_products = data.approx_products
     current_shop.monthly_turnover = data.monthly_turnover
     current_shop.current_tracking_method = data.current_tracking_method
@@ -251,13 +277,18 @@ def save_onboarding_step_3(
     }
 
 
-# Onboarding Step 4
+# Onboarding Step 4: Core Business Challenges & Final Activation
 @app.post("/auth/onboarding/step-4")
 def save_onboarding_step_4(
     data: schemas.OnboardingStep4Request,
     current_shop: models.Shop = Depends(get_current_shop),
     db: Session = Depends(get_db),
 ):
+    """
+    Step 4: Stores selected retail pain points (stock-outs, dead stock, unknown margins),
+    marks onboarding_completed = True, and officially activates full dashboard access
+    for the merchant's 5-day trial period.
+    """
     current_shop.challenges = json.dumps(data.challenges)
     current_shop.onboarding_completed = True
     current_shop.onboarding_step = 4
@@ -382,6 +413,7 @@ def delete_shop(shop_id: int, db: Session = Depends(get_db)):
 # ==========================================
 @app.get("/products/", response_model=Union[schemas.ProductPaginatedResponse, List[schemas.ProductResponse]])
 def get_products(
+    request: Request,
     skip: int = 0,
     limit: int = 100,
     search: Optional[str] = None,
@@ -392,7 +424,11 @@ def get_products(
     page_size: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
+    current_shop = get_current_shop_optional(request, db)
     query = db.query(models.Product)
+    if current_shop and not getattr(current_shop, "is_admin", False):
+        query = query.filter(models.Product.shop_id == current_shop.id)
+
     if search:
         search_pattern = f"%{search}%"
         query = query.filter(
@@ -443,8 +479,38 @@ def get_product(product_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/products/", response_model=schemas.ProductResponse, status_code=status.HTTP_201_CREATED)
-def create_product(product: schemas.ProductCreate, db: Session = Depends(get_db)):
-    db_product = models.Product(**product.model_dump())
+def create_product(product: schemas.ProductCreate, request: Request, db: Session = Depends(get_db)):
+    current_shop = get_current_shop_optional(request, db)
+    prod_data = product.model_dump()
+    target_shop_id = current_shop.id if current_shop else prod_data.get("shop_id")
+    clean_name = product.name.strip()
+
+    name_query = db.query(models.Product).filter(func.lower(models.Product.name) == clean_name.lower())
+    if target_shop_id:
+        name_query = name_query.filter(models.Product.shop_id == target_shop_id)
+    else:
+        name_query = name_query.filter(models.Product.shop_id.is_(None))
+    existing = name_query.first()
+
+    if existing:
+        existing.stock_qty += max(0, product.stock_qty)
+        if product.cost_price is not None and product.cost_price > 0:
+            existing.cost_price = product.cost_price
+        if product.selling_price is not None and product.selling_price > 0:
+            existing.selling_price = product.selling_price
+        if product.category:
+            existing.category = product.category
+        if product.expiry_date:
+            existing.expiry_date = product.expiry_date
+        if product.reorder_level is not None:
+            existing.reorder_level = product.reorder_level
+        db.commit()
+        db.refresh(existing)
+        return existing
+
+    if current_shop and not prod_data.get("shop_id"):
+        prod_data["shop_id"] = current_shop.id
+    db_product = models.Product(**prod_data)
     db.add(db_product)
     db.commit()
     db.refresh(db_product)
@@ -479,6 +545,7 @@ def delete_product(product_id: int, db: Session = Depends(get_db)):
 # ==========================================
 @app.get("/sales/", response_model=Union[schemas.SalePaginatedResponse, List[schemas.SaleResponse]])
 def get_sales(
+    request: Request,
     skip: int = 0,
     limit: int = 100,
     search: Optional[str] = None,
@@ -488,7 +555,11 @@ def get_sales(
     page_size: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
+    current_shop = get_current_shop_optional(request, db)
     query = db.query(models.Sale)
+    if current_shop and not getattr(current_shop, "is_admin", False):
+        query = query.filter(models.Sale.shop_id == current_shop.id)
+
     if search:
         search_pattern = f"%{search}%"
         try:
@@ -538,7 +609,8 @@ def get_sale(sale_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/sales/", response_model=schemas.SaleResponse, status_code=status.HTTP_201_CREATED)
-def create_sale(sale_in: schemas.SaleCreate, db: Session = Depends(get_db)):
+def create_sale(sale_in: schemas.SaleCreate, request: Request, db: Session = Depends(get_db)):
+    current_shop = get_current_shop_optional(request, db)
     # 1. Validate stock for all line items first
     for item in sale_in.items:
         product = db.query(models.Product).filter(models.Product.id == item.product_id).first()
@@ -556,6 +628,8 @@ def create_sale(sale_in: schemas.SaleCreate, db: Session = Depends(get_db)):
     sale_data = sale_in.model_dump(exclude={"items"})
     if not sale_data.get("date_time"):
         sale_data["date_time"] = datetime.utcnow()
+    if current_shop and not sale_data.get("shop_id"):
+        sale_data["shop_id"] = current_shop.id
 
     db_sale = models.Sale(**sale_data)
     db.add(db_sale)
@@ -581,18 +655,47 @@ def create_sale(sale_in: schemas.SaleCreate, db: Session = Depends(get_db)):
 
 
 @app.post("/products/bulk", status_code=status.HTTP_201_CREATED)
-def bulk_create_products(products_in: List[schemas.ProductCreate], db: Session = Depends(get_db)):
+def bulk_create_products(products_in: List[schemas.ProductCreate], request: Request, db: Session = Depends(get_db)):
+    current_shop = get_current_shop_optional(request, db)
     created = []
     for p in products_in:
-        db_prod = models.Product(**p.model_dump())
-        db.add(db_prod)
-        created.append(db_prod)
+        p_dict = p.model_dump()
+        target_shop_id = current_shop.id if current_shop else p_dict.get("shop_id")
+        clean_name = p.name.strip()
+
+        name_query = db.query(models.Product).filter(func.lower(models.Product.name) == clean_name.lower())
+        if target_shop_id:
+            name_query = name_query.filter(models.Product.shop_id == target_shop_id)
+        else:
+            name_query = name_query.filter(models.Product.shop_id.is_(None))
+        existing = name_query.first()
+
+        if existing:
+            existing.stock_qty += max(0, p.stock_qty)
+            if p.cost_price is not None and p.cost_price > 0:
+                existing.cost_price = p.cost_price
+            if p.selling_price is not None and p.selling_price > 0:
+                existing.selling_price = p.selling_price
+            if p.category:
+                existing.category = p.category
+            if p.expiry_date:
+                existing.expiry_date = p.expiry_date
+            if p.reorder_level is not None:
+                existing.reorder_level = p.reorder_level
+            created.append(existing)
+        else:
+            if current_shop and not p_dict.get("shop_id"):
+                p_dict["shop_id"] = current_shop.id
+            db_prod = models.Product(**p_dict)
+            db.add(db_prod)
+            created.append(db_prod)
     db.commit()
     return {"success": True, "count": len(created)}
 
 
 @app.post("/sales/bulk", status_code=status.HTTP_201_CREATED)
-def bulk_create_sales(sales_in: List[schemas.SaleCreate], db: Session = Depends(get_db)):
+def bulk_create_sales(sales_in: List[schemas.SaleCreate], request: Request, db: Session = Depends(get_db)):
+    current_shop = get_current_shop_optional(request, db)
     # Validate stock across all sales
     for s in sales_in:
         for item in s.items:
@@ -613,6 +716,8 @@ def bulk_create_sales(sales_in: List[schemas.SaleCreate], db: Session = Depends(
         s_data = s.model_dump(exclude={"items"})
         if not s_data.get("date_time"):
             s_data["date_time"] = datetime.utcnow()
+        if current_shop and not s_data.get("shop_id"):
+            s_data["shop_id"] = current_shop.id
         db_sale = models.Sale(**s_data)
         db.add(db_sale)
         db.flush()
@@ -663,6 +768,7 @@ def delete_sale(sale_id: int, db: Session = Depends(get_db)):
 # ==========================================
 @app.get("/expenses/", response_model=Union[schemas.ExpensePaginatedResponse, List[schemas.ExpenseResponse]])
 def get_expenses(
+    request: Request,
     skip: int = 0,
     limit: int = 100,
     search: Optional[str] = None,
@@ -673,7 +779,11 @@ def get_expenses(
     page_size: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
+    current_shop = get_current_shop_optional(request, db)
     query = db.query(models.Expense)
+    if current_shop and not getattr(current_shop, "is_admin", False):
+        query = query.filter(models.Expense.shop_id == current_shop.id)
+
     if search:
         search_pattern = f"%{search}%"
         query = query.filter(
@@ -720,8 +830,12 @@ def get_expense(expense_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/expenses/", response_model=schemas.ExpenseResponse, status_code=status.HTTP_201_CREATED)
-def create_expense(expense: schemas.ExpenseCreate, db: Session = Depends(get_db)):
-    db_expense = models.Expense(**expense.model_dump())
+def create_expense(expense: schemas.ExpenseCreate, request: Request, db: Session = Depends(get_db)):
+    current_shop = get_current_shop_optional(request, db)
+    exp_data = expense.model_dump()
+    if current_shop and not exp_data.get("shop_id"):
+        exp_data["shop_id"] = current_shop.id
+    db_expense = models.Expense(**exp_data)
     db.add(db_expense)
     db.commit()
     db.refresh(db_expense)
@@ -755,10 +869,16 @@ def delete_expense(expense_id: int, db: Session = Depends(get_db)):
 # UPLOAD COUNTS HELPER
 # ==========================================
 @app.get("/upload/counts")
-def get_upload_counts(db: Session = Depends(get_db)):
-    products_count = db.query(models.Product).count()
-    sales_count = db.query(models.Sale).count()
-    expenses_count = db.query(models.Expense).count()
+def get_upload_counts(request: Request, db: Session = Depends(get_db)):
+    shop = get_current_shop_optional(request, db)
+    if shop and not getattr(shop, "is_admin", False):
+        products_count = db.query(models.Product).filter(models.Product.shop_id == shop.id).count()
+        sales_count = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).count()
+        expenses_count = db.query(models.Expense).filter(models.Expense.shop_id == shop.id).count()
+    else:
+        products_count = db.query(models.Product).count()
+        sales_count = db.query(models.Sale).count()
+        expenses_count = db.query(models.Expense).count()
     return {
         "products": products_count,
         "sales": sales_count,
@@ -771,16 +891,21 @@ def get_upload_counts(db: Session = Depends(get_db)):
 # ANALYTICS / SUMMARY (ZERO-START SAFE)
 # ==========================================
 @app.get("/analytics/summary")
-def get_analytics_summary(db: Session = Depends(get_db)):
-    total_sales = db.query(models.Sale).count()
-    sales_list = db.query(models.Sale).all()
+def get_analytics_summary(request: Request, db: Session = Depends(get_db)):
+    shop = get_current_shop_optional(request, db)
+    if shop and not getattr(shop, "is_admin", False):
+        sales_list = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).all()
+        expenses_list = db.query(models.Expense).filter(models.Expense.shop_id == shop.id).all()
+        products_list = db.query(models.Product).filter(models.Product.shop_id == shop.id).all()
+    else:
+        sales_list = db.query(models.Sale).all()
+        expenses_list = db.query(models.Expense).all()
+        products_list = db.query(models.Product).all()
+
+    total_sales = len(sales_list)
     total_revenue = sum(s.total_amount for s in sales_list) if sales_list else 0.0
     total_profit = sum(s.total_profit for s in sales_list) if sales_list else 0.0
-
-    expenses_list = db.query(models.Expense).all()
     total_expenses = sum(e.amount for e in expenses_list) if expenses_list else 0.0
-
-    products_list = db.query(models.Product).all()
     total_products = len(products_list)
     low_stock_products = [p for p in products_list if p.stock_qty <= p.reorder_level]
 
@@ -885,7 +1010,11 @@ def get_analytics_sales(
     if parsed_from > parsed_to:
         parsed_from, parsed_to = parsed_to, parsed_from
 
-    all_sales = db.query(models.Sale).all()
+    shop = get_current_shop_optional(request, db)
+    if shop and not getattr(shop, "is_admin", False):
+        all_sales = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).all()
+    else:
+        all_sales = db.query(models.Sale).all()
     period_sales = [
         s for s in all_sales
         if _parse_sale_date(s.date_time) and parsed_from <= _parse_sale_date(s.date_time) <= parsed_to
@@ -1073,6 +1202,7 @@ def get_analytics_sales(
 
 @app.get("/api/analytics/products", response_model=schemas.ProductAnalyticsResponse)
 def get_analytics_products(
+    request: Request,
     period: str = "30days",
     category: str = "all",
     db: Session = Depends(get_db)
@@ -1100,15 +1230,20 @@ def get_analytics_products(
     else:  # "all"
         start_date = date(2000, 1, 1)
 
-    all_products = db.query(models.Product).all()
+    shop = get_current_shop_optional(request, db)
+    if shop and not getattr(shop, "is_admin", False):
+        all_products = db.query(models.Product).filter(models.Product.shop_id == shop.id).all()
+        all_sales = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).all()
+    else:
+        all_products = db.query(models.Product).all()
+        all_sales = db.query(models.Sale).all()
+
     categories_set = sorted(list({p.category for p in all_products if p.category}))
 
     if cat_filter != "all" and cat_filter != "":
         products = [p for p in all_products if p.category and p.category.lower() == cat_filter.lower()]
     else:
         products = all_products
-
-    all_sales = db.query(models.Sale).all()
 
     period_sales = [
         s for s in all_sales
@@ -1263,7 +1398,7 @@ def get_analytics_products(
 
 
 @app.get("/api/analytics/inventory", response_model=schemas.InventoryAnalyticsResponse)
-def get_analytics_inventory(db: Session = Depends(get_db)):
+def get_analytics_inventory(request: Request, db: Session = Depends(get_db)):
     """
     Returns Inventory Analytics:
     - Summary cards: stock value at cost, number of products, low-stock count, inventory turnover
@@ -1273,7 +1408,11 @@ def get_analytics_inventory(db: Session = Depends(get_db)):
     - Zero state: summary cards show ₹0 and 0, and lists empty (displayed as 'No products added yet')
     """
     now_date = datetime.utcnow().date()
-    all_products = db.query(models.Product).all()
+    shop = get_current_shop_optional(request, db)
+    if shop and not getattr(shop, "is_admin", False):
+        all_products = db.query(models.Product).filter(models.Product.shop_id == shop.id).all()
+    else:
+        all_products = db.query(models.Product).all()
 
     group_defs = [
         ("expired", "Expired", "Write off or return to supplier for credit"),
@@ -1307,7 +1446,10 @@ def get_analytics_inventory(db: Session = Depends(get_db)):
             expiry_groups=expiry_groups,
         )
 
-    all_sales = db.query(models.Sale).all()
+    if shop and not getattr(shop, "is_admin", False):
+        all_sales = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).all()
+    else:
+        all_sales = db.query(models.Sale).all()
 
     last_sold_map = {}
     units_30d_map = {}
@@ -1447,6 +1589,7 @@ def get_analytics_inventory(db: Session = Depends(get_db)):
 
 @app.get("/api/analytics/profitability", response_model=schemas.ProfitabilityAnalyticsResponse)
 def get_analytics_profitability(
+    request: Request,
     from_date: Optional[str] = Query(None, alias="from"),
     to_date: Optional[str] = Query(None, alias="to"),
     db: Session = Depends(get_db)
@@ -1478,16 +1621,21 @@ def get_analytics_profitability(
     from_str = parsed_from.isoformat()
     to_str = parsed_to.isoformat()
 
-    all_products = db.query(models.Product).all()
-    prod_map = {p.id: p for p in all_products}
+    shop = get_current_shop_optional(request, db)
+    if shop and not getattr(shop, "is_admin", False):
+        all_products = db.query(models.Product).filter(models.Product.shop_id == shop.id).all()
+        all_sales = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).all()
+        all_expenses = db.query(models.Expense).filter(models.Expense.shop_id == shop.id).all()
+    else:
+        all_products = db.query(models.Product).all()
+        all_sales = db.query(models.Sale).all()
+        all_expenses = db.query(models.Expense).all()
 
-    all_sales = db.query(models.Sale).all()
+    prod_map = {p.id: p for p in all_products}
     period_sales = [
         s for s in all_sales
         if _parse_sale_date(s.date_time) and parsed_from <= _parse_sale_date(s.date_time) <= parsed_to
     ]
-
-    all_expenses = db.query(models.Expense).all()
     period_expenses = [
         e for e in all_expenses
         if e.date and parsed_from <= e.date <= parsed_to
@@ -1915,6 +2063,7 @@ def _holt_winters_forecast(actuals: List[float], horizon: int = 7):
 
 @app.get("/api/ai/sales-forecast", response_model=schemas.SalesForecastResponse)
 def get_ai_sales_forecast(
+    request: Request,
     days: int = Query(7, ge=7, le=30),
     db: Session = Depends(get_db)
 ):
@@ -1924,7 +2073,11 @@ def get_ai_sales_forecast(
     Below 14 days, returns has_enough_data=False and count of days available.
     Caches model and retrains when sales change.
     """
-    all_sales = db.query(models.Sale).order_by(models.Sale.id.asc()).all()
+    shop = get_current_shop_optional(request, db)
+    if shop and not getattr(shop, "is_admin", False):
+        all_sales = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).order_by(models.Sale.id.asc()).all()
+    else:
+        all_sales = db.query(models.Sale).order_by(models.Sale.id.asc()).all()
 
     # Determine unique days of sales
     sales_by_date = {}
@@ -2045,6 +2198,7 @@ def get_ai_sales_forecast(
 
 @app.get("/api/ai/demand-forecast", response_model=schemas.DemandForecastResponse)
 def get_ai_demand_forecast(
+    request: Request,
     lead_time_days: int = Query(3, ge=1, le=14),
     search: Optional[str] = None,
     category: Optional[str] = None,
@@ -2060,8 +2214,13 @@ def get_ai_demand_forecast(
     now_date = datetime.utcnow().date()
     start_30d = now_date - timedelta(days=29)
 
-    all_products = db.query(models.Product).all()
-    all_sales = db.query(models.Sale).all()
+    shop = get_current_shop_optional(request, db)
+    if shop and not getattr(shop, "is_admin", False):
+        all_products = db.query(models.Product).filter(models.Product.shop_id == shop.id).all()
+        all_sales = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).all()
+    else:
+        all_products = db.query(models.Product).all()
+        all_sales = db.query(models.Sale).all()
 
     # Product sales mapping over last 30 days
     prod_daily_units = {}
@@ -2246,6 +2405,7 @@ def get_ai_demand_forecast(
 @app.get("/api/ai/demand-forecast/{product_id}", response_model=schemas.ProductDemandDetailResponse)
 def get_ai_product_demand_detail(
     product_id: int,
+    request: Request,
     lead_time_days: int = Query(3, ge=1, le=14),
     db: Session = Depends(get_db)
 ):
@@ -2260,7 +2420,11 @@ def get_ai_product_demand_detail(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    all_sales = db.query(models.Sale).all()
+    shop = get_current_shop_optional(request, db)
+    if shop and not getattr(shop, "is_admin", False):
+        all_sales = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).all()
+    else:
+        all_sales = db.query(models.Sale).all()
 
     daily_actuals = {}
     for s in all_sales:
@@ -2448,11 +2612,14 @@ def get_dashboard_kpis(request: Request, period: str = "today", db: Session = De
     (today, 7days, 30days) with percentage change compared to the previous period.
     Strictly follows ZERO-START RULE (returns explicit 0s and None for deltas when previous is 0).
     """
-    verify_feature_access_or_raise(request, "daily_dashboard", db)
+    shop = verify_feature_access_or_raise(request, "daily_dashboard", db)
     period_key = (period or "today").lower().strip()
     now_date = datetime.utcnow().date()
 
-    all_sales = db.query(models.Sale).all()
+    if shop and not getattr(shop, "is_admin", False):
+        all_sales = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).all()
+    else:
+        all_sales = db.query(models.Sale).all()
 
     if period_key in ("today", "1d", "day"):
         norm_period = "today"
@@ -2501,16 +2668,20 @@ def get_dashboard_kpis(request: Request, period: str = "today", db: Session = De
 
 
 @app.get("/api/dashboard/today-vs-yesterday", response_model=schemas.DashboardTodayVsYesterdayResponse)
-def get_dashboard_today_vs_yesterday(db: Session = Depends(get_db)):
+def get_dashboard_today_vs_yesterday(request: Request, db: Session = Depends(get_db)):
     """
     Returns today vs yesterday sales, profit, transactions and average bill,
     side-by-side with delta percentages and a one-line summary.
     Returns explicit zeros when no data exists.
     """
+    shop = get_current_shop_optional(request, db)
     now_date = datetime.utcnow().date()
     yesterday_date = now_date - timedelta(days=1)
 
-    all_sales = db.query(models.Sale).all()
+    if shop and not getattr(shop, "is_admin", False):
+        all_sales = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).all()
+    else:
+        all_sales = db.query(models.Sale).all()
 
     today_sales = [s for s in all_sales if _parse_sale_date(s.date_time) == now_date]
     yesterday_sales = [s for s in all_sales if _parse_sale_date(s.date_time) == yesterday_date]
@@ -2583,7 +2754,7 @@ def calculate_days_left(stock_qty: int, units_sold_14d: int) -> tuple[Optional[f
 
 
 @app.get("/api/dashboard/sales-trend", response_model=schemas.SalesTrendResponse)
-def get_sales_trend(granularity: str = "daily", db: Session = Depends(get_db)):
+def get_sales_trend(request: Request, granularity: str = "daily", db: Session = Depends(get_db)):
     """
     Returns Sales Trend data for /dashboard:
     - Daily: last 30 days (day by day)
@@ -2591,9 +2762,13 @@ def get_sales_trend(granularity: str = "daily", db: Session = Depends(get_db)):
     Returns points with sales (bars) and profit/transactions (line).
     has_data is True only when sales or transactions exist.
     """
+    shop = get_current_shop_optional(request, db)
     gran = (granularity or "daily").lower().strip()
     now_date = datetime.utcnow().date()
-    all_sales = db.query(models.Sale).all()
+    if shop and not getattr(shop, "is_admin", False):
+        all_sales = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).all()
+    else:
+        all_sales = db.query(models.Sale).all()
     points: List[dict] = []
 
     if gran in ("weekly", "week", "12w", "12weeks"):
@@ -2650,11 +2825,12 @@ def get_sales_trend(granularity: str = "daily", db: Session = Depends(get_db)):
 
 
 @app.get("/api/dashboard/category-sales", response_model=schemas.CategorySalesResponse)
-def get_category_sales(period: str = "today", db: Session = Depends(get_db)):
+def get_category_sales(request: Request, period: str = "today", db: Session = Depends(get_db)):
     """
     Returns Category-wise sales with horizontal bars, ₹ amount, share %,
     and Top 5 products list for the period (today, 7days, 30days).
     """
+    shop = get_current_shop_optional(request, db)
     period_key = (period or "today").lower().strip()
     now_date = datetime.utcnow().date()
 
@@ -2673,10 +2849,14 @@ def get_category_sales(period: str = "today", db: Session = Depends(get_db)):
         norm_period = "today"
         date_filter = lambda d: d == now_date
 
-    all_sales = db.query(models.Sale).all()
-    period_sales = [s for s in all_sales if date_filter(_parse_sale_date(s.date_time))]
+    if shop and not getattr(shop, "is_admin", False):
+        all_sales = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).all()
+        products_by_id = {p.id: p for p in db.query(models.Product).filter(models.Product.shop_id == shop.id).all()}
+    else:
+        all_sales = db.query(models.Sale).all()
+        products_by_id = {p.id: p for p in db.query(models.Product).all()}
 
-    products_by_id = {p.id: p for p in db.query(models.Product).all()}
+    period_sales = [s for s in all_sales if date_filter(_parse_sale_date(s.date_time))]
 
     cat_data = {}
     total_sales_amount = 0.0
@@ -2750,19 +2930,29 @@ def get_category_sales(period: str = "today", db: Session = Depends(get_db)):
 
 
 @app.get("/api/alerts", response_model=schemas.AlertsResponse)
-def get_alerts(db: Session = Depends(get_db)):
+def get_alerts(request: Request, db: Session = Depends(get_db)):
     """
     Returns Out of stock (stock_qty = 0) and Low stock (stock_qty <= reorder_level) products.
     Flags high demand when stock will run out within 7 days at the last-14-day average sales rate.
     Handles zero sales history gracefully without crashing (days_left = None, is_high_demand = False).
     """
+    shop = get_current_shop_optional(request, db)
     now_date = datetime.utcnow().date()
     start_14d = now_date - timedelta(days=13)
 
-    all_products = db.query(models.Product).all()
+    if shop and not getattr(shop, "is_admin", False):
+        user_products = db.query(models.Product).filter(models.Product.shop_id == shop.id).all()
+        if user_products:
+            all_products = user_products
+            all_sales = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).all()
+        else:
+            all_products = db.query(models.Product).filter(models.Product.shop_id.is_(None)).all()
+            all_sales = db.query(models.Sale).filter(models.Sale.shop_id.is_(None)).all()
+    else:
+        all_products = db.query(models.Product).all()
+        all_sales = db.query(models.Sale).all()
     total_products = len(all_products)
 
-    all_sales = db.query(models.Sale).all()
     recent_sales = [
         s for s in all_sales
         if _parse_sale_date(s.date_time) and start_14d <= _parse_sale_date(s.date_time) <= now_date
@@ -2825,25 +3015,35 @@ def get_alerts(db: Session = Depends(get_db)):
 # ==========================================
 # INVOICE / IMAGE TO DATA OCR EXTRACTION
 # ==========================================
+# INVOICE / IMAGE TO DATA OCR EXTRACTION
+# ==========================================
 @app.post("/api/extract-invoice", response_model=schemas.ExtractedInvoiceResponse)
 async def extract_invoice(
     request: Request,
     file: UploadFile = File(...),
     x_gemini_api_key: Optional[str] = Header(None, alias="X-Gemini-API-Key"),
+    x_anthropic_api_key: Optional[str] = Header(None, alias="X-Anthropic-API-Key"),
     db: Session = Depends(get_db),
 ):
     """
     Extracts line items and supplier data from a supplier invoice or handwritten sales note.
-    Uses vision-capable LLM API (GEMINI_API_KEY) with local OCR and fallback mock mode.
+    Uses vision-capable LLM API (Anthropic Claude or Google Gemini) with local OCR and fallback mock mode.
     """
     verify_feature_access_or_raise(request, "data_upload", db)
     try:
         content = await file.read()
         mime_type = file.content_type or "image/jpeg"
+        def _clean_key(k: Optional[str]) -> Optional[str]:
+            if not k:
+                return None
+            val = str(k).strip()
+            return None if val.lower() in ("undefined", "null", "none", "false", "") else val
+
+        api_key = _clean_key(x_anthropic_api_key) or _clean_key(x_gemini_api_key)
         result = await vision_provider.extract_invoice_from_image(
             content,
             mime_type=mime_type,
-            api_key=x_gemini_api_key,
+            api_key=api_key,
         )
         return result
     except vision_provider.UnreadableImageError as e:
@@ -2873,7 +3073,8 @@ def get_ocr_status():
     """
     Returns current OCR status and capabilities.
     """
-    has_api_key = bool(os.environ.get("GEMINI_API_KEY", "").strip())
+    has_anthropic = bool(os.environ.get("ANTHROPIC_API_KEY", "").strip())
+    has_gemini = bool(os.environ.get("GEMINI_API_KEY", "").strip())
     has_winocr = False
     try:
         import winocr
@@ -2881,9 +3082,18 @@ def get_ocr_status():
     except ImportError:
         pass
 
-    engine = "Gemini Vision AI" if has_api_key else ("Windows Native OCR" if has_winocr else "Demo Mode")
+    if has_anthropic:
+        engine = "Claude Vision AI"
+    elif has_gemini:
+        engine = "Gemini Vision AI"
+    elif has_winocr:
+        engine = "Windows Native OCR"
+    else:
+        engine = "Demo Mode"
+
     return {
-        "gemini_configured": has_api_key,
+        "gemini_configured": has_gemini or has_anthropic,
+        "anthropic_configured": has_anthropic,
         "active_engine": engine,
         "windows_native_available": has_winocr,
     }
@@ -2895,20 +3105,23 @@ class SaveGeminiKeyRequest(schemas.BaseModel):
 @app.post("/api/save-gemini-key")
 def save_gemini_key(payload: SaveGeminiKeyRequest):
     """
-    Saves GEMINI_API_KEY to runtime environment and .env file.
+    Saves GEMINI_API_KEY or ANTHROPIC_API_KEY to runtime environment and .env file.
     """
     key = payload.api_key.strip()
     if not key:
         raise HTTPException(status_code=400, detail="API key cannot be empty")
 
-    os.environ["GEMINI_API_KEY"] = key
+    var_name = "ANTHROPIC_API_KEY" if key.startswith("sk-ant-") else "GEMINI_API_KEY"
+    engine_name = "Claude Vision AI" if key.startswith("sk-ant-") else "Gemini Vision AI"
+
+    os.environ[var_name] = key
     env_path = os.path.join(os.path.dirname(__file__), ".env")
     try:
         lines = []
         if os.path.exists(env_path):
             with open(env_path, "r", encoding="utf-8") as f:
-                lines = [line for line in f.readlines() if not line.startswith("GEMINI_API_KEY=")]
-        lines.append(f"GEMINI_API_KEY={key}\n")
+                lines = [line for line in f.readlines() if not line.startswith(f"{var_name}=")]
+        lines.append(f"{var_name}={key}\n")
         with open(env_path, "w", encoding="utf-8") as f:
             f.writelines(lines)
     except Exception:
@@ -2916,36 +3129,51 @@ def save_gemini_key(payload: SaveGeminiKeyRequest):
 
     return {
         "success": True,
-        "message": "Gemini API key saved successfully. Vision OCR is now enabled.",
-        "active_engine": "Gemini Vision AI",
+        "message": f"{engine_name} key saved successfully. Vision OCR is now enabled.",
+        "active_engine": engine_name,
     }
 
 
 @app.post("/api/confirm-extracted-invoice")
-def confirm_extracted_invoice(payload: schemas.ConfirmInvoiceRequest, db: Session = Depends(get_db)):
+def confirm_extracted_invoice(payload: schemas.ConfirmInvoiceRequest, request: Request, db: Session = Depends(get_db)):
+    current_shop = get_current_shop_optional(request, db)
     """
     Saves confirmed items to the store inventory:
-    - If action == 'update': adds stock (+qty) to the existing matched product.
-    - If action == 'create': creates a new product in the store.
+    - If matched by ID or matching product name: adds stock (+qty) to the existing product.
+    - If completely new: creates a new product in the store.
     """
     updated_count = 0
     created_count = 0
 
     for item in payload.items:
-        if item.action == "update" and item.matched_product_id:
-            existing = db.query(models.Product).filter(models.Product.id == item.matched_product_id).first()
-            if existing:
-                existing.stock_qty += max(0, item.qty)
-                if item.cost_price is not None and item.cost_price > 0:
-                    existing.cost_price = item.cost_price
-                if item.selling_price is not None and item.selling_price > 0:
-                    existing.selling_price = item.selling_price
-                if item.expiry_date:
-                    existing.expiry_date = item.expiry_date
-                updated_count += 1
-                continue
+        clean_name = item.name.strip()
+        target_existing = None
 
-        # Fallback if no matching product was found or action == 'create'
+        if item.matched_product_id:
+            target_existing = db.query(models.Product).filter(models.Product.id == item.matched_product_id).first()
+
+        if not target_existing and clean_name:
+            name_query = db.query(models.Product).filter(func.lower(models.Product.name) == clean_name.lower())
+            if current_shop:
+                name_query = name_query.filter(models.Product.shop_id == current_shop.id)
+            else:
+                name_query = name_query.filter(models.Product.shop_id.is_(None))
+            target_existing = name_query.first()
+
+        if target_existing:
+            target_existing.stock_qty += max(0, item.qty)
+            if item.cost_price is not None and item.cost_price > 0:
+                target_existing.cost_price = item.cost_price
+            if item.selling_price is not None and item.selling_price > 0:
+                target_existing.selling_price = item.selling_price
+            if item.expiry_date:
+                target_existing.expiry_date = item.expiry_date
+            if item.category:
+                target_existing.category = item.category
+            updated_count += 1
+            continue
+
+        # Fallback if no matching product was found
         cost = item.cost_price if item.cost_price is not None else 0.0
         selling = (
             item.selling_price
@@ -2953,13 +3181,14 @@ def confirm_extracted_invoice(payload: schemas.ConfirmInvoiceRequest, db: Sessio
             else (round(cost * 1.25, 2) if cost > 0 else 20.0)
         )
         new_prod = models.Product(
-            name=item.name.strip(),
+            name=clean_name,
             category=item.category or "Grocery",
             cost_price=cost,
             selling_price=selling,
             stock_qty=max(0, item.qty),
             reorder_level=10,
             expiry_date=item.expiry_date,
+            shop_id=current_shop.id if current_shop else None,
         )
         db.add(new_prod)
         created_count += 1
@@ -2991,8 +3220,13 @@ def get_ai_product_recommendations(request: Request, db: Session = Depends(get_d
     """
     verify_feature_access_or_raise(request, "ai_insights", db)
     now_date = datetime.utcnow().date()
-    products = db.query(models.Product).all()
-    sales = db.query(models.Sale).order_by(models.Sale.date_time.asc()).all()
+    shop = get_current_shop_optional(request, db)
+    if shop and not getattr(shop, "is_admin", False):
+        products = db.query(models.Product).filter(models.Product.shop_id == shop.id).all()
+        sales = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).order_by(models.Sale.date_time.asc()).all()
+    else:
+        products = db.query(models.Product).all()
+        sales = db.query(models.Sale).order_by(models.Sale.date_time.asc()).all()
 
     # Checklist tracking
     product_count = len(products)
@@ -4074,8 +4308,8 @@ def get_admin_business_detail(
     s_status = "active" if shop.is_paid else ("expired" if trial_left == 0 else (shop.status or "trial"))
 
     # Real database statistics
-    catalogue_size = db.query(models.Product).count()
-    all_sales = db.query(models.Sale).all()
+    catalogue_size = db.query(models.Product).filter(models.Product.shop_id == shop.id).count()
+    all_sales = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).all()
     now_date = now.date()
     start_30 = now_date - timedelta(days=30)
     monthly_sales = sum(
