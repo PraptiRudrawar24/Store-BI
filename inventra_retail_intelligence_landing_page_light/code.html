@@ -1,0 +1,705 @@
+<!DOCTYPE html><html class="scroll-smooth" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Inventra Intel — Modern Retail &amp; Supermarket Business Intelligence</title>
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "inverse-on-surface": "#eaf1ff",
+          "surface-container-high": "#dce9ff",
+          "outline-variant": "#bdc9c6",
+          "primary-fixed-dim": "#80d5cb",
+          "on-tertiary": "#ffffff",
+          "surface-variant": "#d3e4fe",
+          "tertiary-fixed-dim": "#c0c1ff",
+          "on-error": "#ffffff",
+          "on-tertiary-container": "#eae8ff",
+          "on-tertiary-fixed-variant": "#2f2ebe",
+          "secondary-fixed": "#dae2fd",
+          "on-primary-fixed": "#00201d",
+          "inverse-primary": "#80d5cb",
+          "surface-bright": "#f8f9ff",
+          "surface-container-low": "#eff4ff",
+          "inverse-surface": "#213145",
+          "on-secondary-fixed-variant": "#3f465c",
+          "on-error-container": "#93000a",
+          "surface-dim": "#cbdbf5",
+          "on-primary": "#ffffff",
+          "primary-fixed": "#9cf2e8",
+          "surface-container-lowest": "#ffffff",
+          "surface-container": "#e5eeff",
+          "outline": "#6e7977",
+          "surface-container-highest": "#d3e4fe",
+          "on-secondary-container": "#5c647a",
+          "primary": "#005c55",
+          "surface-tint": "#006a63",
+          "background": "#f8f9ff",
+          "primary-container": "#0f766e",
+          "on-surface": "#0b1c30",
+          "on-tertiary-fixed": "#07006c",
+          "error": "#ba1a1a",
+          "error-container": "#ffdad6",
+          "on-secondary": "#ffffff",
+          "secondary": "#565e74",
+          "tertiary": "#3b3bc9",
+          "secondary-container": "#dae2fd",
+          "on-background": "#0b1c30",
+          "on-primary-container": "#a3faef",
+          "on-surface-variant": "#3e4947",
+          "tertiary-container": "#5457e2",
+          "surface": "#f8f9ff",
+          "on-primary-fixed-variant": "#00504a",
+          "on-secondary-fixed": "#131b2e",
+          "secondary-fixed-dim": "#bec6e0",
+          "tertiary-fixed": "#e1e0ff"
+        },
+        borderRadius: {
+          "DEFAULT": "0.125rem",
+          "lg": "0.25rem",
+          "xl": "0.5rem",
+          "full": "0.75rem"
+        },
+        spacing: {
+          "gutter-compact": "0.75rem",
+          "space-xs": "0.25rem",
+          "margin": "1.5rem",
+          "space-sm": "0.5rem",
+          "space-md": "0.75rem",
+          "margin-mobile": "1rem",
+          "space-lg": "1rem",
+          "space-xl": "1.5rem",
+          "gutter": "1rem"
+        },
+        fontFamily: {
+          "display-metric": ["Inter", "sans-serif"],
+          "body-sm": ["Inter", "sans-serif"],
+          "body-md": ["Inter", "sans-serif"],
+          "headline-lg": ["Inter", "sans-serif"],
+          "headline-md": ["Inter", "sans-serif"],
+          "body-lg": ["Inter", "sans-serif"],
+          "label-md": ["Inter", "sans-serif"],
+          "headline-sm": ["Inter", "sans-serif"],
+          "table-header": ["Inter", "sans-serif"],
+          "body-xs": ["Inter", "sans-serif"],
+          "metric-tabular": ["Inter", "sans-serif"],
+          "label-sm": ["Inter", "sans-serif"]
+        },
+        fontSize: {
+          "display-metric": ["32px", { lineHeight: "38px", letterSpacing: "-0.025em", fontWeight: "700" }],
+          "body-sm": ["13px", { lineHeight: "18px", fontWeight: "400" }],
+          "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+          "headline-lg": ["24px", { lineHeight: "32px", letterSpacing: "-0.02em", fontWeight: "600" }],
+          "headline-md": ["20px", { lineHeight: "28px", letterSpacing: "-0.015em", fontWeight: "600" }],
+          "body-lg": ["15px", { lineHeight: "22px", fontWeight: "400" }],
+          "label-md": ["13px", { lineHeight: "16px", letterSpacing: "0.01em", fontWeight: "600" }],
+          "headline-sm": ["16px", { lineHeight: "24px", letterSpacing: "-0.01em", fontWeight: "600" }],
+          "table-header": ["11px", { lineHeight: "14px", letterSpacing: "0.05em", fontWeight: "600" }],
+          "body-xs": ["12px", { lineHeight: "16px", fontWeight: "400" }],
+          "metric-tabular": ["14px", { lineHeight: "20px", fontWeight: "600" }],
+          "label-sm": ["11px", { lineHeight: "14px", letterSpacing: "0.04em", fontWeight: "600" }]
+        }
+      }
+    }
+  };
+</script>
+<style>
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    display: inline-block;
+    vertical-align: middle;
+    line-height: 1;
+  }
+  .pattern-grid-light {
+    background-image: radial-gradient(rgba(15, 118, 110, 0.08) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-position: 0 0;
+  }
+</style>
+</head>
+<body class="bg-[#f8fafc] text-slate-900 antialiased selection:bg-teal-700 selection:text-white min-h-screen">
+<!-- TOP NAVIGATION BAR -->
+<header class="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-slate-200 transition-all duration-150 shadow-sm">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+<!-- Brand & Platform Glyph -->
+<div class="flex items-center gap-3">
+<div class="h-9 w-9 rounded-lg bg-teal-700 flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-white text-[20px]" data-icon="storefront">storefront</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="font-headline-md text-headline-md font-bold text-slate-900 tracking-tight">Inventra</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-label-sm bg-teal-50 text-teal-800 border border-teal-200 font-semibold">PRO</span>
+</div>
+<span class="text-[10px] font-label-sm text-slate-500 tracking-wider uppercase">Retail Intelligence</span>
+</div>
+</div>
+<!-- Center Navigation Links -->
+<nav class="hidden md:flex items-center gap-8">
+<a class="font-label-md text-label-md text-slate-600 hover:text-teal-700 transition-colors font-medium" href="#features">Features</a>
+<a class="font-label-md text-label-md text-slate-600 hover:text-teal-700 transition-colors font-medium" href="#demo">Live POS Sync</a>
+<a class="font-label-md text-label-md text-slate-600 hover:text-teal-700 transition-colors font-medium" href="#capabilities">Capabilities</a>
+<a class="font-label-md text-label-md text-slate-600 hover:text-teal-700 transition-colors font-medium" href="#metrics">Enterprise ROI</a>
+<a class="font-label-md text-label-md text-slate-600 hover:text-teal-700 transition-colors font-medium" href="#pricing">Pricing</a>
+</nav>
+<!-- Action Buttons -->
+<div class="flex items-center gap-4">
+<a class="hidden sm:inline-block font-label-md text-label-md text-slate-600 hover:text-slate-900 transition-colors font-medium" href="http://localhost:5173/login">
+        Sign In
+      </a>
+<a class="flex items-center gap-1.5 px-4 py-2 rounded-lg font-label-md text-label-md text-white bg-teal-700 hover:bg-teal-800 shadow-sm transition-all duration-150 font-semibold" href="http://localhost:5173/login?mode=trial">
+<span>Start 5-Day Free Trial</span>
+<span class="material-symbols-outlined text-[16px]" data-icon="arrow_forward">arrow_forward</span>
+</a>
+</div>
+</div>
+</header>
+<!-- HERO SECTION -->
+<section class="relative pt-12 pb-20 overflow-hidden pattern-grid-light border-b border-slate-200 bg-white">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+<!-- Left Hero Content -->
+<div class="lg:col-span-6 space-y-6 text-left">
+<!-- Category Status Chip -->
+<div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-teal-50 border border-teal-200">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-500 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-teal-600"></span>
+</span>
+<span class="font-label-sm text-label-sm text-teal-800 font-semibold">
+            From Retail Data to Profitable Decisions — Zero Complexity
+          </span>
+</div>
+<!-- Headline -->
+<h1 class="font-headline-lg text-4xl sm:text-5xl lg:text-[52px] font-extrabold text-slate-900 leading-[1.14] tracking-tight">
+          Turn Your Supermarket Data Into <span class="text-teal-700">High-Impact Decisions.</span>
+</h1>
+<!-- Subheadline -->
+<p class="font-body-lg text-body-lg text-slate-600 max-w-xl leading-relaxed">
+          Automate inventory velocity, capture multi-counter billing terminals, calculate exact net margin per SKU, and predict dairy &amp; grocery stockouts before shelves empty. Built explicitly for Indian supermarkets &amp; grocery chains.
+        </p>
+<!-- CTA Buttons -->
+<div class="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+<a class="flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-label-md text-label-md text-white bg-teal-700 hover:bg-teal-800 shadow-sm transition-all font-semibold" href="http://localhost:5173/login?mode=trial">
+<span>Start 5-Day Free Trial</span>
+<span class="material-symbols-outlined text-[18px]" data-icon="arrow_forward">arrow_forward</span>
+</a>
+<a class="flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-label-md text-label-md text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 transition-all font-medium" href="#demo">
+<span class="material-symbols-outlined text-[18px] text-teal-700" data-icon="visibility">visibility</span>
+<span>Explore Interactive Demo</span>
+</a>
+</div>
+<!-- Trust Badges -->
+<div class="pt-4 flex flex-wrap items-center gap-y-2 gap-x-6 text-slate-600 font-label-sm text-label-sm">
+<div class="flex items-center gap-1.5 text-teal-700">
+<span class="material-symbols-outlined text-[16px]" data-icon="check_circle">check_circle</span>
+<span class="text-slate-600">No Credit Card Required</span>
+</div>
+<div class="flex items-center gap-1.5 text-teal-700">
+<span class="material-symbols-outlined text-[16px]" data-icon="check_circle">check_circle</span>
+<span class="text-slate-600">5-Minute POS Setup</span>
+</div>
+<div class="flex items-center gap-1.5 text-teal-700">
+<span class="material-symbols-outlined text-[16px]" data-icon="check_circle">check_circle</span>
+<span class="text-slate-600">Multi-Store Ready</span>
+</div>
+</div>
+</div>
+<!-- Right Hero Live Dashboard Window Preview (Clean SaaS Window) -->
+<div class="lg:col-span-6" id="demo">
+<div class="relative rounded-xl bg-white border border-slate-200 shadow-xl overflow-hidden">
+<!-- Window Title Bar -->
+<div class="h-11 px-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="h-3 w-3 rounded-full bg-slate-300 inline-block"></span>
+<span class="h-3 w-3 rounded-full bg-slate-300 inline-block"></span>
+<span class="h-3 w-3 rounded-full bg-slate-300 inline-block"></span>
+<span class="ml-2 font-label-sm text-label-sm text-slate-600 font-medium">Inventra Live Intelligence Engine</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-label-sm bg-teal-50 text-teal-700 border border-teal-200 font-semibold">
+<span class="h-1.5 w-1.5 rounded-full bg-teal-600 animate-pulse"></span>
+                Real-Time Sync
+              </span>
+</div>
+</div>
+<!-- Terminal Content Area -->
+<div class="p-5 space-y-4 bg-slate-50/50">
+<!-- KPI Row -->
+<div class="grid grid-cols-3 gap-3">
+<!-- KPI 1 -->
+<div class="bg-white border border-slate-200 rounded-lg p-3.5 space-y-1 shadow-sm">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-[11px] text-slate-500 uppercase tracking-wider font-semibold">30-Day Sales</span>
+<span class="material-symbols-outlined text-[16px] text-teal-600" data-icon="trending_up">trending_up</span>
+</div>
+<div class="font-metric-tabular text-lg sm:text-xl font-bold text-slate-900 tracking-tight">₹14,22,219</div>
+<div class="inline-flex items-center gap-1 text-[11px] font-label-sm text-teal-700 font-semibold">
+<span>+12.4% MoM</span>
+</div>
+</div>
+<!-- KPI 2 -->
+<div class="bg-white border border-slate-200 rounded-lg p-3.5 space-y-1 shadow-sm">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Net Profit</span>
+<span class="material-symbols-outlined text-[16px] text-teal-600" data-icon="account_balance_wallet">account_balance_wallet</span>
+</div>
+<div class="font-metric-tabular text-lg sm:text-xl font-bold text-slate-900 tracking-tight">₹2,14,630</div>
+<div class="text-[11px] font-label-sm text-slate-600">15.1% Real Margin</div>
+</div>
+<!-- KPI 3 -->
+<div class="bg-white border border-slate-200 rounded-lg p-3.5 space-y-1 shadow-sm">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Health Score</span>
+<span class="material-symbols-outlined text-[16px] text-amber-600" data-icon="verified">verified</span>
+</div>
+<div class="font-metric-tabular text-lg sm:text-xl font-bold text-slate-900 tracking-tight">88<span class="text-xs text-slate-500 font-normal">/100</span></div>
+<div class="text-[11px] font-label-sm text-teal-700 font-medium">Optimal Stock</div>
+</div>
+</div>
+<!-- Bar Velocity & ML Forecast Chart Box -->
+<div class="bg-white border border-slate-200 rounded-lg p-4 space-y-3 shadow-sm">
+<div class="flex items-center justify-between">
+<div>
+<h2 class="font-headline-sm text-xs font-semibold text-slate-900 tracking-wide">Daily Footfall &amp; Sales Forecast vs Run-Rate</h2>
+<p class="font-body-xs text-body-xs text-slate-500">Pune Regional Hub • POS Counter 01-04 Aggregated</p>
+</div>
+<span class="px-2 py-0.5 rounded text-[10px] font-label-sm bg-teal-50 text-teal-800 border border-teal-200 font-semibold">
+                  Confidence: 94.2%
+                </span>
+</div>
+<!-- Forecast Bars Graphic -->
+<div class="grid grid-cols-7 gap-2 pt-2 items-end h-32 border-b border-slate-100 pb-2">
+<div class="flex flex-col items-center gap-1.5 h-full justify-end">
+<div class="w-full bg-slate-200 rounded-t h-[55%] hover:bg-slate-300 transition-colors"></div>
+<span class="text-[10px] font-label-sm text-slate-500">Mon</span>
+</div>
+<div class="flex flex-col items-center gap-1.5 h-full justify-end">
+<div class="w-full bg-slate-200 rounded-t h-[68%] hover:bg-slate-300 transition-colors"></div>
+<span class="text-[10px] font-label-sm text-slate-500">Tue</span>
+</div>
+<div class="flex flex-col items-center gap-1.5 h-full justify-end">
+<div class="w-full bg-slate-200 rounded-t h-[62%] hover:bg-slate-300 transition-colors"></div>
+<span class="text-[10px] font-label-sm text-slate-500">Wed</span>
+</div>
+<div class="flex flex-col items-center gap-1.5 h-full justify-end">
+<div class="w-full bg-slate-200 rounded-t h-[75%] hover:bg-slate-300 transition-colors"></div>
+<span class="text-[10px] font-label-sm text-slate-500">Thu</span>
+</div>
+<div class="flex flex-col items-center gap-1.5 h-full justify-end">
+<div class="w-full bg-slate-200 rounded-t h-[82%] hover:bg-slate-300 transition-colors"></div>
+<span class="text-[10px] font-label-sm text-slate-500">Fri</span>
+</div>
+<!-- Weekend Rush (Teal Highlight) -->
+<div class="flex flex-col items-center gap-1.5 h-full justify-end">
+<div class="w-full bg-teal-600 rounded-t h-[94%] relative shadow-sm">
+<div class="absolute -top-4 left-1/2 -translate-x-1/2 text-[9px] font-label-sm text-teal-800 font-bold">Peak</div>
+</div>
+<span class="text-[10px] font-label-sm text-teal-800 font-bold">Sat</span>
+</div>
+<div class="flex flex-col items-center gap-1.5 h-full justify-end">
+<div class="w-full bg-teal-600 rounded-t h-[98%] shadow-sm"></div>
+<span class="text-[10px] font-label-sm text-teal-800 font-bold">Sun</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+<div class="flex items-center gap-2">
+<span class="h-2 w-2 rounded-full bg-slate-400"></span>
+<span>Weekday Run-Rate</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="h-2 w-2 rounded-full bg-teal-600"></span>
+<span class="text-teal-800 font-medium">Weekend Rush Surge (+38%)</span>
+</div>
+</div>
+</div>
+<!-- Critical Reorder Action Alert Banner -->
+<div class="flex items-center justify-between p-3 rounded-lg bg-amber-50 border border-amber-200">
+<div class="flex items-center gap-2.5">
+<div class="p-1 rounded bg-amber-100 text-amber-700">
+<span class="material-symbols-outlined text-[18px]" data-icon="warning">warning</span>
+</div>
+<div>
+<div class="font-label-sm text-xs font-semibold text-amber-900">
+                    Critical Reorder: Amul Pure Ghee 1L Tin &amp; Salted Butter
+                  </div>
+<div class="text-[11px] text-amber-700">Stock depleting in 3 days. Vendor lead time: 48h</div>
+</div>
+</div>
+<button class="px-3 py-1.5 rounded-md bg-amber-600 hover:bg-amber-700 text-white font-label-sm text-label-sm font-semibold tracking-tight shadow-sm transition-colors flex items-center gap-1">
+<span>View Reorder</span>
+<span class="material-symbols-outlined text-[14px]" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- SOCIAL PROOF & METRIC COUNTER BANNER -->
+<section class="py-10 bg-slate-50 border-b border-slate-200" id="metrics">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center divide-y md:divide-y-0 md:divide-x divide-slate-200">
+<div class="pt-4 md:pt-0">
+<div class="font-display-metric text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">₹48 Cr+</div>
+<p class="font-label-sm text-label-sm text-slate-500 uppercase tracking-wider mt-1 font-semibold">Retail Turnover Tracked</p>
+</div>
+<div class="pt-4 md:pt-0">
+<div class="font-display-metric text-3xl lg:text-4xl font-extrabold text-teal-700 tracking-tight">1,200+</div>
+<p class="font-label-sm text-label-sm text-slate-500 uppercase tracking-wider mt-1 font-semibold">Active Supermarket Counters</p>
+</div>
+<div class="pt-4 md:pt-0">
+<div class="font-display-metric text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">99.4%</div>
+<p class="font-label-sm text-label-sm text-slate-500 uppercase tracking-wider mt-1 font-semibold">Stockout Prevention Rate</p>
+</div>
+<div class="pt-4 md:pt-0">
+<div class="font-display-metric text-3xl lg:text-4xl font-extrabold text-teal-700 tracking-tight">4.2 Hrs</div>
+<p class="font-label-sm text-label-sm text-slate-500 uppercase tracking-wider mt-1 font-semibold">Weekly Store Admin Saved</p>
+</div>
+</div>
+</div>
+</section>
+<!-- CORE CAPABILITIES GRID -->
+<section class="py-20 bg-white relative" id="features">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+<!-- Section Header -->
+<div class="text-center max-w-2xl mx-auto space-y-3">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-teal-700 font-bold">
+        Engineered for Retail Efficiency
+      </span>
+<h2 class="font-headline-lg text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+        Everything Supermarket Owners Need. Zero Fluff.
+      </h2>
+<p class="font-body-md text-body-md text-slate-600">
+        Say goodbye to delayed tally entries and guesswork. Inventra bridges the gap between your physical POS counters, distributor bills, and daily net margins.
+      </p>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="capabilities">
+<!-- Card 1 -->
+<div class="p-6 rounded-xl bg-white border border-slate-200 hover:border-teal-400 hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
+<div class="space-y-4">
+<div class="h-12 w-12 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700 group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[26px]" data-icon="receipt_long">receipt_long</span>
+</div>
+<h3 class="font-headline-md text-lg font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+            Fast Invoice OCR &amp; Paper Bill Importer
+          </h3>
+<p class="font-body-sm text-body-sm text-slate-600">
+            Directly scan or upload distributor paper invoices. Automatic extraction maps HSN codes, wholesale purchase prices, and batch numbers into current stock in seconds.
+          </p>
+</div>
+<div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-label-sm text-teal-700 font-semibold">
+<span>Scan 50+ Line Items in 8 Sec</span>
+<span class="material-symbols-outlined text-[16px]" data-icon="auto_awesome">auto_awesome</span>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="p-6 rounded-xl bg-white border border-slate-200 hover:border-teal-400 hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
+<div class="space-y-4">
+<div class="h-12 w-12 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700 group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[26px]" data-icon="analytics">analytics</span>
+</div>
+<h3 class="font-headline-md text-lg font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+            Net Profit Per SKU &amp; Category
+          </h3>
+<p class="font-body-sm text-body-sm text-slate-600">
+            Gross sales lie; net margin tells the truth. Factoring in overhead, shelf space cost, staff wages, and supplier kickbacks gives you real profitability across FMCG, Dairy, and Produce.
+          </p>
+</div>
+<div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-label-sm text-teal-700 font-semibold">
+<span>True Gross-to-Net Analytics</span>
+<span class="material-symbols-outlined text-[16px]" data-icon="trending_up">trending_up</span>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="p-6 rounded-xl bg-white border border-slate-200 hover:border-rose-400 hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
+<div class="space-y-4">
+<div class="h-12 w-12 rounded-lg bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-700 group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[26px]" data-icon="hourglass_bottom">hourglass_bottom</span>
+</div>
+<h3 class="font-headline-md text-lg font-bold text-slate-900 group-hover:text-rose-700 transition-colors">
+            30-Day Expiry &amp; Shrinkage Guard
+          </h3>
+<p class="font-body-sm text-body-sm text-slate-600">
+            Prevent dead inventory and write-offs. Get notified 30, 15, and 7 days prior to expiry so floor managers can bundle discount items before it turns into dead loss.
+          </p>
+</div>
+<div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-label-sm text-rose-700 font-semibold">
+<span>Zero Wastage Triggers</span>
+<span class="material-symbols-outlined text-[16px]" data-icon="notifications_active">notifications_active</span>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="p-6 rounded-xl bg-white border border-slate-200 hover:border-teal-400 hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
+<div class="space-y-4">
+<div class="h-12 w-12 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700 group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[26px]" data-icon="hub">hub</span>
+</div>
+<h3 class="font-headline-md text-lg font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+            Multi-Branch Regional Sync
+          </h3>
+<p class="font-body-sm text-body-sm text-slate-600">
+            Manage Pune Central, Kothrud, and Baner outlets from one master console. Shift slow-moving stock between stores with one-click inter-branch transfer challans.
+          </p>
+</div>
+<div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-label-sm text-teal-700 font-semibold">
+<span>Inter-Branch Transfer Engine</span>
+<span class="material-symbols-outlined text-[16px]" data-icon="swap_horiz">swap_horiz</span>
+</div>
+</div>
+<!-- Card 5 -->
+<div class="p-6 rounded-xl bg-white border border-slate-200 hover:border-teal-400 hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
+<div class="space-y-4">
+<div class="h-12 w-12 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700 group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[26px]" data-icon="auto_graph">auto_graph</span>
+</div>
+<h3 class="font-headline-md text-lg font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+            Dynamic Lead-Time Reordering
+          </h3>
+<p class="font-body-sm text-body-sm text-slate-600">
+            Never miss festive rush or weekend spikes. The algorithm learns seasonal buying rhythms and generates draft purchase orders sent straight to your registered suppliers.
+          </p>
+</div>
+<div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-label-sm text-teal-700 font-semibold">
+<span>Automated Purchase Orders</span>
+<span class="material-symbols-outlined text-[16px]" data-icon="send">send</span>
+</div>
+</div>
+<!-- Card 6 -->
+<div class="p-6 rounded-xl bg-white border border-slate-200 hover:border-emerald-500 transition-all duration-200 group flex flex-col justify-between">
+<div class="space-y-4">
+<div class="h-12 w-12 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[26px]" data-icon="chat">chat</span>
+</div>
+<h3 class="font-headline-md text-lg font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
+            Daily WhatsApp Store Digest
+          </h3>
+<p class="font-body-sm text-body-sm text-slate-600">
+            Get an automated 10:00 PM summary straight to your phone: Total gross receipts, top 5 fast-movers, cash collected vs UPI, and stockouts detected on the floor.
+          </p>
+</div>
+<div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-label-sm text-emerald-700 font-semibold">
+<span>Delivered Nightly at 10:00 PM</span>
+<span class="material-symbols-outlined text-[16px]" data-icon="check_circle">check_circle</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- INTERACTIVE ROI / COMPARISON SECTION -->
+<section class="py-16 bg-slate-50 border-t border-b border-slate-200">
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="rounded-2xl bg-white border border-slate-200 p-8 sm:p-12 shadow-sm space-y-8">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-100 pb-6">
+<div>
+<span class="text-xs font-label-sm uppercase tracking-widest text-teal-700 font-bold">Tangible Store Returns</span>
+<h2 class="text-2xl sm:text-3xl font-bold text-slate-900 mt-1">Spreadsheet Chaos vs Inventra Intel</h2>
+</div>
+<div class="text-left md:text-right">
+<div class="text-2xl font-extrabold text-teal-700 font-metric-tabular">Average +₹85,000 / Mo</div>
+<span class="text-xs text-slate-500">Recovered profit per 2,000 sq ft retail store</span>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<!-- Traditional Method -->
+<div class="space-y-4 p-5 rounded-xl bg-rose-50/50 border border-rose-100">
+<div class="flex items-center gap-2 text-rose-700 font-label-md text-label-md font-bold">
+<span class="material-symbols-outlined text-[20px]" data-icon="cancel">cancel</span>
+<span>Manual Spreadsheet Tracking</span>
+</div>
+<ul class="space-y-3 font-body-sm text-body-sm text-slate-600">
+<li class="flex items-start gap-2">
+<span class="material-symbols-outlined text-[16px] text-rose-600 shrink-0 mt-0.5" data-icon="close">close</span>
+<span>Manual bill entry takes 2-3 hours each evening after closing.</span>
+</li>
+<li class="flex items-start gap-2">
+<span class="material-symbols-outlined text-[16px] text-rose-600 shrink-0 mt-0.5" data-icon="close">close</span>
+<span>Unnoticed expired biscuits, juices, and dairy lead to 3-5% margin loss.</span>
+</li>
+<li class="flex items-start gap-2">
+<span class="material-symbols-outlined text-[16px] text-rose-600 shrink-0 mt-0.5" data-icon="close">close</span>
+<span>Sudden OOS on top grocery brands loses loyal walk-in shoppers.</span>
+</li>
+</ul>
+</div>
+<!-- With Inventra -->
+<div class="space-y-4 p-5 rounded-xl bg-teal-50/50 border border-teal-100">
+<div class="flex items-center gap-2 text-teal-800 font-label-md text-label-md font-bold">
+<span class="material-symbols-outlined text-[20px] text-teal-700" data-icon="check_circle">check_circle</span>
+<span>With Inventra Intel Automation</span>
+</div>
+<ul class="space-y-3 font-body-sm text-body-sm text-slate-700">
+<li class="flex items-start gap-2">
+<span class="material-symbols-outlined text-[16px] text-teal-700 shrink-0 mt-0.5" data-icon="done">done</span>
+<span>Instant paper bill scan maps distributor prices in seconds.</span>
+</li>
+<li class="flex items-start gap-2">
+<span class="material-symbols-outlined text-[16px] text-teal-700 shrink-0 mt-0.5" data-icon="done">done</span>
+<span>Automatic 30-day early warnings prevent expiry write-offs.</span>
+</li>
+<li class="flex items-start gap-2">
+<span class="material-symbols-outlined text-[16px] text-teal-700 shrink-0 mt-0.5" data-icon="done">done</span>
+<span>Proactive distributor PO generation ensures 99.4% shelf availability.</span>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- PRICING TIERS -->
+<section class="py-20 bg-white" id="pricing">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+<div class="text-center max-w-xl mx-auto space-y-2">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-teal-700 font-bold">Predictable Pricing</span>
+<h2 class="font-headline-lg text-3xl font-bold text-slate-900">Transparent Plans for Every Store Size</h2>
+<p class="font-body-sm text-body-sm text-slate-600">Zero long-term lock-in. Cancel or adjust counters anytime.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+<!-- Starter Plan -->
+<div class="p-8 rounded-xl bg-white border border-slate-200 flex flex-col justify-between space-y-6 shadow-sm">
+<div class="space-y-4">
+<div class="font-headline-sm text-slate-900 font-bold">Single Store POS</div>
+<div class="font-metric-tabular text-3xl font-extrabold text-slate-900">₹1,999<span class="text-sm font-normal text-slate-500">/mo</span></div>
+<p class="font-body-sm text-slate-600">Ideal for standalone grocery outlets and convenience marts with 1-2 billing counters.</p>
+<ul class="space-y-2.5 pt-4 text-xs font-label-md text-slate-700">
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-[16px] text-teal-700" data-icon="check">check</span> Up to 2 Billing Counters</li>
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-[16px] text-teal-700" data-icon="check">check</span> OCR Invoice Scanner (100/mo)</li>
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-[16px] text-teal-700" data-icon="check">check</span> Nightly WhatsApp Digest</li>
+</ul>
+</div>
+<button class="w-full py-2.5 rounded-lg border border-slate-300 text-slate-700 font-label-md text-label-md font-semibold hover:bg-slate-50 transition-colors">
+          Get Started
+        </button>
+</div>
+<!-- Growth / Popular Plan -->
+<div class="p-8 rounded-xl bg-white border-2 border-teal-700 shadow-lg flex flex-col justify-between space-y-6 relative">
+<div class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-teal-700 text-white text-[10px] font-label-sm uppercase tracking-wider font-bold">
+          Most Popular
+        </div>
+<div class="space-y-4">
+<div class="font-headline-sm text-slate-900 font-bold">Multi-Counter Supermarket</div>
+<div class="font-metric-tabular text-3xl font-extrabold text-teal-700">₹4,499<span class="text-sm font-normal text-slate-500">/mo</span></div>
+<p class="font-body-sm text-slate-600">For mid-to-large supermarkets with 3-6 checkout terminals and multi-category bays.</p>
+<ul class="space-y-2.5 pt-4 text-xs font-label-md text-slate-800">
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-[16px] text-teal-700" data-icon="check">check</span> Up to 6 POS Billing Terminals</li>
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-[16px] text-teal-700" data-icon="check">check</span> Unlimited Bill OCR &amp; CSV Import</li>
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-[16px] text-teal-700" data-icon="check">check</span> ML 30-Day Expiry &amp; Demand Forecast</li>
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-[16px] text-teal-700" data-icon="check">check</span> Net Profit Breakdown per SKU</li>
+</ul>
+</div>
+<a href="http://localhost:5173/login?mode=trial" class="w-full py-3 rounded-lg bg-teal-700 text-white font-label-md text-label-md font-bold hover:bg-teal-800 transition-colors shadow-sm inline-block text-center">
+          Start 5-Day Free Trial
+        </a>
+</div>
+<!-- Regional Chain Plan -->
+<div class="p-8 rounded-xl bg-white border border-slate-200 flex flex-col justify-between space-y-6 shadow-sm">
+<div class="space-y-4">
+<div class="font-headline-sm text-slate-900 font-bold">Regional Chain / Multi-Branch</div>
+<div class="font-metric-tabular text-3xl font-extrabold text-slate-900">Custom<span class="text-sm font-normal text-slate-500"> / enterprise</span></div>
+<p class="font-body-sm text-slate-600">For store owners operating 3+ outlets across city zones requiring inter-branch stock logistics.</p>
+<ul class="space-y-2.5 pt-4 text-xs font-label-md text-slate-700">
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-[16px] text-teal-700" data-icon="check">check</span> Unlimited Outlets &amp; Warehouse Hubs</li>
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-[16px] text-teal-700" data-icon="check">check</span> Inter-Branch Transfer Orders</li>
+<li class="flex items-center gap-2"><span class="material-symbols-outlined text-[16px] text-teal-700" data-icon="check">check</span> Dedicated Pune Implementation Mgr</li>
+</ul>
+</div>
+<a href="http://localhost:5173/login" class="w-full py-2.5 rounded-lg border border-slate-300 text-slate-700 font-label-md text-label-md font-semibold hover:bg-slate-50 transition-colors inline-block text-center">
+          Contact Enterprise Sales
+        </a>
+</div>
+</div>
+</div>
+</section>
+<!-- FINAL CALL TO ACTION SECTION -->
+<section class="py-20 bg-slate-50 border-t border-slate-200 relative overflow-hidden" id="trial">
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8 relative z-10">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-teal-800 font-label-sm text-xs font-semibold">
+<span class="material-symbols-outlined text-[16px]" data-icon="bolt">bolt</span>
+      Instant Cloud Deployment
+    </div>
+<h2 class="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
+      Take Control of Your Supermarket Margins Today.
+    </h2>
+<p class="font-body-lg text-body-lg text-slate-600 max-w-2xl mx-auto">
+      Join over 1,200 store owners across Pune, Mumbai, and regional hubs who have stopped spreadsheet errors and unlocked predictive profits.
+    </p>
+<div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+<a href="http://localhost:5173/login?mode=trial" class="w-full sm:w-auto px-8 py-3.5 rounded-lg font-label-md text-label-md font-bold text-white bg-teal-700 hover:bg-teal-800 shadow-sm transition-all inline-block text-center">
+        Start 5-Day Free Trial Today
+      </a>
+<a href="http://localhost:5173/login" class="w-full sm:w-auto px-6 py-3.5 rounded-lg font-label-md text-label-md text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 font-medium transition-colors inline-block text-center">
+        Schedule Pune Floor Demo
+      </a>
+</div>
+<div class="flex items-center justify-center gap-6 text-xs text-slate-500 pt-2 font-label-sm">
+<span>No Credit Card Required</span>
+<span>•</span>
+<span>Compatible with all POS Terminals</span>
+<span>•</span>
+<span>GST Ready</span>
+</div>
+</div>
+</section>
+<!-- FOOTER -->
+<footer class="bg-white border-t border-slate-200 py-12 text-slate-600">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+<div class="space-y-3">
+<div class="flex items-center gap-2">
+<div class="h-7 w-7 rounded-md bg-teal-700 flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-[16px]" data-icon="storefront">storefront</span>
+</div>
+<span class="font-headline-sm font-bold text-slate-900 tracking-tight">Inventra Intel</span>
+</div>
+<p class="font-body-xs text-body-xs text-slate-500">
+          Enterprise supermarket data intelligence, inventory velocity, and multi-store profit telemetry. Pune Regional Division.
+        </p>
+</div>
+<div>
+<h4 class="font-label-sm text-label-sm uppercase text-slate-900 tracking-wider mb-3 font-semibold">Platform</h4>
+<ul class="space-y-2 font-body-xs text-body-xs">
+<li><a class="hover:text-teal-700 transition-colors" href="#features">Invoice OCR Importer</a></li>
+<li><a class="hover:text-teal-700 transition-colors" href="#features">Net Profit Per SKU</a></li>
+<li><a class="hover:text-teal-700 transition-colors" href="#features">30-Day Expiry Guard</a></li>
+<li><a class="hover:text-teal-700 transition-colors" href="#features">WhatsApp Nightly Digest</a></li>
+</ul>
+</div>
+<div>
+<h4 class="font-label-sm text-label-sm uppercase text-slate-900 tracking-wider mb-3 font-semibold">Regional Hubs</h4>
+<ul class="space-y-2 font-body-xs text-body-xs">
+<li class="text-slate-800 font-medium">Branch: Pune Central</li>
+<li class="text-slate-600">Kothrud Commercial Hub</li>
+<li class="text-slate-600">Baner Retail Center</li>
+<li class="text-slate-600">Viman Nagar Outlets</li>
+</ul>
+</div>
+<div>
+<h4 class="font-label-sm text-label-sm uppercase text-slate-900 tracking-wider mb-3 font-semibold">Support &amp; Legal</h4>
+<ul class="space-y-2 font-body-xs text-body-xs">
+<li><a class="hover:text-teal-700 transition-colors" href="#support">Help &amp; Documentation</a></li>
+<li><a class="hover:text-teal-700 transition-colors" href="#status">POS Integration API</a></li>
+<li><a class="hover:text-teal-700 transition-colors" href="#privacy">Privacy Policy</a></li>
+<li><a class="hover:text-teal-700 transition-colors" href="#terms">Terms of Service</a></li>
+</ul>
+</div>
+</div>
+<div class="pt-8 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between text-xs font-body-xs text-slate-500">
+<div>© 2025 Inventra Intel Technologies Pvt. Ltd. All rights reserved.</div>
+<div class="flex items-center gap-4 mt-4 sm:mt-0">
+<span>Encrypted with 256-Bit SSL</span>
+<span>•</span>
+<span>Pune, Maharashtra, India</span>
+</div>
+</div>
+</div>
+</footer>
+</body></html>
