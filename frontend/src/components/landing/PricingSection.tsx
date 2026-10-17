@@ -20,8 +20,8 @@ export function PricingSection() {
           </p>
         </div>
 
-        {/* 3 Pricing Plans Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch pt-2">
+        {/* Single Pricing Plan Card */}
+        <div className="max-w-xl mx-auto pt-2">
           {pricing.plans.map((plan) => (
             <PricingCard key={plan.id} plan={plan} />
           ))}

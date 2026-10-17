@@ -25,11 +25,11 @@ export function WeekdayHourHeatmap({ cells }: WeekdayHourHeatmapProps) {
   const maxCount = Math.max(...cells.map((c) => c.count), 1);
 
   const getCellColor = (count: number) => {
-    if (count === 0) return 'bg-[#F1F3FF] border-[#E5E7EB] text-[#737686]';
+    if (count === 0) return 'bg-[#EEF2FF] border-[#E0E7FF] text-[#6366F1]/50';
     const ratio = count / maxCount;
-    if (ratio < 0.25) return 'bg-[#DBE1FF] text-[#00174B] border-[#B4C5FF] font-semibold';
-    if (ratio < 0.6) return 'bg-[#B4C5FF] text-[#00174B] border-[#2563EB]/40 font-bold';
-    return 'bg-[#2563EB] text-[#FFFFFF] border-[#1D4ED8] font-bold';
+    if (ratio < 0.25) return 'bg-[#E0E7FF] text-[#3730A3] border-[#C7D2FE] font-semibold';
+    if (ratio < 0.6) return 'bg-[#A5B4FC] text-[#1E1B4B] border-[#818CF8] font-bold';
+    return 'bg-[#6366F1] text-[#FFFFFF] border-[#4F46E5] font-bold';
   };
 
   const formatHourLabel = (h: number) => {
@@ -45,10 +45,10 @@ export function WeekdayHourHeatmap({ cells }: WeekdayHourHeatmapProps) {
         <div className="flex items-center gap-2 text-[11px] text-text-medium">
           <span>Less busy</span>
           <div className="flex items-center gap-1">
-            <span className="w-3.5 h-3.5 rounded-[3px] bg-[#F1F3FF] border border-[#E5E7EB]" />
-            <span className="w-3.5 h-3.5 rounded-[3px] bg-[#DBE1FF] border border-[#B4C5FF]" />
-            <span className="w-3.5 h-3.5 rounded-[3px] bg-[#B4C5FF] border border-[#2563EB]/40" />
-            <span className="w-3.5 h-3.5 rounded-[3px] bg-[#2563EB] border border-[#1D4ED8]" />
+            <span className="w-3.5 h-3.5 rounded-[3px] bg-[#EEF2FF] border border-[#E0E7FF]" />
+            <span className="w-3.5 h-3.5 rounded-[3px] bg-[#E0E7FF] border border-[#C7D2FE]" />
+            <span className="w-3.5 h-3.5 rounded-[3px] bg-[#A5B4FC] border border-[#818CF8]" />
+            <span className="w-3.5 h-3.5 rounded-[3px] bg-[#6366F1] border border-[#4F46E5]" />
           </div>
           <span>Busiest peak</span>
         </div>

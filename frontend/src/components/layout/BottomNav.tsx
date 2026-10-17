@@ -5,7 +5,7 @@ import { cn } from '../ui/utils';
 export function BottomNav() {
   const tabs = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/upload', label: 'Data upload', icon: Upload },
+    { to: '/upload', label: 'Inventory management', icon: Upload },
     { to: '/analytics', label: 'Analytics', icon: BarChart3 },
     { to: '/insights', label: 'AI insight', icon: Sparkles },
   ];

@@ -301,7 +301,7 @@ export function SalesPredictionTab() {
 
           {/* Fallback preview of what's been logged so far */}
           {data.historical_points && data.historical_points.length > 0 && (
-            <Card className="p-5">
+            <Card showTrail trailColor="neutral" trailSize={85} className="p-5 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-sm font-semibold text-text-high">
@@ -382,7 +382,7 @@ export function SalesPredictionTab() {
           </div>
 
           {/* Headline Card */}
-          <Card className="p-5 sm:p-6 bg-surface border border-border">
+          <Card showTrail trailColor="indigo" trailSize={95} className="p-5 sm:p-6 bg-surface border border-border shadow-sm">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <span className="text-xs font-semibold text-primary">
@@ -423,7 +423,7 @@ export function SalesPredictionTab() {
           </Card>
 
           {/* Interactive Forecast Chart */}
-          <Card className="p-5 overflow-hidden">
+          <Card showTrail trailColor="indigo" trailSize={105} className="p-5 overflow-hidden shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border">
               <div>
                 <h3 className="text-sm font-semibold text-text-high">
@@ -727,7 +727,7 @@ export function SalesPredictionTab() {
 
           {/* Quick Metrics Breakdown Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Card className="p-4 bg-surface">
+            <Card showTrail trailColor="violet" trailSize={75} className="p-4 bg-surface shadow-sm">
               <span className="text-xs font-medium text-text-medium">Forecast horizon</span>
               <div className="flex items-baseline gap-2 mt-1">
                 <span className="text-xl font-bold text-text-high">
@@ -739,7 +739,7 @@ export function SalesPredictionTab() {
               </div>
             </Card>
 
-            <Card className="p-4 bg-surface">
+            <Card showTrail trailColor="indigo" trailSize={75} className="p-4 bg-surface shadow-sm">
               <span className="text-xs font-medium text-text-medium">Average expected daily run</span>
               <div className="flex items-baseline gap-2 mt-1">
                 <span className="text-xl font-bold text-text-high tabular-nums">
@@ -749,7 +749,7 @@ export function SalesPredictionTab() {
               </div>
             </Card>
 
-            <Card className="p-4 bg-surface">
+            <Card showTrail trailColor="emerald" trailSize={75} className="p-4 bg-surface shadow-sm">
               <span className="text-xs font-medium text-text-medium">Historical baseline</span>
               <div className="flex items-baseline gap-2 mt-1">
                 <span className="text-xl font-bold text-text-high tabular-nums">

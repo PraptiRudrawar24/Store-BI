@@ -16,17 +16,19 @@ import { formatINR } from '../../utils';
 import { Card, CardHeader, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 
+import { CHART_COLORS } from '../../utils/chartColors';
+
 // Flat curated color palette for expense categories donut
 const FLAT_DONUT_COLORS = [
-  '#2563EB', // Blue
-  '#16A34A', // Green
-  '#F59E0B', // Amber
-  '#DC2626', // Red
-  '#8B5CF6', // Purple
-  '#EC4899', // Pink
-  '#06B6D4', // Cyan
-  '#F97316', // Orange
-  '#64748B', // Slate
+  CHART_COLORS.expenses, // #F43F5E Rose
+  CHART_COLORS.costs,    // #F59E0B Amber
+  CHART_COLORS.inventory,// #06B6D4 Cyan
+  CHART_COLORS.secondary,// #8B5CF6 Violet
+  CHART_COLORS.sales,    // #6366F1 Indigo
+  CHART_COLORS.profit,   // #10B981 Emerald
+  '#EC4899',             // Pink
+  '#F97316',             // Orange
+  '#64748B',             // Slate
 ];
 
 export function ProfitabilityAnalyticsTab() {
@@ -268,7 +270,7 @@ export function ProfitabilityAnalyticsTab() {
       {/* KPI Cards: Sales, COGS, Gross Profit & Margin, Expenses, Net Profit & Margin */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         {/* Gross Revenue */}
-        <div className="p-3 sm:p-4 rounded-[8px] bg-surface border border-border border-l-4 border-l-[#2563EB]">
+        <Card showTrail trailColor="indigo" className="p-3 sm:p-4 border-l-4 border-l-[#6366F1] shadow-sm">
           <span className="text-[11px] font-semibold text-text-medium block">
             Gross sales
           </span>
@@ -276,10 +278,10 @@ export function ProfitabilityAnalyticsTab() {
             {isZeroState ? '₹0' : formatINR(data.total_sales)}
           </span>
           <span className="text-[11px] text-text-low mt-0.5 block">Total revenue</span>
-        </div>
+        </Card>
 
         {/* Cost of Goods Sold */}
-        <div className="p-3 sm:p-4 rounded-[8px] bg-surface border border-border border-l-4 border-l-[#F97316]">
+        <Card showTrail trailColor="amber" className="p-3 sm:p-4 border-l-4 border-l-[#F59E0B] shadow-sm">
           <span className="text-[11px] font-semibold text-text-medium block">
             Cost of goods (COGS)
           </span>
@@ -287,38 +289,40 @@ export function ProfitabilityAnalyticsTab() {
             {isZeroState ? '₹0' : formatINR(data.total_cogs)}
           </span>
           <span className="text-[11px] text-text-low mt-0.5 block">Wholesale acquisition</span>
-        </div>
+        </Card>
 
         {/* Gross Profit & Margin % */}
-        <div className="p-3 sm:p-4 rounded-[8px] bg-surface border border-border border-l-4 border-l-[#16A34A]">
+        <Card showTrail trailColor="emerald" className="p-3 sm:p-4 border-l-4 border-l-[#10B981] shadow-sm">
           <span className="text-[11px] font-semibold text-text-medium block">
             Gross margin
           </span>
           <div className="flex items-baseline gap-1.5 mt-1">
-            <span className="text-lg sm:text-xl font-bold text-[#16A34A] tabular-nums">
+            <span className="text-lg sm:text-xl font-bold text-[#10B981] tabular-nums">
               {isZeroState ? '0.0%' : `${data.overall_gross_margin_pct.toFixed(1)}%`}
             </span>
           </div>
           <span className="text-[11px] text-text-medium mt-0.5 block tabular-nums">
             {isZeroState ? '₹0' : formatINR(data.gross_profit)} gross profit
           </span>
-        </div>
+        </Card>
 
         {/* Operating Expenses */}
-        <div className="p-3 sm:p-4 rounded-[8px] bg-surface border border-border border-l-4 border-l-[#DC2626]">
+        <Card showTrail trailColor="rose" className="p-3 sm:p-4 border-l-4 border-l-[#F43F5E] shadow-sm">
           <span className="text-[11px] font-semibold text-text-medium block">
             Expenses
           </span>
-          <span className="text-lg sm:text-xl font-bold text-destructive tabular-nums block mt-1">
+          <span className="text-lg sm:text-xl font-bold text-[#F43F5E] tabular-nums block mt-1">
             {isZeroState ? '₹0' : formatINR(data.total_expenses)}
           </span>
           <span className="text-[11px] text-text-low mt-0.5 block">Operating overhead</span>
-        </div>
+        </Card>
 
         {/* Net Profit & Net Margin % */}
-        <div
-          className={`p-3 sm:p-4 rounded-[8px] bg-surface border border-border border-l-4 col-span-2 lg:col-span-1 ${
-            isZeroState || data.net_profit >= 0 ? 'border-l-[#10B981]' : 'border-l-destructive'
+        <Card
+          showTrail
+          trailColor={isZeroState || data.net_profit >= 0 ? 'emerald' : 'rose'}
+          className={`p-3 sm:p-4 border-l-4 col-span-2 lg:col-span-1 shadow-sm ${
+            isZeroState || data.net_profit >= 0 ? 'border-l-[#10B981]' : 'border-l-[#F43F5E]'
           }`}
         >
           <span className="text-[11px] font-semibold text-text-medium block">
@@ -327,7 +331,7 @@ export function ProfitabilityAnalyticsTab() {
           <div className="flex items-baseline gap-1.5 mt-1">
             <span
               className={`text-lg sm:text-xl font-bold tabular-nums ${
-                isZeroState || data.net_profit >= 0 ? 'text-[#10B981]' : 'text-destructive'
+                isZeroState || data.net_profit >= 0 ? 'text-[#10B981]' : 'text-[#F43F5E]'
               }`}
             >
               {isZeroState ? '₹0' : formatINR(data.net_profit)}
@@ -336,11 +340,11 @@ export function ProfitabilityAnalyticsTab() {
           <span className="text-[11px] font-medium text-text-medium mt-0.5 block tabular-nums">
             {isZeroState ? '0.0%' : `${data.overall_net_margin_pct.toFixed(1)}%`} net margin
           </span>
-        </div>
+        </Card>
       </div>
 
       {/* 3. Net profit: sales - cost of goods - expenses as a simple stepped breakdown, plus net margin % */}
-      <Card>
+      <Card showTrail trailColor="indigo" trailSize={100} className="shadow-sm">
         <CardHeader
           title="Net Profit Stepped Breakdown"
           subtitle="Sales − Cost of Goods Sold − Operating Expenses = Net Profit for the chosen period"
@@ -364,13 +368,13 @@ export function ProfitabilityAnalyticsTab() {
                   : 'bg-surface border-border';
 
                 const icon = isRevenue ? (
-                  <Plus className="w-4 h-4 text-[#2563EB]" />
+                  <Plus className="w-4 h-4 text-[#6366F1]" />
                 ) : isCogs ? (
-                  <Minus className="w-4 h-4 text-[#F97316]" />
+                  <Minus className="w-4 h-4 text-[#F59E0B]" />
                 ) : isGross ? (
-                  <Equal className="w-4 h-4 text-[#16A34A]" />
+                  <Equal className="w-4 h-4 text-[#10B981]" />
                 ) : isExp ? (
-                  <Minus className="w-4 h-4 text-[#DC2626]" />
+                  <Minus className="w-4 h-4 text-[#F43F5E]" />
                 ) : (
                   <Equal className="w-4 h-4 text-[#10B981]" />
                 );
@@ -383,7 +387,7 @@ export function ProfitabilityAnalyticsTab() {
                     <div>
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-bold text-text-medium">
-                          Step {idx + 1}
+                           Step {idx + 1}
                         </span>
                         <div className="w-6 h-6 rounded-full bg-surface border border-border flex items-center justify-center">
                           {icon}
@@ -419,13 +423,13 @@ export function ProfitabilityAnalyticsTab() {
             <div className="mt-2 p-3 bg-canvas border border-border rounded-[6px] flex flex-wrap items-center justify-between text-xs text-text-medium">
               <span className="font-semibold text-text-high">Accounting Equation:</span>
               <div className="flex flex-wrap items-center gap-1.5 font-medium tabular-nums text-text-high">
-                <span className="text-[#2563EB]">Sales ({isZeroState ? '₹0' : formatINR(data.total_sales)})</span>
+                <span className="text-[#6366F1]">Sales ({isZeroState ? '₹0' : formatINR(data.total_sales)})</span>
                 <span>−</span>
-                <span className="text-[#F97316]">COGS ({isZeroState ? '₹0' : formatINR(data.total_cogs)})</span>
+                <span className="text-[#F59E0B]">COGS ({isZeroState ? '₹0' : formatINR(data.total_cogs)})</span>
                 <span>−</span>
-                <span className="text-[#DC2626]">Expenses ({isZeroState ? '₹0' : formatINR(data.total_expenses)})</span>
+                <span className="text-[#F43F5E]">Expenses ({isZeroState ? '₹0' : formatINR(data.total_expenses)})</span>
                 <span>=</span>
-                <span className={`font-bold ${data.net_profit >= 0 ? 'text-[#10B981]' : 'text-destructive'}`}>
+                <span className={`font-bold ${data.net_profit >= 0 ? 'text-[#10B981]' : 'text-[#F43F5E]'}`}>
                   Net Profit ({isZeroState ? '₹0' : formatINR(data.net_profit)}) [{isZeroState ? '0.0%' : `${data.overall_net_margin_pct.toFixed(1)}%`}]
                 </span>
               </div>
@@ -437,18 +441,18 @@ export function ProfitabilityAnalyticsTab() {
       {/* 1. Margin Section: Margin trend over time, Margin by category, Lowest-margin products */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Margin Trend Over Time */}
-        <Card>
+        <Card showTrail trailColor="indigo" trailSize={100} className="shadow-sm">
           <CardHeader
             title="Gross Margin Trend Over Time"
             subtitle="Trajectory of sales revenue vs. gross margin percentage across the period"
             action={
               <div className="flex items-center gap-3 text-xs">
                 <div className="flex items-center gap-1">
-                  <span className="w-3 h-1 bg-[#2563EB] rounded-full" />
+                  <span className="w-3 h-1 bg-[#6366F1] rounded-full" />
                   <span className="text-text-medium">Sales</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <span className="w-3 h-1 bg-[#16A34A] rounded-full" />
+                  <span className="w-3 h-1 bg-[#10B981] rounded-full" />
                   <span className="text-text-medium">Gross Profit</span>
                 </div>
               </div>
@@ -521,7 +525,7 @@ export function ProfitabilityAnalyticsTab() {
                         })
                         .join(' ')}
                       fill="none"
-                      stroke="#2563EB"
+                      stroke="#6366F1"
                       strokeWidth="2"
                     />
 
@@ -536,7 +540,7 @@ export function ProfitabilityAnalyticsTab() {
                         })
                         .join(' ')}
                       fill="none"
-                      stroke="#16A34A"
+                      stroke="#10B981"
                       strokeWidth="2"
                     />
 
@@ -548,8 +552,8 @@ export function ProfitabilityAnalyticsTab() {
                         trendPadTop + trendPlotH * (1 - (Math.max(0, p.gross_profit) / maxTrendVal || 0));
                       return (
                         <g key={p.date}>
-                          <circle cx={x} cy={ySales} r="3" fill="#2563EB" />
-                          <circle cx={x} cy={yProfit} r="3" fill="#16A34A" />
+                          <circle cx={x} cy={ySales} r="3" fill="#6366F1" />
+                          <circle cx={x} cy={yProfit} r="3" fill="#10B981" />
                         </g>
                       );
                     })}
@@ -561,7 +565,7 @@ export function ProfitabilityAnalyticsTab() {
         </Card>
 
         {/* Margin by Category */}
-        <Card>
+        <Card showTrail trailColor="violet" trailSize={95} className="shadow-sm">
           <CardHeader
             title="Margin by Category"
             subtitle="Gross profit percentage and revenue contribution across product categories"
@@ -627,7 +631,7 @@ export function ProfitabilityAnalyticsTab() {
       </div>
 
       {/* Lowest-Margin Products Table */}
-      <Card>
+      <Card showTrail trailColor="rose" trailSize={95} className="shadow-sm">
         <CardHeader
           title="Lowest-Margin Products"
           subtitle="Products generating the thinnest profit margin percentage (candidates for price adjustments)"
@@ -690,7 +694,7 @@ export function ProfitabilityAnalyticsTab() {
       {/* 2. Expenses Section: Donut with flat colours, monthly trend, table of entries */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Expenses Totals by Category (Donut with flat colours) */}
-        <Card>
+        <Card showTrail trailColor="amber" trailSize={95} className="shadow-sm">
           <CardHeader
             title="Expenses by Category"
             subtitle="Breakdown of operating costs by category with flat colour visualization"
@@ -779,7 +783,7 @@ export function ProfitabilityAnalyticsTab() {
         </Card>
 
         {/* Expenses Monthly Trend */}
-        <Card>
+        <Card showTrail trailColor="rose" trailSize={95} className="shadow-sm">
           <CardHeader
             title="Monthly Expense Trend"
             subtitle="Operating overhead trend across recorded months"
@@ -824,7 +828,7 @@ export function ProfitabilityAnalyticsTab() {
       </div>
 
       {/* Expenses Table of Entries */}
-      <Card>
+      <Card showTrail trailColor="neutral" trailSize={100} className="shadow-sm">
         <CardHeader
           title="Expense Entries"
           subtitle="Detailed audit log of operating expenditure line items"

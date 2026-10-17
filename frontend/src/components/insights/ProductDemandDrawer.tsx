@@ -12,6 +12,7 @@ import {
 import { api, type ProductDemandDetailResponse } from '../../api/client';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
+import { Card } from '../ui/Card';
 import { useToast } from '../ui/Toast';
 
 interface ProductDemandDrawerProps {
@@ -220,23 +221,23 @@ export function ProductDemandDrawer({
             <>
               {/* Quick Stat Tiles */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                <div className="p-3 rounded-lg border border-border bg-canvas">
+                <Card showTrail trailColor="indigo" className="p-3 rounded-lg shadow-sm">
                   <span className="text-[11px] font-medium text-text-low">Current Stock</span>
                   <div className="text-lg font-bold text-text-high mt-0.5 tabular-nums">
                     {product.stock_qty}
                     <span className="text-xs font-normal text-text-low ml-1">units</span>
                   </div>
-                </div>
+                </Card>
 
-                <div className="p-3 rounded-lg border border-border bg-canvas">
+                <Card showTrail trailColor="cyan" className="p-3 rounded-lg shadow-sm">
                   <span className="text-[11px] font-medium text-text-low">Daily Sales Velocity</span>
                   <div className="text-lg font-bold text-text-high mt-0.5 tabular-nums">
                     {product.daily_sales_rate}
                     <span className="text-xs font-normal text-text-low ml-1">/ day</span>
                   </div>
-                </div>
+                </Card>
 
-                <div className="p-3 rounded-lg border border-border bg-canvas">
+                <Card showTrail trailColor="violet" className="p-3 rounded-lg shadow-sm">
                   <span className="text-[11px] font-medium text-text-low">14d Demand Forecast</span>
                   <div className="text-lg font-bold text-text-high mt-0.5 tabular-nums">
                     {product.has_enough_history && product.forecast_demand_14d !== null
@@ -246,9 +247,17 @@ export function ProductDemandDrawer({
                       <span className="text-xs font-normal text-text-low ml-1">units</span>
                     )}
                   </div>
-                </div>
+                </Card>
 
-                <div className="p-3 rounded-lg border border-border bg-canvas">
+                <Card
+                  showTrail
+                  trailColor={
+                    typeof product.days_of_stock_left === 'number' && product.days_of_stock_left <= leadTimeDays
+                      ? 'rose'
+                      : 'emerald'
+                  }
+                  className="p-3 rounded-lg shadow-sm"
+                >
                   <span className="text-[11px] font-medium text-text-low">Days of Stock Left</span>
                   <div
                     className={`text-lg font-bold mt-0.5 tabular-nums ${
@@ -259,7 +268,7 @@ export function ProductDemandDrawer({
                   >
                     {typeof product.days_of_stock_left === 'number' ? `${product.days_of_stock_left}d` : '–'}
                   </div>
-                </div>
+                </Card>
               </div>
 
               {/* Status Note or Data Quality Banner */}
@@ -271,7 +280,7 @@ export function ProductDemandDrawer({
               )}
 
               {/* Demand Velocity Chart */}
-              <div className="border border-border rounded-lg p-4 bg-surface">
+              <Card showTrail trailColor="indigo" trailSize={95} className="border border-border rounded-lg p-4 bg-surface shadow-sm">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-xs font-semibold text-text-medium">
                     Sales velocity & demand projection (units)
@@ -414,10 +423,10 @@ export function ProductDemandDrawer({
                     )}
                   </svg>
                 </div>
-              </div>
+              </Card>
 
               {/* Replenishment Math Calculation Card */}
-              <div className="border border-border rounded-lg p-4 bg-canvas/40 flex flex-col gap-3">
+              <Card showTrail trailColor="violet" trailSize={90} className="border border-border rounded-lg p-4 bg-canvas/40 flex flex-col gap-3 shadow-sm">
                 <div className="flex items-center gap-2 text-xs font-semibold text-text-high">
                   <Layers className="w-4 h-4 text-primary" />
                   <span>Reorder recommendation math</span>
@@ -473,7 +482,7 @@ export function ProductDemandDrawer({
                       : 'Stock adequate'}
                   </span>
                 </div>
-              </div>
+              </Card>
             </>
           )}
         </div>

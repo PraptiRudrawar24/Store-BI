@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Card, CardContent } from './Card';
+import { Card, CardContent, type CardTrailColor } from './Card';
 import { cn } from './utils';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
@@ -12,6 +12,9 @@ export interface StatCardProps {
   subtext?: string;
   icon?: React.ReactNode;
   className?: string;
+  showTrail?: boolean;
+  trailColor?: CardTrailColor;
+  trailSize?: number;
 }
 
 export function StatCard({
@@ -23,6 +26,9 @@ export function StatCard({
   subtext,
   icon,
   className,
+  showTrail = true,
+  trailColor,
+  trailSize = 75,
 }: StatCardProps) {
   // Determine trend badge adhering to ZERO-START RULE:
   // "Percent-change values show '–' when the previous period is 0 (no divide-by-zero)."
@@ -44,8 +50,26 @@ export function StatCard({
     }
   }
 
+  const determinedColor: CardTrailColor =
+    trailColor ||
+    (label.toLowerCase().includes('profit') || label.toLowerCase().includes('margin')
+      ? 'emerald'
+      : label.toLowerCase().includes('transaction') || label.toLowerCase().includes('bill')
+      ? 'violet'
+      : label.toLowerCase().includes('stock') || label.toLowerCase().includes('alert')
+      ? 'amber'
+      : 'indigo');
+
   return (
-    <Card className={cn('flex flex-col justify-between hover:border-border-hover dark:hover:border-border-strong hover:shadow-raised transition-all', className)}>
+    <Card
+      showTrail={showTrail}
+      trailColor={determinedColor}
+      trailSize={trailSize}
+      className={cn(
+        'flex flex-col justify-between hover:border-border-hover dark:hover:border-border-strong hover:shadow-raised transition-all shadow-sm',
+        className
+      )}
+    >
       <CardContent className="p-4 flex flex-col justify-between h-full gap-3">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-text-medium">{label}</span>

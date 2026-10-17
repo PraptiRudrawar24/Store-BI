@@ -113,7 +113,7 @@ export function InventoryAnalyticsTab() {
       {/* Zero state: summary cards show ₹0 and 0 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Stock Value at Cost */}
-        <Card className="border-l-4 border-l-primary">
+        <Card showTrail trailColor="indigo" className="border-l-4 border-l-primary shadow-sm">
           <CardContent className="p-4 flex items-start justify-between">
             <div>
               <span className="text-[11px] font-semibold text-text-medium block">
@@ -131,7 +131,7 @@ export function InventoryAnalyticsTab() {
         </Card>
 
         {/* Number of Products */}
-        <Card className="border-l-4 border-l-[#3B82F6]">
+        <Card showTrail trailColor="blue" className="border-l-4 border-l-[#3B82F6] shadow-sm">
           <CardContent className="p-4 flex items-start justify-between">
             <div>
               <span className="text-[11px] font-semibold text-text-medium block">
@@ -149,7 +149,7 @@ export function InventoryAnalyticsTab() {
         </Card>
 
         {/* Low-Stock Count */}
-        <Card className="border-l-4 border-l-warning">
+        <Card showTrail trailColor="amber" className="border-l-4 border-l-warning shadow-sm">
           <CardContent className="p-4 flex items-start justify-between">
             <div>
               <span className="text-[11px] font-semibold text-text-medium block">
@@ -167,7 +167,7 @@ export function InventoryAnalyticsTab() {
         </Card>
 
         {/* Inventory Turnover */}
-        <Card className="border-l-4 border-l-[#10B981]">
+        <Card showTrail trailColor="emerald" className="border-l-4 border-l-[#10B981] shadow-sm">
           <CardContent className="p-4 flex items-start justify-between">
             <div>
               <span className="text-[11px] font-semibold text-text-medium block">
@@ -186,7 +186,7 @@ export function InventoryAnalyticsTab() {
       </div>
 
       {/* 1. Out of Stock List with last sold date and estimated lost sales */}
-      <Card>
+      <Card showTrail trailColor="rose" trailSize={95} className="shadow-sm">
         <CardHeader
           title="Out of stock list"
           subtitle="Depleted inventory items with historical sales rate and estimated lost revenue"
@@ -292,7 +292,7 @@ export function InventoryAnalyticsTab() {
 
       {/* 2. Expiry groups: Expired, within 7 days, 30 days, 90 days */}
       {/* with quantity and ₹ value at risk (cost x qty), and a "discount to clear" suggestion for the 30-day group */}
-      <Card>
+      <Card showTrail trailColor="amber" trailSize={95} className="shadow-sm">
         <CardHeader
           title="Expiry risk groups"
           subtitle="Monitors perishable stock with quantity, rupee value at risk (cost × qty), and clearance suggestions"

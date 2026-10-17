@@ -49,9 +49,9 @@ export function ProductCatalog({
           <div className="h-64 flex flex-col items-center justify-center text-text-medium gap-3 p-6 text-center border border-dashed border-border rounded-[8px] bg-surface/50 dark:bg-surface-low/50">
             <PackageSearch className="w-10 h-10 text-text-low" strokeWidth={1.5} />
             <div>
-              <p className="text-sm font-semibold text-text-high">No products found</p>
+              <p className="text-sm font-semibold text-text-high">No products currently available in inventory</p>
               <p className="text-xs text-text-medium mt-1">
-                Try searching with a different barcode, SKU, or clear your category filter.
+                Add items to your inventory to see them appear here for POS billing.
               </p>
             </div>
           </div>

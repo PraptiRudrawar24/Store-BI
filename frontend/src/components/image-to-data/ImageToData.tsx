@@ -47,6 +47,25 @@ interface EditableExtractedItem extends ExtractedInvoiceItem {
   matched_product_id: number | null;
   matched_product_name: string | null;
   match_confidence: number;
+  tax_input_str?: string;
+}
+
+function parseTaxInput(raw: string): { rate: number | null; str: string; needsReview: boolean } {
+  const clean = (raw || '').trim().toLowerCase();
+  if (!clean || clean === 'needs review' || clean === 'unknown' || clean === '-' || clean === 'n/a' || clean === '—') {
+    return { rate: null, str: 'Needs Review', needsReview: true };
+  }
+  if (clean === '0' || clean === '0%' || clean === '0.0%' || clean === 'exempt' || clean === 'nil' || clean === 'zero') {
+    return { rate: 0, str: '0%', needsReview: false };
+  }
+  const match = clean.match(/(\d+(?:\.\d+)?)\s*%?/);
+  if (match) {
+    const val = parseFloat(match[1]);
+    if (!isNaN(val) && val >= 0 && val <= 50) {
+      return { rate: val, str: `${val}%`, needsReview: false };
+    }
+  }
+  return { rate: null, str: raw, needsReview: true };
 }
 
 const PRODUCT_CATEGORIES = [
@@ -141,6 +160,11 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   const [showImageModal, setShowImageModal] = React.useState(false);
   const [isRotating, setIsRotating] = React.useState(false);
+
+  const isPdf = Boolean(
+    selectedFile?.type === 'application/pdf' ||
+    selectedFile?.name?.toLowerCase().endsWith('.pdf')
+  );
 
   // Extraction state
   const [isExtracting, setIsExtracting] = React.useState(false);
@@ -292,7 +316,7 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
       setCurrency(response.currency || 'INR');
       setSubtotal(response.subtotal ?? null);
       setTax(response.tax ?? null);
-      setTotal(response.total ?? null);
+      setTotal(response.invoice_grand_total ?? response.total_amount_for_invoice ?? response.total ?? null);
       setIsMockResult(response.is_mock);
       setMockMessage(response.message || null);
       setOcrEngineUsed(response.ocr_engine || (response.is_mock ? 'Sample Demo Mock' : 'AI Vision'));
@@ -300,29 +324,33 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
       // Map items with fuzzy matching to existing inventory
       const mappedItems: EditableExtractedItem[] = response.items.map((item, idx) => {
         const itemName = (item.name || item.description || '').trim();
-        const itemQty = item.qty || item.quantity || 1;
+        const rawQty = item.qty ?? item.quantity;
+        const itemQty = rawQty && rawQty > 0 ? rawQty : 1;
         const match = fuzzyMatchProduct(itemName, existingProducts);
-        const costPrice = item.cost_price ?? item.unit_price ?? 0;
-        const mrp = item.mrp || 0;
+        const costPrice = item.cost_price ?? item.unit_price ?? null;
 
-        // Default selling price: if MRP is known, use MRP; else 25% markup on cost
-        const defaultSelling = match
-          ? match.product.selling_price
-          : mrp > 0
-          ? mrp
-          : costPrice > 0
-          ? Math.round(costPrice * 1.25)
-          : 25;
+        const taxRate = item.tax_rate !== undefined ? item.tax_rate : null;
+        const taxPercentStr = item.tax_percent || (taxRate !== null ? `${taxRate}%` : 'Needs Review');
+        const baseAmt = item.base_amount ?? (costPrice && itemQty ? Math.round(costPrice * itemQty * 100) / 100 : null);
+        const taxAmt = item.tax_amount ?? (baseAmt && taxRate !== null ? Math.round(baseAmt * (taxRate / 100) * 100) / 100 : null);
+        // Preserves original extracted line amount directly from invoice; do not formula-calculate
+        const lineTotal = item.line_total !== null && item.line_total !== undefined ? item.line_total : (item.amount ?? null);
 
-        const lineTotal = item.line_total ?? item.amount ?? (costPrice > 0 ? Math.round(costPrice * itemQty * 100) / 100 : null);
+        // User requirement: sell price should be filled by user only (no auto-calculated markup or MRP)
+        const defaultSelling = 0;
 
         return {
           ...item,
           name: itemName,
           qty: itemQty,
           id: `item-${Date.now()}-${idx}`,
-          cost_price: item.cost_price ?? item.unit_price ?? null,
-          mrp: item.mrp || null,
+          cost_price: costPrice,
+          tax_rate: taxRate,
+          tax_percent: taxPercentStr,
+          tax_input_str: taxPercentStr,
+          tax_amount: taxAmt,
+          base_amount: baseAmt,
+          mrp: lineTotal,
           line_total: lineTotal,
           selling_price: defaultSelling,
           category: match ? match.product.category : 'Grocery',
@@ -330,6 +358,7 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
           matched_product_id: match ? match.product.id : null,
           matched_product_name: match ? match.product.name : null,
           match_confidence: match ? match.score : 0,
+          needs_review: item.needs_review || taxRate === null || lineTotal === null,
         };
       });
 
@@ -356,12 +385,19 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
       name: '',
       qty: 1,
       cost_price: 0,
-      mrp: null,
+      tax_rate: 0,
+      tax_percent: '0%',
+      tax_input_str: '0%',
+      tax_amount: 0,
+      base_amount: 0,
+      mrp: 0,
       line_total: 0,
       selling_price: 0,
       category: 'Grocery',
       expiry_date: null,
       confidence: 1.0,
+      field_confidence: { name: 1.0, qty: 1.0, cost_price: 1.0, tax: 1.0, total_mrp: 1.0 },
+      needs_review: false,
       action: 'create',
       matched_product_id: null,
       matched_product_name: null,
@@ -375,7 +411,12 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
     setItems((prev) => prev.filter((item) => item.id !== id));
   };
 
-  // Update a field in a row
+  // Update a field in a row:
+  // User specification:
+  // - Extract TOTAL MRP exactly from the corresponding product row in the invoice.
+  // - Do not calculate, estimate, or replace it with a formula-derived value.
+  // - If QTY, UNIT COST, or TAX is manually edited, do NOT automatically recalculate TOTAL MRP.
+  // - If user edits TOTAL MRP directly, preserve user's edited amount.
   const handleUpdateItemField = (id: string, field: keyof EditableExtractedItem, value: any) => {
     setItems((prev) =>
       prev.map((item) => {
@@ -383,14 +424,36 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
 
         const updated = { ...item, [field]: value };
 
-        // Automatically update line total when qty or cost_price changes
-        if (field === 'qty' || field === 'cost_price') {
-          const q = field === 'qty' ? value : updated.qty;
-          const c = field === 'cost_price' ? value : updated.cost_price;
-          if (c !== null && c !== undefined && q > 0) {
-            updated.line_total = Math.round(q * c * 100) / 100;
-          }
+        // Handle user editing TAX field (e.g. "18%", "5%", "0%", or "Needs Review")
+        if (field === 'tax_input_str') {
+          const parsed = parseTaxInput(String(value || ''));
+          updated.tax_rate = parsed.rate;
+          updated.tax_percent = parsed.str;
+          updated.tax_input_str = value;
         }
+
+        // When TOTAL MRP (line_total) is directly edited by user, preserve user's entered value
+        if (field === 'line_total') {
+          updated.mrp = value;
+          updated.line_total = value;
+        }
+
+        // Recalculate field confidences
+        const fieldConf: Record<string, number> = {
+          name: updated.name.trim().length >= 3 ? 0.95 : 0.40,
+          qty: updated.qty > 0 ? 0.95 : 0.40,
+          cost_price: updated.cost_price && updated.cost_price > 0 ? 0.95 : 0.40,
+          tax: updated.tax_rate !== null ? 0.95 : 0.40,
+          total_mrp: updated.line_total && updated.line_total > 0 ? 0.95 : 0.30,
+        };
+        updated.field_confidence = fieldConf;
+        updated.needs_review = (
+          updated.line_total === null ||
+          updated.line_total === undefined ||
+          updated.line_total <= 0 ||
+          updated.tax_rate === null ||
+          Object.values(fieldConf).some((v) => v < 0.7)
+        );
 
         // If action toggled to update, pick closest match or first product if not set
         if (field === 'action' && value === 'update' && !updated.matched_product_id) {
@@ -398,12 +461,10 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
           if (match) {
             updated.matched_product_id = match.product.id;
             updated.matched_product_name = match.product.name;
-            updated.selling_price = match.product.selling_price;
             updated.category = match.product.category;
           } else if (existingProducts.length > 0) {
             updated.matched_product_id = existingProducts[0].id;
             updated.matched_product_name = existingProducts[0].name;
-            updated.selling_price = existingProducts[0].selling_price;
             updated.category = existingProducts[0].category;
           }
         }
@@ -416,9 +477,6 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
             updated.matched_product_id = match.product.id;
             updated.matched_product_name = match.product.name;
             updated.match_confidence = match.score;
-            if (!updated.selling_price || updated.selling_price <= 0) {
-              updated.selling_price = match.product.selling_price;
-            }
             if (!updated.category || updated.category === 'Grocery') {
               updated.category = match.product.category;
             }
@@ -431,7 +489,6 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
           if (prod) {
             updated.matched_product_id = prod.id;
             updated.matched_product_name = prod.name;
-            updated.selling_price = prod.selling_price;
             updated.category = prod.category;
           }
         }
@@ -466,7 +523,7 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
       return;
     }
 
-    // Validation: make sure all items have a name and positive qty
+    // Validation: make sure all items have a name, positive qty, and sell price entered by user
     for (const item of items) {
       if (!item.name.trim()) {
         toast.error('All items must have a product name');
@@ -474,6 +531,10 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
       }
       if (item.qty <= 0) {
         toast.error(`Quantity for "${item.name}" must be at least 1`);
+        return;
+      }
+      if (!item.selling_price || item.selling_price <= 0) {
+        toast.error(`Please enter the sell price for "${item.name}"`);
         return;
       }
     }
@@ -484,7 +545,7 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
         name: item.name.trim(),
         qty: item.qty,
         cost_price: item.cost_price || 0,
-        selling_price: item.selling_price || (item.cost_price ? Math.round(item.cost_price * 1.25) : 20),
+        selling_price: item.selling_price || 0,
         category: item.category || 'Grocery',
         expiry_date: item.expiry_date || null,
         action: item.action,
@@ -618,14 +679,14 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                       <span>Upload file</span>
                       <input
                         type="file"
-                        accept="image/*"
+                        accept="image/*,application/pdf,.pdf"
                         className="hidden"
                         onChange={handleFileChange}
                       />
                     </label>
                   </div>
                   <span className="text-[11px] text-text-medium mt-1">
-                    Supports JPG, PNG, WEBP invoices and handwritten order slips
+                    Supports PDF, JPG, PNG, WEBP invoices and handwritten order slips
                   </span>
                 </div>
               </div>
@@ -642,25 +703,29 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                         </span>
                       </div>
                       <div className="flex items-center gap-1">
-                        {/* Orientation Rotation Controls */}
-                        <button
-                          type="button"
-                          onClick={() => handleRotateImage('ccw')}
-                          disabled={isRotating}
-                          className="h-8 w-8 rounded-[6px] border border-border bg-surface text-text-medium hover:text-text-high flex items-center justify-center"
-                          title="Rotate left 90°"
-                        >
-                          <RotateCcw className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleRotateImage('cw')}
-                          disabled={isRotating}
-                          className="h-8 w-8 rounded-[6px] border border-border bg-surface text-text-medium hover:text-text-high flex items-center justify-center"
-                          title="Rotate right 90°"
-                        >
-                          <RotateCw className="w-3.5 h-3.5" />
-                        </button>
+                        {/* Orientation Rotation Controls (only for images) */}
+                        {!isPdf && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleRotateImage('ccw')}
+                              disabled={isRotating}
+                              className="h-8 w-8 rounded-[6px] border border-border bg-surface text-text-medium hover:text-text-high flex items-center justify-center"
+                              title="Rotate left 90°"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRotateImage('cw')}
+                              disabled={isRotating}
+                              className="h-8 w-8 rounded-[6px] border border-border bg-surface text-text-medium hover:text-text-high flex items-center justify-center"
+                              title="Rotate right 90°"
+                            >
+                              <RotateCw className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
                         <button
                           type="button"
                           onClick={() => setShowImageModal(true)}
@@ -673,21 +738,40 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                           type="button"
                           onClick={handleReset}
                           className="h-8 px-2 rounded-[6px] text-text-medium hover:text-destructive hover:bg-surface transition-colors"
-                          title="Remove photo"
+                          title="Remove file"
                         >
                           <X className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
 
-                    <div className="relative rounded-[8px] overflow-hidden border border-border/80 max-h-36 bg-surface flex items-center justify-center">
-                      <img
-                        src={previewUrl}
-                        alt="Invoice preview"
-                        className="object-contain max-h-36 w-full cursor-pointer hover:opacity-95 transition-opacity"
+                    {isPdf ? (
+                      <div
+                        className="relative rounded-[8px] overflow-hidden border border-border/80 h-36 bg-surface flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-canvas transition-colors p-4"
                         onClick={() => setShowImageModal(true)}
-                      />
-                    </div>
+                      >
+                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                          <FileText className="w-6 h-6" />
+                        </div>
+                        <div className="flex flex-col items-center text-center">
+                          <span className="text-xs font-bold text-text-high truncate max-w-[220px]">
+                            {selectedFile?.name}
+                          </span>
+                          <span className="text-[11px] text-text-medium">
+                            PDF Invoice ({selectedFile ? `${(selectedFile.size / 1024).toFixed(0)} KB` : ''}) • Click to preview
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative rounded-[8px] overflow-hidden border border-border/80 max-h-36 bg-surface flex items-center justify-center">
+                        <img
+                          src={previewUrl}
+                          alt="Invoice preview"
+                          className="object-contain max-h-36 w-full cursor-pointer hover:opacity-95 transition-opacity"
+                          onClick={() => setShowImageModal(true)}
+                        />
+                      </div>
+                    )}
 
                     <Button
                       type="button"
@@ -778,8 +862,8 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                 </div>
               </div>
 
-              {/* Invoice Meta header: Supplier, Invoice Number & Date */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-[10px] bg-canvas border border-border">
+              {/* Invoice Meta header: Supplier, Invoice Number, Date & Total Amount read from invoice */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 rounded-[10px] bg-canvas border border-border">
                 <Input
                   label="Supplier / Vendor"
                   placeholder="e.g. Metro Cash & Carry, Local Wholesaler"
@@ -803,6 +887,30 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                   onChange={(e) => setInvoiceDate(e.target.value)}
                   helperText="Extracted invoice or receipt date"
                 />
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-text-high flex items-center justify-between">
+                    <span>INVOICE GRAND TOTAL</span>
+                    {total === null && <Badge variant="warning">Needs Review</Badge>}
+                  </label>
+                  <div
+                    id="invoice-grand-total-display"
+                    className={`flex items-center h-12 min-h-[48px] px-3.5 rounded-[6px] border ${
+                      total === null
+                        ? 'border-amber-400 bg-amber-50/50 text-amber-800'
+                        : 'border-border-strong bg-surface text-primary'
+                    } font-mono text-base font-bold select-all`}
+                  >
+                    {total !== null
+                      ? `${currency === 'USD' ? '$' : '₹'}${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                      : 'Not Printed / Needs Review'}
+                  </div>
+                  <span className="text-xs text-text-medium">
+                    {total !== null
+                      ? 'Printed grand total extracted from bottom/summary section of invoice'
+                      : 'Invoice grand total was not clearly detected from bottom/summary area. Flagged for review.'}
+                  </span>
+                </div>
               </div>
 
               {/* Financial Totals Ribbon from Invoice */}
@@ -836,7 +944,7 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
 
                     {total !== null && (
                       <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] bg-primary/[0.08] border border-primary/20">
-                        <span className="text-text-medium text-[11px] font-sans">Grand Total:</span>
+                        <span className="text-text-medium text-[11px] font-sans">INVOICE GRAND TOTAL:</span>
                         <span className="font-bold text-primary">
                           {currency === 'USD' ? '$' : '₹'}{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
@@ -848,12 +956,12 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                       const isMatch = total !== null && Math.abs(calculatedSum - total) <= Math.max(2, total * 0.05);
                       return (
                         <div className="flex items-center gap-1.5 text-text-medium text-[11px]">
-                          <span className="font-sans">Items sum:</span>
+                          <span className="font-sans">Items sum (TOTAL MRP):</span>
                           <span className="font-semibold text-text-high">
                             {currency === 'USD' ? '$' : '₹'}{calculatedSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
                           {isMatch && (
-                            <span className="text-emerald-600 flex items-center gap-0.5 font-sans font-semibold ml-1" title="Items line total matches invoice total">
+                            <span className="text-emerald-600 flex items-center gap-0.5 font-sans font-semibold ml-1" title="Items line total matches invoice grand total">
                               <CheckCircle2 className="w-3.5 h-3.5" /> Matched
                             </span>
                           )}
@@ -864,6 +972,36 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                 </div>
               )}
 
+              {/* Printed Total Discrepancy Validation Banner */}
+              {total !== null && total > 0 && (() => {
+                const calculatedSum = items.reduce((sum, item) => sum + (item.line_total || 0), 0);
+                const diff = Math.round(Math.abs(calculatedSum - total) * 100) / 100;
+                const isMismatch = diff > 1.0;
+
+                if (isMismatch) {
+                  return (
+                    <div className="flex items-start gap-2.5 p-3.5 rounded-[8px] bg-amber-500/10 border border-amber-500/30 text-amber-900 text-xs">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-bold">Printed Invoice Grand Total Discrepancy</div>
+                        <div className="text-amber-800 mt-0.5 leading-relaxed">
+                          The printed final invoice total (<strong>INVOICE GRAND TOTAL</strong>) is <strong>{currency === 'USD' ? '$' : '₹'}{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>, but the sum of extracted individual product amounts (TOTAL MRP) is <strong>{currency === 'USD' ? '$' : '₹'}{calculatedSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> (discrepancy: {currency === 'USD' ? '$' : '₹'}{diff.toFixed(2)}). Both values are preserved without alteration. Please review individual item rows or summary amounts below.
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="flex items-center gap-2 p-3 rounded-[8px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 text-xs">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>
+                      <strong>Total Reconciled:</strong> Sum of extracted product amounts ({currency === 'USD' ? '$' : '₹'}{calculatedSum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) reconciles with printed <strong>INVOICE GRAND TOTAL</strong> ({currency === 'USD' ? '$' : '₹'}{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}).
+                    </span>
+                  </div>
+                );
+              })()}
+
               {/* Review Table Header with Action and Counts */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
@@ -872,7 +1010,7 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                     <Badge variant="neutral">{items.length} items</Badge>
                   </h3>
                   <p className="text-xs text-text-medium mt-0.5">
-                    Unit Cost Price = wholesale buying rate per piece. Check that Line Total ≈ Qty × Cost Price.
+                    Original product line amounts extracted directly from invoice. Review fields or update any marked 'Needs Review'.
                   </p>
                 </div>
 
@@ -895,11 +1033,11 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-10 text-center">#</TableHead>
-                      <TableHead className="min-w-[190px]">Item Name</TableHead>
-                      <TableHead className="w-20">Qty</TableHead>
-                      <TableHead className="w-32 min-w-[130px]">Unit Cost (₹)</TableHead>
-                      <TableHead className="w-32 min-w-[130px]">MRP (₹)</TableHead>
-                      <TableHead className="w-32 min-w-[130px]">Line Total (₹)</TableHead>
+                      <TableHead className="min-w-[190px]">Product / Description</TableHead>
+                      <TableHead className="w-24 min-w-[85px] text-center">QTY</TableHead>
+                      <TableHead className="w-32 min-w-[130px]">UNIT COST (₹)</TableHead>
+                      <TableHead className="w-28 min-w-[110px] text-center">TAX</TableHead>
+                      <TableHead className="w-32 min-w-[130px]">TOTAL MRP (₹)</TableHead>
                       <TableHead className="w-32 min-w-[130px]">Sell Price (₹)</TableHead>
                       <TableHead className="w-32">Category</TableHead>
                       <TableHead className="w-32">Expiry</TableHead>
@@ -912,16 +1050,12 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                       const isLowConfidence = item.confidence < 0.7;
                       const isMissingPrice =
                         item.cost_price === null || item.cost_price === undefined || item.cost_price <= 0;
-                      const hasAmberFlag = isLowConfidence || isMissingPrice;
-
-                      // Math check: qty * cost_price == line_total
-                      const calculatedTotal =
-                        item.cost_price && item.qty ? Math.round(item.qty * item.cost_price * 100) / 100 : null;
-                      const isMathConsistent =
-                        calculatedTotal !== null &&
-                        item.line_total !== null &&
-                        item.line_total !== undefined &&
-                        Math.abs(calculatedTotal - item.line_total) <= 1.5;
+                      const isMissingSellPrice =
+                        !item.selling_price || item.selling_price <= 0;
+                      const isTaxReview =
+                        item.tax_rate === null || item.tax_percent === 'Needs Review';
+                      const hasAmberFlag =
+                        item.needs_review || isLowConfidence || isMissingPrice || isMissingSellPrice || isTaxReview;
 
                       return (
                         <TableRow
@@ -933,7 +1067,7 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                             {idx + 1}
                           </TableCell>
 
-                          {/* Item Name */}
+                          {/* Product / Description */}
                           <TableCell>
                             <div className="flex flex-col gap-1">
                               <Input
@@ -942,7 +1076,7 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                                 className={`h-11 min-h-[44px] text-xs font-semibold ${
                                   !item.name.trim() ? 'border-destructive' : ''
                                 }`}
-                                placeholder="Product name"
+                                placeholder="Product name or description"
                               />
                               {isLowConfidence && (
                                 <span className="inline-flex items-center gap-1 text-[10px] text-amber-700 font-medium">
@@ -953,20 +1087,30 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                             </div>
                           </TableCell>
 
-                          {/* Qty */}
-                          <TableCell>
-                            <Input
-                              type="number"
-                              min="1"
-                              value={item.qty}
-                              onChange={(e) =>
-                                handleUpdateItemField(item.id, 'qty', parseInt(e.target.value, 10) || 1)
-                              }
-                              className="h-11 min-h-[44px] text-xs tabular-nums text-center"
-                            />
+                          {/* QTY - Supports Whole Numbers & Decimals (e.g. 1, 5, 2.5, 0.75) */}
+                          <TableCell className="px-2 py-2 w-24 min-w-[85px]">
+                            <div className="flex flex-col gap-0.5">
+                              <Input
+                                type="number"
+                                step="any"
+                                min="0.01"
+                                placeholder="1"
+                                value={item.qty !== null && item.qty !== undefined && item.qty > 0 ? item.qty : ''}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value);
+                                  handleUpdateItemField(item.id, 'qty', isNaN(val) ? 1 : val);
+                                }}
+                                className="h-11 min-h-[44px] text-xs tabular-nums text-center font-bold px-2"
+                              />
+                              {(!item.qty || item.qty <= 0) && (
+                                <span className="text-[10px] text-amber-700 font-semibold text-center">
+                                  Enter qty
+                                </span>
+                              )}
+                            </div>
                           </TableCell>
 
-                          {/* Unit Cost Price */}
+                          {/* UNIT COST - Price per Unit before Tax */}
                           <TableCell className="px-2 py-2 min-w-[130px]">
                             <div className="flex flex-col gap-1">
                               <Input
@@ -984,28 +1128,42 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                               />
                               {isMissingPrice && (
                                 <span className="text-[10px] text-amber-700 font-semibold">
-                                  Missing price
+                                  Missing unit price
                                 </span>
                               )}
                             </div>
                           </TableCell>
 
-                          {/* MRP */}
-                          <TableCell className="px-2 py-2 min-w-[130px]">
-                            <Input
-                              isCurrency={true}
-                              placeholder="0"
-                              value={item.mrp !== null && item.mrp !== undefined ? item.mrp : ''}
-                              onChange={(e) => {
-                                const raw = e.target.value.replace(/[^0-9.]/g, '');
-                                const val = raw ? parseFloat(raw) : null;
-                                handleUpdateItemField(item.id, 'mrp', val);
-                              }}
-                              className="h-11 min-h-[44px] text-xs tabular-nums pl-6 pr-2 font-medium"
-                            />
+                          {/* TAX - Percentage Rate (e.g. 18%, 5%, 0% or Needs Review) */}
+                          <TableCell className="px-2 py-2 w-28 min-w-[110px]">
+                            <div className="flex flex-col gap-0.5">
+                              <Input
+                                placeholder="e.g. 18%"
+                                value={item.tax_input_str ?? item.tax_percent ?? (item.tax_rate !== null && item.tax_rate !== undefined ? `${item.tax_rate}%` : 'Needs Review')}
+                                onChange={(e) => {
+                                  handleUpdateItemField(item.id, 'tax_input_str', e.target.value);
+                                }}
+                                className={`h-11 min-h-[44px] text-xs text-center font-bold px-2 ${
+                                  isTaxReview
+                                    ? 'border-amber-500 bg-amber-500/[0.06] text-amber-900 focus-visible:border-amber-500'
+                                    : 'tabular-nums'
+                                }`}
+                              />
+                              {isTaxReview ? (
+                                <span className="text-[10px] text-amber-700 font-semibold text-center">
+                                  Needs Review
+                                </span>
+                              ) : (
+                                <span className="text-[10px] text-text-medium text-center font-mono">
+                                  {item.tax_amount !== null && item.tax_amount !== undefined
+                                    ? `+₹${item.tax_amount.toFixed(2)}`
+                                    : '0% tax'}
+                                </span>
+                              )}
+                            </div>
                           </TableCell>
 
-                          {/* Line Total */}
+                          {/* TOTAL MRP - Original Extracted Product Line Amount */}
                           <TableCell className="px-2 py-2 min-w-[130px]">
                             <div className="flex flex-col gap-0.5">
                               <Input
@@ -1017,33 +1175,45 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                                   const val = raw ? parseFloat(raw) : null;
                                   handleUpdateItemField(item.id, 'line_total', val);
                                 }}
-                                className="h-11 min-h-[44px] text-xs tabular-nums pl-6 pr-2 font-medium"
+                                className={`h-11 min-h-[44px] text-xs tabular-nums pl-6 pr-2 font-medium ${
+                                  item.line_total === null || item.line_total === undefined || item.line_total <= 0
+                                    ? 'border-amber-500 bg-amber-500/[0.06] focus-visible:border-amber-500'
+                                    : ''
+                                }`}
                               />
-                              {isMathConsistent && (
-                                <span className="text-[10px] text-emerald-700 font-medium flex items-center gap-0.5">
-                                  <CheckCircle2 className="w-3 h-3 text-emerald-600 inline" />
-                                  Qty × Cost verified
-                                </span>
-                              )}
+                              <span className="text-[10px] text-text-medium font-mono">
+                                {item.line_total !== null && item.line_total !== undefined && item.line_total > 0
+                                  ? 'Invoice line amount'
+                                  : 'Needs Review'}
+                              </span>
                             </div>
                           </TableCell>
 
-                          {/* Selling Price */}
+                          {/* Sell Price (₹) - Filled by User Only */}
                           <TableCell className="px-2 py-2 min-w-[130px]">
-                            <Input
-                              isCurrency={true}
-                              placeholder="0"
-                              value={item.selling_price || ''}
-                              onChange={(e) => {
-                                const raw = e.target.value.replace(/[^0-9.]/g, '');
-                                handleUpdateItemField(
-                                  item.id,
-                                  'selling_price',
-                                  raw ? parseFloat(raw) : 0
-                                );
-                              }}
-                              className="h-11 min-h-[44px] text-xs tabular-nums pl-6 pr-2 font-medium"
-                            />
+                            <div className="flex flex-col gap-1">
+                              <Input
+                                isCurrency={true}
+                                placeholder="Enter sell price"
+                                value={item.selling_price && item.selling_price > 0 ? item.selling_price : ''}
+                                onChange={(e) => {
+                                  const raw = e.target.value.replace(/[^0-9.]/g, '');
+                                  handleUpdateItemField(
+                                    item.id,
+                                    'selling_price',
+                                    raw ? parseFloat(raw) : 0
+                                  );
+                                }}
+                                className={`h-11 min-h-[44px] text-xs tabular-nums pl-6 pr-2 font-semibold ${
+                                  isMissingSellPrice ? 'border-amber-500 focus-visible:border-amber-500' : ''
+                                }`}
+                              />
+                              {isMissingSellPrice && (
+                                <span className="text-[10px] text-amber-700 font-semibold">
+                                  Enter sell price
+                                </span>
+                              )}
+                            </div>
                           </TableCell>
 
                           {/* Category */}
@@ -1220,16 +1390,20 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
         <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
           <div className="relative bg-surface rounded-[8px] overflow-hidden max-w-2xl w-full border border-border flex flex-col max-h-[90vh]">
             <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-canvas">
-              <span className="text-xs font-bold text-text-high">Invoice image preview</span>
+              <span className="text-xs font-bold text-text-high">
+                {isPdf ? 'PDF Invoice preview' : 'Invoice image preview'}
+              </span>
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleRotateImage('cw')}
-                  className="h-7 px-2 rounded border border-border text-xs flex items-center gap-1 hover:bg-surface"
-                >
-                  <RotateCw className="w-3.5 h-3.5" />
-                  Rotate
-                </button>
+                {!isPdf && (
+                  <button
+                    type="button"
+                    onClick={() => handleRotateImage('cw')}
+                    className="h-7 px-2 rounded border border-border text-xs flex items-center gap-1 hover:bg-surface"
+                  >
+                    <RotateCw className="w-3.5 h-3.5" />
+                    Rotate
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setShowImageModal(false)}
@@ -1240,11 +1414,19 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
               </div>
             </div>
             <div className="p-4 flex items-center justify-center overflow-auto flex-1 bg-black/5">
-              <img
-                src={previewUrl}
-                alt="Enlarged invoice"
-                className="max-h-[75vh] object-contain rounded"
-              />
+              {isPdf ? (
+                <iframe
+                  src={previewUrl}
+                  title="PDF invoice viewer"
+                  className="w-full h-[75vh] rounded border border-border"
+                />
+              ) : (
+                <img
+                  src={previewUrl}
+                  alt="Enlarged invoice"
+                  className="max-h-[75vh] object-contain rounded"
+                />
+              )}
             </div>
           </div>
         </div>

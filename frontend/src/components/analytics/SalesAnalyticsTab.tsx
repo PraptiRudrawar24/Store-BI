@@ -12,6 +12,7 @@ import { formatINR } from '../../utils';
 import { Card, CardHeader, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { WeekdayHourHeatmap } from './WeekdayHourHeatmap';
+import { CHART_COLORS } from '../../utils/chartColors';
 
 export function SalesAnalyticsTab() {
   const [granularity, setGranularity] = useState<'daily' | 'weekly' | 'monthly'>('daily');
@@ -271,7 +272,7 @@ export function SalesAnalyticsTab() {
       {/* Highlights Cards (Best day, Slowest day, Busiest hour) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Best Day Card */}
-        <Card className="border-l-4 border-l-secondary">
+        <Card showTrail trailColor="violet" className="border-l-4 border-l-secondary shadow-sm">
           <CardContent className="p-4 flex items-start justify-between">
             <div>
               <span className="text-xs font-semibold text-text-medium block">
@@ -293,7 +294,7 @@ export function SalesAnalyticsTab() {
         </Card>
 
         {/* Slowest Day Card */}
-        <Card className="border-l-4 border-l-border">
+        <Card showTrail trailColor="amber" className="border-l-4 border-l-border shadow-sm">
           <CardContent className="p-4 flex items-start justify-between">
             <div>
               <span className="text-xs font-semibold text-text-medium block">
@@ -315,7 +316,7 @@ export function SalesAnalyticsTab() {
         </Card>
 
         {/* Busiest Hour Card */}
-        <Card className="border-l-4 border-l-primary">
+        <Card showTrail trailColor="indigo" className="border-l-4 border-l-primary shadow-sm">
           <CardContent className="p-4 flex items-start justify-between">
             <div>
               <span className="text-xs font-semibold text-text-medium block">
@@ -372,18 +373,18 @@ export function SalesAnalyticsTab() {
       </div>
 
       {/* Line Chart of Sales and Profit */}
-      <Card>
+      <Card showTrail trailColor="indigo" trailSize={105} className="shadow-sm">
         <CardHeader
           title="Sales & profit trend"
           subtitle={`Dual-metric trajectory across ${granularity} periods`}
           action={
             <div className="flex items-center gap-4 text-xs">
               <div className="flex items-center gap-1.5">
-                <span className="w-3.5 h-1 bg-[#2563EB] rounded-full" />
+                <span className="w-3.5 h-1.5 bg-[#6366F1] rounded-full" />
                 <span className="font-semibold text-text-high">Sales (₹)</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-3.5 h-1 bg-[#16A34A] rounded-full" />
+                <span className="w-3.5 h-1.5 bg-[#10B981] rounded-full" />
                 <span className="font-semibold text-text-high">Profit (₹)</span>
               </div>
             </div>
@@ -452,22 +453,22 @@ export function SalesAnalyticsTab() {
                 {/* Data lines when data exists */}
                 {data.has_data && chartPoints.length > 0 && (
                   <>
-                    {/* Sales Path (Store BI Blue) */}
+                    {/* Sales Path (Indigo #6366F1) */}
                     <path
                       d={salesPath}
                       fill="none"
-                      stroke="#2563EB"
-                      strokeWidth={2.5}
+                      stroke={CHART_COLORS.sales}
+                      strokeWidth={2.8}
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
 
-                    {/* Profit Path (Success Green) */}
+                    {/* Profit Path (Emerald #10B981) */}
                     <path
                       d={profitPath}
                       fill="none"
-                      stroke="#16A34A"
-                      strokeWidth={2.2}
+                      stroke={CHART_COLORS.profit}
+                      strokeWidth={2.4}
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
@@ -498,8 +499,8 @@ export function SalesAnalyticsTab() {
                           <circle
                             cx={sx}
                             cy={sy}
-                            r={isHovered ? 5 : 3}
-                            fill="#2563EB"
+                            r={isHovered ? 5.5 : 3.5}
+                            fill={CHART_COLORS.sales}
                             stroke="#FFFFFF"
                             strokeWidth={1.5}
                           />
@@ -508,8 +509,8 @@ export function SalesAnalyticsTab() {
                           <circle
                             cx={sx}
                             cy={py}
-                            r={isHovered ? 4.5 : 2.5}
-                            fill="#16A34A"
+                            r={isHovered ? 5 : 3}
+                            fill={CHART_COLORS.profit}
                             stroke="#FFFFFF"
                             strokeWidth={1.5}
                           />
@@ -568,10 +569,10 @@ export function SalesAnalyticsTab() {
                   {activePoint.period} ({activePoint.date})
                 </span>
                 <span className="text-text-medium">
-                  Sales: <strong className="text-[#2563EB]">{formatINR(activePoint.sales)}</strong>
+                  Sales: <strong className="text-[#6366F1] font-bold">{formatINR(activePoint.sales)}</strong>
                 </span>
                 <span className="text-text-medium">
-                  Profit: <strong className="text-[#16A34A]">{formatINR(activePoint.profit)}</strong>
+                  Profit: <strong className="text-[#10B981] font-bold">{formatINR(activePoint.profit)}</strong>
                 </span>
                 <span className="text-text-medium">
                   Bills: <strong className="text-text-high">{activePoint.transactions}</strong>
@@ -593,7 +594,7 @@ export function SalesAnalyticsTab() {
       </Card>
 
       {/* Weekday x Hour Footfall Heatmap */}
-      <Card>
+      <Card showTrail trailColor="indigo" trailSize={95} className="shadow-sm">
         <CardHeader
           title="Busiest hours & shopping patterns"
           subtitle="Hourly transaction density to plan staffing and stock readiness"
@@ -604,7 +605,7 @@ export function SalesAnalyticsTab() {
       </Card>
 
       {/* Data Table with Export CSV */}
-      <Card>
+      <Card showTrail trailColor="neutral" trailSize={100} className="shadow-sm">
         <CardHeader
           title="Periodic sales & profit breakdown"
           subtitle="Tabular summary for the selected date range"

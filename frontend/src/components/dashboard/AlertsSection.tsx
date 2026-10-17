@@ -34,7 +34,7 @@ export function AlertsSection() {
 
   return (
     <section id="dashboard-alerts-section" className="scroll-mt-20">
-      <Card>
+      <Card showTrail trailColor={totalAlerts > 0 ? "rose" : "amber"} trailSize={100} className="shadow-sm">
         <CardHeader
           title="Stock alerts"
           subtitle="Critical inventory replenishment thresholds and run-out projections"

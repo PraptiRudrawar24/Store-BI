@@ -20,8 +20,8 @@ export function FeaturesSection() {
           </p>
         </div>
 
-        {/* Bento Grid Layout (6 Feature Cards) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="capabilities">
+        {/* Feature Cards Grid (4 Features in 2x2 layout) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto" id="capabilities">
           {features.items.map((feature) => (
             <FeatureCard key={feature.id} feature={feature} />
           ))}

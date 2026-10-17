@@ -401,10 +401,24 @@ export function ProductRecommendationsTab() {
               borderStyle = 'border-purple-200/80';
             }
 
+            const trailCol: any =
+              rec.type === 'stock_more'
+                ? 'emerald'
+                : rec.type === 'discount_clear'
+                ? 'amber'
+                : rec.type === 'reconsider'
+                ? 'rose'
+                : rec.type === 'price_check'
+                ? 'violet'
+                : 'indigo';
+
             return (
               <Card
                 key={rec.id}
-                className={`border bg-surface transition-all overflow-hidden ${borderStyle}`}
+                showTrail
+                trailColor={trailCol}
+                trailSize={90}
+                className={`border bg-surface transition-all overflow-hidden ${borderStyle} shadow-sm`}
               >
                 <CardContent className="p-5 flex flex-col gap-4">
                   {/* Card Header */}

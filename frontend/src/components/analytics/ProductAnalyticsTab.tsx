@@ -171,6 +171,11 @@ export function ProductAnalyticsTab() {
     return peak;
   }, [data.profit_table]);
 
+  const maxSalesVal = useMemo(() => {
+    const peak = Math.max(...data.profit_table.map((p) => p.sales), 1);
+    return peak;
+  }, [data.profit_table]);
+
   return (
     <div className="flex flex-col gap-6">
       {error && (
@@ -246,7 +251,7 @@ export function ProductAnalyticsTab() {
 
       {/* Summary KPI Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="p-3.5 rounded-[8px] bg-surface border border-border flex items-center justify-between">
+        <Card showTrail trailColor="neutral" className="p-3.5 flex items-center justify-between shadow-sm">
           <div>
             <span className="text-[11px] text-text-medium block font-medium">Catalog items</span>
             <span className="text-xl font-bold text-text-high tabular-nums block mt-0.5">
@@ -256,9 +261,9 @@ export function ProductAnalyticsTab() {
           <div className="w-9 h-9 rounded-[6px] bg-canvas border border-border flex items-center justify-center text-text-medium">
             <Package className="w-5 h-5" />
           </div>
-        </div>
+        </Card>
 
-        <div className="p-3.5 rounded-[8px] bg-surface border border-border flex items-center justify-between">
+        <Card showTrail trailColor="cyan" className="p-3.5 flex items-center justify-between shadow-sm">
           <div>
             <span className="text-[11px] text-text-medium block font-medium">Units sold in period</span>
             <span className="text-xl font-bold text-primary tabular-nums block mt-0.5">
@@ -268,9 +273,9 @@ export function ProductAnalyticsTab() {
           <div className="w-9 h-9 rounded-[6px] bg-primary/10 flex items-center justify-center text-primary">
             <TrendingUp className="w-5 h-5" />
           </div>
-        </div>
+        </Card>
 
-        <div className="p-3.5 rounded-[8px] bg-surface border border-border flex items-center justify-between">
+        <Card showTrail trailColor="indigo" className="p-3.5 flex items-center justify-between shadow-sm">
           <div>
             <span className="text-[11px] text-text-medium block font-medium">Product revenue</span>
             <span className="text-xl font-bold text-secondary tabular-nums block mt-0.5">
@@ -280,11 +285,11 @@ export function ProductAnalyticsTab() {
           <div className="w-9 h-9 rounded-[6px] bg-secondary/10 flex items-center justify-center text-secondary">
             <BarChart3 className="w-5 h-5" />
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* 1. Demand: Top products by units sold with trend line */}
-      <Card>
+      <Card showTrail trailColor="cyan" trailSize={95} className="shadow-sm">
         <CardHeader
           title="Demand: Top products by units sold"
           subtitle="Highest sales volume items with recent 7-day velocity trajectory"
@@ -354,7 +359,7 @@ export function ProductAnalyticsTab() {
       {/* 2. Best selling vs Slow selling (Ranked lists top 10 & bottom 10) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top 10 Best Selling */}
-        <Card>
+        <Card showTrail trailColor="indigo" trailSize={90} className="shadow-sm">
           <CardHeader
             title="Best selling (Top 10)"
             subtitle="Products generating highest revenue velocity"
@@ -409,7 +414,7 @@ export function ProductAnalyticsTab() {
         </Card>
 
         {/* Bottom 10 Slow Selling with "No sales in 30 days" Chip */}
-        <Card>
+        <Card showTrail trailColor="amber" trailSize={90} className="shadow-sm">
           <CardHeader
             title="Slow selling (Bottom 10)"
             subtitle="Sluggish or stagnant items with potential capital tie-up"
@@ -473,7 +478,7 @@ export function ProductAnalyticsTab() {
       </div>
 
       {/* 3. Product Profit: Table and Bar Chart, Sortable */}
-      <Card>
+      <Card showTrail trailColor="emerald" trailSize={100} className="shadow-sm">
         <CardHeader
           title="Product profit & margin"
           subtitle="Gross profit contribution, margin percentage, and profitability rank"
@@ -637,8 +642,20 @@ export function ProductAnalyticsTab() {
           ) : (
             /* Bar Chart View of Profit & Margin */
             <div className="p-4 sm:p-6 flex flex-col gap-4">
-              <div className="text-xs text-text-medium flex items-center justify-between pb-2 border-b border-border">
-                <span>Displaying profit contribution and gross margin per product</span>
+              <div className="text-xs text-text-medium flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-border">
+                <div className="flex items-center gap-4">
+                  <span>Displaying top product sales and profit velocity</span>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2 rounded-[2px] bg-[#6366F1]" />
+                      <span className="text-[11px] font-semibold text-text-high">Sales (₹)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2 rounded-[2px] bg-[#10B981]" />
+                      <span className="text-[11px] font-semibold text-text-high">Profit (₹)</span>
+                    </div>
+                  </div>
+                </div>
                 <span className="tabular-nums font-semibold text-text-high">
                   {sortedProfitItems.length} products
                 </span>
@@ -646,6 +663,8 @@ export function ProductAnalyticsTab() {
 
               <div className="flex flex-col gap-3">
                 {sortedProfitItems.slice(0, 15).map((p) => {
+                  const salesRatio = Math.max(p.sales / maxSalesVal, 0);
+                  const salesWidthPct = Math.min(Math.max(salesRatio * 100, 2), 100);
                   const profitRatio = Math.max(p.profit / maxProfitVal, 0);
                   const profitWidthPct = Math.min(Math.max(profitRatio * 100, 2), 100);
 
@@ -660,7 +679,10 @@ export function ProductAnalyticsTab() {
                           {renderAbcBadge(p.abc_class)}
                         </div>
                         <div className="flex items-center gap-3 shrink-0 tabular-nums">
-                          <span className="font-bold text-secondary">
+                          <span className="font-bold text-[#6366F1]">
+                            Sales: {formatINR(p.sales)}
+                          </span>
+                          <span className="font-bold text-[#10B981]">
                             Profit: {formatINR(p.profit)}
                           </span>
                           <span className="font-semibold text-text-high px-1.5 py-0.5 rounded-[4px] bg-surface border border-border">
@@ -669,12 +691,22 @@ export function ProductAnalyticsTab() {
                         </div>
                       </div>
 
-                      {/* Bar Visualization */}
-                      <div className="w-full h-3 rounded-[4px] bg-surface overflow-hidden flex items-center">
-                        <div
-                          className="h-full bg-secondary rounded-[4px] transition-all"
-                          style={{ width: `${profitWidthPct}%` }}
-                        />
+                      {/* Coordinated Dual Bars: Sales (#6366F1) & Profit (#10B981) */}
+                      <div className="flex flex-col gap-1 w-full">
+                        <div className="w-full h-2 rounded-[3px] bg-surface overflow-hidden flex items-center">
+                          <div
+                            className="h-full rounded-[3px] transition-all bg-[#6366F1]"
+                            style={{ width: `${salesWidthPct}%` }}
+                            title={`Sales: ${formatINR(p.sales)}`}
+                          />
+                        </div>
+                        <div className="w-full h-2 rounded-[3px] bg-surface overflow-hidden flex items-center">
+                          <div
+                            className="h-full rounded-[3px] transition-all bg-[#10B981]"
+                            style={{ width: `${profitWidthPct}%` }}
+                            title={`Profit: ${formatINR(p.profit)}`}
+                          />
+                        </div>
                       </div>
                     </div>
                   );
@@ -686,7 +718,7 @@ export function ProductAnalyticsTab() {
       </Card>
 
       {/* 4. ABC Classification Tags and Breakdown */}
-      <Card>
+      <Card showTrail trailColor="violet" trailSize={95} className="shadow-sm">
         <CardHeader
           title="ABC classification tags"
           subtitle="Prioritize inventory focus by Pareto revenue contribution (80 / 15 / 5 Rule)"

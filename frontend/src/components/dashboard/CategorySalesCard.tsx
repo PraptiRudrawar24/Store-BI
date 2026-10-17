@@ -4,6 +4,7 @@ import { api, type CategorySalesResponse, type CategorySalesItem } from '../../a
 import { formatINR } from '../../utils';
 import { cn } from '../ui/utils';
 import { Layers, Package, AlertCircle, AlertTriangle } from 'lucide-react';
+import { getCategoryColor } from '../../utils/chartColors';
 
 interface CategorySalesCardProps {
   period: 'today' | '7days' | '30days';
@@ -59,7 +60,7 @@ export function CategorySalesCard({ period, onRecordSaleClick }: CategorySalesCa
     period === 'today' ? 'Today' : period === '7days' ? 'Last 7 days' : 'Last 30 days';
 
   return (
-    <Card>
+    <Card showTrail trailColor="violet" trailSize={100} className="shadow-sm">
       <CardHeader
         title="Category-wise sales"
         subtitle={`Department distribution and top selling merchandise for ${periodLabel}`}
@@ -109,8 +110,9 @@ export function CategorySalesCard({ period, onRecordSaleClick }: CategorySalesCa
               </div>
 
               <div className="flex flex-col gap-2.5">
-                {data.categories.map((cat) => {
+                {data.categories.map((cat, idx) => {
                   const isSelected = selectedCategory?.category === cat.category;
+                  const catColor = getCategoryColor(idx);
 
                   return (
                     <button
@@ -126,6 +128,10 @@ export function CategorySalesCard({ period, onRecordSaleClick }: CategorySalesCa
                     >
                       <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full shrink-0"
+                            style={{ backgroundColor: catColor }}
+                          />
                           <span
                             className={cn(
                               'font-bold truncate max-w-[150px] sm:max-w-[220px]',
@@ -149,14 +155,15 @@ export function CategorySalesCard({ period, onRecordSaleClick }: CategorySalesCa
                         </div>
                       </div>
 
-                      {/* Flat Horizontal Bar (No gradients per DESIGN.md) */}
+                      {/* Coordinated Category Bar with rounded corners */}
                       <div className="w-full h-2 rounded-full bg-canvas border border-border/80 overflow-hidden">
                         <div
-                          className={cn(
-                            'h-full rounded-full transition-all duration-300',
-                            isSelected ? 'bg-primary' : 'bg-primary/70'
-                          )}
-                          style={{ width: `${Math.min(100, Math.max(2, cat.share_pct))}%` }}
+                          className="h-full rounded-full transition-all duration-300"
+                          style={{
+                            width: `${Math.min(100, Math.max(2, cat.share_pct))}%`,
+                            backgroundColor: catColor,
+                            opacity: isSelected ? 1 : 0.8,
+                          }}
                         />
                       </div>
                     </button>

@@ -3,7 +3,7 @@ import { CustomerFields } from './CustomerFields';
 import { CartItemRow } from './CartItemRow';
 import { TotalsSummary } from './TotalsSummary';
 import { PaymentSelector } from './PaymentSelector';
-import { Receipt, Trash2, ShoppingBasket } from 'lucide-react';
+import { Receipt, Trash2, ShoppingBasket, PlusCircle } from 'lucide-react';
 
 interface CartPanelProps {
   items: CartItem[];
@@ -15,6 +15,7 @@ interface CartPanelProps {
   onUpdateQuantity: (productId: string, quantity: number) => void;
   onRemoveItem: (productId: string) => void;
   onClearCart: () => void;
+  onNewBill?: () => void;
   onCompleteSale: () => void;
   onApplyDiscountClick?: () => void;
 }
@@ -29,6 +30,7 @@ export function CartPanel({
   onUpdateQuantity,
   onRemoveItem,
   onClearCart,
+  onNewBill,
   onCompleteSale,
   onApplyDiscountClick,
 }: CartPanelProps) {
@@ -47,16 +49,30 @@ export function CartPanel({
             </span>
           </div>
 
-          <button
-            type="button"
-            onClick={onClearCart}
-            disabled={!hasItems}
-            title="Clear current cart"
-            className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 px-2 py-1 rounded-[4px] transition-colors flex items-center gap-1 font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <Trash2 className="w-3.5 h-3.5" strokeWidth={2} />
-            <span>Clear Cart</span>
-          </button>
+          <div className="flex items-center gap-1.5">
+            {onNewBill && (
+              <button
+                type="button"
+                onClick={onNewBill}
+                title="Start a fresh bill"
+                className="text-xs text-primary hover:text-primary-hover hover:bg-primary/10 px-2 py-1 rounded-[4px] transition-colors flex items-center gap-1 font-semibold"
+              >
+                <PlusCircle className="w-3.5 h-3.5" strokeWidth={2} />
+                <span>New Bill</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onClearCart}
+              disabled={!hasItems}
+              title="Clear current cart"
+              className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 px-2 py-1 rounded-[4px] transition-colors flex items-center gap-1 font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Trash2 className="w-3.5 h-3.5" strokeWidth={2} />
+              <span>Clear Cart</span>
+            </button>
+          </div>
         </div>
 
         {/* Customer Information (Name & Mobile) */}

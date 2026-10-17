@@ -169,7 +169,7 @@ export function DemandForecastTab() {
 
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="p-4 bg-surface flex flex-col justify-between">
+        <Card showTrail trailColor="rose" className="p-4 bg-surface flex flex-col justify-between shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-text-medium">Critical stockouts</span>
             <Badge variant="destructive" dot>
@@ -184,7 +184,7 @@ export function DemandForecastTab() {
           </div>
         </Card>
 
-        <Card className="p-4 bg-surface flex flex-col justify-between">
+        <Card showTrail trailColor="amber" className="p-4 bg-surface flex flex-col justify-between shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-text-medium">Reorder warnings</span>
             <Badge variant="warning" dot>
@@ -199,7 +199,7 @@ export function DemandForecastTab() {
           </div>
         </Card>
 
-        <Card className="p-4 bg-surface flex flex-col justify-between">
+        <Card showTrail trailColor="indigo" className="p-4 bg-surface flex flex-col justify-between shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-text-medium">Total suggested orders</span>
             <Package className="w-4 h-4 text-primary" />
@@ -212,7 +212,7 @@ export function DemandForecastTab() {
           </div>
         </Card>
 
-        <Card className="p-4 bg-surface flex flex-col justify-between">
+        <Card showTrail trailColor="neutral" className="p-4 bg-surface flex flex-col justify-between shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-text-medium">Configured lead time</span>
             <Clock className="w-4 h-4 text-text-low" />
@@ -257,7 +257,7 @@ export function DemandForecastTab() {
       </Card>
 
       {/* Demand Forecast Table */}
-      <Card className="overflow-hidden bg-surface border border-border">
+      <Card showTrail trailColor="cyan" trailSize={100} className="overflow-hidden bg-surface border border-border shadow-sm">
         {loading && !data && (
           <div className="p-12 flex flex-col items-center justify-center gap-3">
             <RefreshCw className="w-7 h-7 text-primary animate-spin" />

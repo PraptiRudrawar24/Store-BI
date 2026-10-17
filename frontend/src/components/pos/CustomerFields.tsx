@@ -21,7 +21,7 @@ export function CustomerFields({ customer, onChange }: CustomerFieldsProps) {
           type="text"
           value={customer.name}
           onChange={(e) => onChange({ ...customer, name: e.target.value })}
-          placeholder="e.g. Vikram Joshi"
+          placeholder="Enter customer name"
           className="w-full h-8 px-2.5 bg-surface dark:bg-surface-low rounded-[6px] border border-border text-xs text-text-high placeholder:text-text-low focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-colors"
         />
       </div>
@@ -47,7 +47,7 @@ export function CustomerFields({ customer, onChange }: CustomerFieldsProps) {
               const clean = e.target.value.replace(/\D/g, '').slice(0, 10);
               onChange({ ...customer, phone: clean });
             }}
-            placeholder="98765 43210"
+            placeholder="Enter 10-digit mobile number"
             className="w-full h-8 pl-10 pr-2 bg-surface dark:bg-surface-low rounded-[6px] border border-border text-xs text-text-high font-mono placeholder:text-text-low focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-colors"
           />
         </div>

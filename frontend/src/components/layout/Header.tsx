@@ -5,6 +5,9 @@ import { useAuth } from '../../context/AuthContext';
 import { useAlerts } from '../../context/AlertsContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
+import { PurchaseSubscriptionModal } from '../subscription/PurchaseSubscriptionModal';
+
+import { ProductSearchBar } from '../search/ProductSearchBar';
 
 export function Header() {
   const { user, logout } = useAuth();
@@ -12,9 +15,14 @@ export function Header() {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = React.useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = React.useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
 
   const trialDays = user?.trial_days_left ?? 5;
+  const isPaid = !!user?.is_paid;
+  const subDaysLeft = user?.subscription_days_left_in_month ?? 18;
+  const totalMonthDays = user?.subscription_total_days_in_month ?? 30;
+  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = React.useState(false);
 
   // Close dropdown on outside click
   React.useEffect(() => {
@@ -38,6 +46,27 @@ export function Header() {
 
   return (
     <header className="h-16 bg-surface border-b border-border px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30">
+      {/* Mobile Search Overlay */}
+      {mobileSearchOpen && (
+        <div className="lg:hidden fixed inset-x-0 top-0 h-16 bg-surface border-b border-border z-50 px-4 flex items-center gap-3 animate-in fade-in slide-in-from-top-1 duration-150">
+          <div className="flex-1">
+            <ProductSearchBar
+              autoFocus
+              isMobileModal
+              onCloseMobile={() => setMobileSearchOpen(false)}
+              placeholder="Search products in inventory..."
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setMobileSearchOpen(false)}
+            className="px-3 py-1.5 rounded-[6px] text-xs font-semibold text-text-medium hover:text-text-high bg-canvas border border-border shrink-0"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
       {/* Left: Mobile Brand & Desktop Search Field */}
       <div className="flex items-center gap-4 flex-1 max-w-md">
         {/* Mobile Logo Presentation */}
@@ -55,30 +84,47 @@ export function Header() {
           </div>
         </div>
 
-        {/* Desktop Search Field matching reference screens */}
-        <div className="hidden lg:flex items-center w-full max-w-sm relative">
-          <Search className="w-4 h-4 text-text-medium absolute left-3.5 pointer-events-none" strokeWidth={2} />
-          <input
-            type="text"
-            placeholder="Search stores, bills, items..."
-            className="h-10 w-full pl-9 pr-12 rounded-[8px] border border-border bg-canvas text-xs text-text-high placeholder:text-text-low focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary transition-colors"
-          />
-          <kbd className="absolute right-2.5 px-1.5 py-0.5 text-[10px] font-mono text-text-medium bg-surface border border-border rounded-[4px] pointer-events-none select-none">
-            ⌘K
-          </kbd>
+        {/* Desktop Search Field with Live Autocomplete */}
+        <div className="hidden lg:flex items-center w-full max-w-sm">
+          <ProductSearchBar placeholder="Search products in inventory... (⌘K)" />
         </div>
       </div>
 
       {/* Right: Notification Bell & Profile Menu */}
       <div className="flex items-center gap-2 sm:gap-3.5">
-        {/* Trial: X days left chip in the app header */}
-        <Badge
-          variant={trialDays <= 1 ? 'warning' : 'success'}
-          dot
-          className="text-xs font-semibold"
+        {/* Trial or Subscription chip in app header */}
+        {!isPaid ? (
+          <Badge
+            variant={trialDays <= 1 ? 'warning' : 'success'}
+            dot
+            onClick={() => setIsPurchaseModalOpen(true)}
+            className="text-xs font-semibold cursor-pointer hover:opacity-85 transition-opacity"
+            title="Click to view subscription options"
+          >
+            Trial: {trialDays} {trialDays === 1 ? 'day' : 'days'} left
+          </Badge>
+        ) : (
+          <Badge
+            variant="success"
+            dot
+            onClick={() => setIsPurchaseModalOpen(true)}
+            className="text-xs font-semibold cursor-pointer hover:opacity-85 transition-opacity"
+            title="Click to manage subscription"
+          >
+            {user?.plan_name || 'Pro'}: {subDaysLeft} of {totalMonthDays}d left this month
+          </Badge>
+        )}
+
+        {/* Mobile Search Button */}
+        <button
+          type="button"
+          onClick={() => setMobileSearchOpen(true)}
+          title="Search inventory products"
+          className="lg:hidden w-12 h-12 min-h-[48px] min-w-[48px] rounded-[6px] border border-border bg-surface flex items-center justify-center text-text-medium hover:text-text-high hover:bg-canvas transition-colors"
+          aria-label="Open search"
         >
-          Trial: {trialDays} {trialDays === 1 ? 'day' : 'days'} left
-        </Badge>
+          <Search className="w-5 h-5" strokeWidth={2} />
+        </button>
 
         {/* Theme Toggle Button (Sun / Moon) */}
         <button
@@ -215,6 +261,11 @@ export function Header() {
           )}
         </div>
       </div>
+
+      <PurchaseSubscriptionModal
+        isOpen={isPurchaseModalOpen}
+        onClose={() => setIsPurchaseModalOpen(false)}
+      />
     </header>
   );
 }

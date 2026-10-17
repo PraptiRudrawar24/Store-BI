@@ -9,7 +9,7 @@ export function Sparkline({
   data,
   width = 80,
   height = 24,
-  color = '#2563EB',
+  color = '#6366F1',
 }: SparklineProps) {
   if (!data || data.length === 0) {
     return <div className="w-[80px] h-[24px] bg-canvas rounded-[4px] border border-border/50" />;
