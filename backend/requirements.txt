@@ -11,3 +11,4 @@ python-dotenv>=1.0.0
 winocr>=0.0.15
 pypdf>=5.0.0
 pypdfium2>=4.30.0
+razorpay>=2.0.0

@@ -164,6 +164,83 @@ class InitiateCheckoutResponse(BaseModel):
     payment_gateway: str  # "standard_upi_card"
     message: str
 
+class CreateOrderRequest(BaseModel):
+    plan_name: str = "All-Features Pro"
+    billing_cycle: str = "monthly"
+    payment_method: Optional[str] = "upi"  # "upi", "card", "netbanking"
+    promo_code: Optional[str] = None
+
+class CreateOrderResponse(BaseModel):
+    success: bool
+    order_id: str
+    key_id: str
+    amount: float  # In INR
+    amount_paise: int  # In paise for Razorpay SDK
+    currency: str = "INR"
+    plan_name: str
+    billing_cycle: str
+    is_test_mode: bool = False
+    is_configured: bool = True
+    payment_method: Optional[str] = "upi"
+    message: str
+    qr_info: Optional[Dict[str, Any]] = None
+
+class VerifyPaymentRequest(BaseModel):
+    razorpay_order_id: str
+    razorpay_payment_id: str
+    razorpay_signature: str
+    plan_name: Optional[str] = "All-Features Pro"
+    billing_cycle: Optional[str] = "monthly"
+
+class VerifyPaymentResponse(BaseModel):
+    success: bool
+    message: str
+    payment_id: Optional[str] = None
+    order_id: Optional[str] = None
+    plan_name: Optional[str] = None
+    amount: Optional[float] = None
+    currency: str = "INR"
+    subscription_start_date: Optional[datetime] = None
+    subscription_end_date: Optional[datetime] = None
+    shop: Optional[ShopResponse] = None
+
+class PaymentStatusResponse(BaseModel):
+    order_id: str
+    status: str  # "created", "waiting_for_payment", "pending_verification", "paid", "failed", "cancelled"
+    payment_id: Optional[str] = None
+    amount: float
+    currency: str = "INR"
+    plan_name: str
+    created_at: Optional[datetime] = None
+    paid_at: Optional[datetime] = None
+    is_test_mode: bool = False
+    utr_number: Optional[str] = None
+    error_reason: Optional[str] = None
+
+class PaymentCancelRequest(BaseModel):
+    order_id: str
+    reason: Optional[str] = "User cancelled payment"
+
+class SubmitUPIPaymentRequest(BaseModel):
+    order_id: str
+    utr_number: str
+    plan_name: Optional[str] = "All-Features Pro"
+    billing_cycle: Optional[str] = "monthly"
+
+class SubmitUPIPaymentResponse(BaseModel):
+    success: bool
+    status: str
+    message: str
+    order_id: str
+    utr_number: Optional[str] = None
+    amount: float
+    currency: str = "INR"
+    plan_name: str
+    subscription_start_date: Optional[datetime] = None
+    subscription_end_date: Optional[datetime] = None
+    shop: Optional[ShopResponse] = None
+
+
 
 # --- Product Schemas ---
 class ProductBase(BaseModel):
@@ -1216,6 +1293,102 @@ class CustomerSummaryResponse(BaseModel):
     total_profit: float = 0.0
     visit_count: int = 0
     last_visit: Optional[str] = None
+
+
+# --- Support & Feedback Schemas ---
+class CreateTicketRequest(BaseModel):
+    subject: str
+    category: str
+    description: str
+    priority: Optional[str] = "Normal"
+    attachment_name: Optional[str] = None
+    attachment_data: Optional[str] = None
+
+class CreateMessageRequest(BaseModel):
+    message: str
+    attachment_name: Optional[str] = None
+    attachment_data: Optional[str] = None
+    status: Optional[str] = None
+
+class TicketMessageResponse(BaseModel):
+    id: int
+    ticket_id: int
+    sender_id: Optional[int] = None
+    sender_role: str
+    sender_name: str
+    message: str
+    attachment_name: Optional[str] = None
+    attachment_data: Optional[str] = None
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+class SupportTicketResponse(BaseModel):
+    id: int
+    ticket_number: str
+    shop_id: int
+    store_name: Optional[str] = None
+    customer_name: Optional[str] = None
+    customer_phone: Optional[str] = None
+    customer_email: Optional[str] = None
+    subject: str
+    category: str
+    description: str
+    priority: str
+    status: str
+    assigned_admin: Optional[str] = None
+    attachment_name: Optional[str] = None
+    has_customer_unread: bool = False
+    has_admin_unread: bool = False
+    created_at: datetime
+    updated_at: datetime
+    messages_count: Optional[int] = 0
+    latest_reply_by: Optional[str] = None
+    latest_reply_at: Optional[datetime] = None
+    messages: Optional[List[TicketMessageResponse]] = None
+    model_config = ConfigDict(from_attributes=True)
+
+class AdminUpdateTicketRequest(BaseModel):
+    status: Optional[str] = None
+    priority: Optional[str] = None
+    assigned_admin: Optional[str] = None
+
+class CreateFeedbackRequest(BaseModel):
+    category: str
+    rating: int = 5
+    subject: Optional[str] = None
+    comments: str
+
+class CustomerFeedbackResponse(BaseModel):
+    id: int
+    shop_id: int
+    store_name: Optional[str] = None
+    customer_name: Optional[str] = None
+    customer_phone: Optional[str] = None
+    category: str
+    rating: int
+    subject: Optional[str] = None
+    comments: str
+    status: str
+    admin_notes: Optional[str] = None
+    converted_ticket_id: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+class AdminUpdateFeedbackRequest(BaseModel):
+    status: Optional[str] = None
+    admin_notes: Optional[str] = None
+
+class SupportOverviewResponse(BaseModel):
+    total_tickets: int
+    open_tickets: int
+    in_progress_tickets: int
+    waiting_for_customer_tickets: int
+    resolved_tickets: int
+    closed_tickets: int
+    unanswered_tickets: int
+    total_feedback: int
+    average_rating: float
 
 
 

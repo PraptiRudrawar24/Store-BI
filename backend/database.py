@@ -101,6 +101,91 @@ def migrate_db():
             if "notes" not in inv_cols:
                 conn.execute(text("ALTER TABLE invoices ADD COLUMN notes VARCHAR"))
 
+            # Ensure payment_transactions table exists for tracking subscription payments
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS payment_transactions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    shop_id INTEGER NOT NULL,
+                    order_id VARCHAR NOT NULL UNIQUE,
+                    payment_id VARCHAR UNIQUE,
+                    signature VARCHAR,
+                    plan_name VARCHAR DEFAULT 'All-Features Pro',
+                    billing_cycle VARCHAR DEFAULT 'monthly',
+                    amount FLOAT NOT NULL,
+                    currency VARCHAR DEFAULT 'INR',
+                    payment_method VARCHAR,
+                    status VARCHAR DEFAULT 'created',
+                    error_reason VARCHAR,
+                    is_test_mode BOOLEAN DEFAULT 0,
+                    utr_number VARCHAR UNIQUE,
+                    created_at DATETIME,
+                    updated_at DATETIME,
+                    paid_at DATETIME,
+                    FOREIGN KEY(shop_id) REFERENCES shops(id)
+                )
+            """))
+            # Ensure utr_number column exists if payment_transactions table already existed
+            res_pt = conn.execute(text("PRAGMA table_info(payment_transactions)")).fetchall()
+            pt_cols = [r[1] for r in res_pt]
+            if "utr_number" not in pt_cols:
+                conn.execute(text("ALTER TABLE payment_transactions ADD COLUMN utr_number VARCHAR"))
+
+
+            # Ensure support_tickets, ticket_messages, and customer_feedback tables exist
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS support_tickets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ticket_number VARCHAR NOT NULL UNIQUE,
+                    shop_id INTEGER NOT NULL,
+                    subject VARCHAR NOT NULL,
+                    category VARCHAR NOT NULL,
+                    description TEXT NOT NULL,
+                    priority VARCHAR DEFAULT 'Normal',
+                    status VARCHAR DEFAULT 'Open',
+                    assigned_admin VARCHAR,
+                    attachment_name VARCHAR,
+                    attachment_data TEXT,
+                    has_customer_unread BOOLEAN DEFAULT 0,
+                    has_admin_unread BOOLEAN DEFAULT 1,
+                    created_at DATETIME,
+                    updated_at DATETIME,
+                    FOREIGN KEY(shop_id) REFERENCES shops(id)
+                )
+            """))
+
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS ticket_messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ticket_id INTEGER NOT NULL,
+                    sender_id INTEGER,
+                    sender_role VARCHAR NOT NULL,
+                    sender_name VARCHAR NOT NULL,
+                    message TEXT NOT NULL,
+                    attachment_name VARCHAR,
+                    attachment_data TEXT,
+                    created_at DATETIME,
+                    FOREIGN KEY(ticket_id) REFERENCES support_tickets(id),
+                    FOREIGN KEY(sender_id) REFERENCES shops(id)
+                )
+            """))
+
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS customer_feedback (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    shop_id INTEGER NOT NULL,
+                    category VARCHAR NOT NULL,
+                    rating INTEGER DEFAULT 5,
+                    subject VARCHAR,
+                    comments TEXT NOT NULL,
+                    status VARCHAR DEFAULT 'New',
+                    admin_notes TEXT,
+                    converted_ticket_id INTEGER,
+                    created_at DATETIME,
+                    updated_at DATETIME,
+                    FOREIGN KEY(shop_id) REFERENCES shops(id)
+                )
+            """))
+
             conn.commit()
         except Exception:
             pass

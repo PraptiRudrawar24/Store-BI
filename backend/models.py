@@ -139,3 +139,76 @@ class Invoice(Base):
     status = Column(String, default="confirmed")
     items_json = Column(String, nullable=True)
 
+class PaymentTransaction(Base):
+    __tablename__ = "payment_transactions"
+    id = Column(Integer, primary_key=True, index=True)
+    shop_id = Column(Integer, ForeignKey("shops.id"), nullable=False, index=True)
+    order_id = Column(String, unique=True, index=True, nullable=False)
+    payment_id = Column(String, unique=True, index=True, nullable=True)
+    signature = Column(String, nullable=True)
+    plan_name = Column(String, default="All-Features Pro")
+    billing_cycle = Column(String, default="monthly")
+    amount = Column(Float, nullable=False)
+    currency = Column(String, default="INR")
+    payment_method = Column(String, nullable=True)
+    status = Column(String, default="created")  # "created", "waiting_for_payment", "pending_verification", "paid", "failed", "cancelled"
+    error_reason = Column(String, nullable=True)
+    is_test_mode = Column(Boolean, default=False)
+    utr_number = Column(String, unique=True, index=True, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+    paid_at = Column(DateTime, nullable=True)
+
+    shop = relationship("Shop", backref="payment_transactions")
+
+class SupportTicket(Base):
+    __tablename__ = "support_tickets"
+    id = Column(Integer, primary_key=True, index=True)
+    ticket_number = Column(String, unique=True, index=True, nullable=False)
+    shop_id = Column(Integer, ForeignKey("shops.id"), nullable=False, index=True)
+    subject = Column(String, nullable=False)
+    category = Column(String, nullable=False)
+    description = Column(String, nullable=False)
+    priority = Column(String, default="Normal")  # "Low", "Normal", "High"
+    status = Column(String, default="Open")  # "Open", "In Progress", "Waiting for Customer", "Resolved", "Closed"
+    assigned_admin = Column(String, nullable=True)
+    attachment_name = Column(String, nullable=True)
+    attachment_data = Column(String, nullable=True)
+    has_customer_unread = Column(Boolean, default=False)
+    has_admin_unread = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+    shop = relationship("Shop", backref="support_tickets")
+    messages = relationship("TicketMessage", back_populates="ticket", cascade="all, delete-orphan", order_by="TicketMessage.created_at.asc()")
+
+class TicketMessage(Base):
+    __tablename__ = "ticket_messages"
+    id = Column(Integer, primary_key=True, index=True)
+    ticket_id = Column(Integer, ForeignKey("support_tickets.id"), nullable=False, index=True)
+    sender_id = Column(Integer, ForeignKey("shops.id"), nullable=True)
+    sender_role = Column(String, nullable=False)  # "customer" or "admin"
+    sender_name = Column(String, nullable=False)
+    message = Column(String, nullable=False)
+    attachment_name = Column(String, nullable=True)
+    attachment_data = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    ticket = relationship("SupportTicket", back_populates="messages")
+
+class CustomerFeedback(Base):
+    __tablename__ = "customer_feedback"
+    id = Column(Integer, primary_key=True, index=True)
+    shop_id = Column(Integer, ForeignKey("shops.id"), nullable=False, index=True)
+    category = Column(String, nullable=False)  # "Feature Suggestion", "User Experience", "Bug Report", "General Feedback"
+    rating = Column(Integer, nullable=False, default=5)  # 1 to 5
+    subject = Column(String, nullable=True)
+    comments = Column(String, nullable=False)
+    status = Column(String, default="New")  # "New", "Under Review", "Planned", "Implemented", "Declined"
+    admin_notes = Column(String, nullable=True)
+    converted_ticket_id = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+    shop = relationship("Shop", backref="customer_feedbacks")
+
