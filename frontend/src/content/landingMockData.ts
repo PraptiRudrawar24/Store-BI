@@ -1,5 +1,5 @@
 /**
- * Mock data for Inventra Hero Live Forecast Chart
+ * Mock data for Store BI Hero Live Forecast Chart
  * Daily Footfall & Sales Forecast vs Run-Rate
  */
 

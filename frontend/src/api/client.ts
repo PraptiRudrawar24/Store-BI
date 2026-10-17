@@ -145,6 +145,97 @@ export interface PurchaseSubscriptionResponse {
   shop: Shop;
 }
 
+export interface CreateSubscriptionOrderPayload {
+  plan_name?: string;
+  billing_cycle?: string;
+  payment_method?: 'upi' | 'card' | 'netbanking' | string;
+  promo_code?: string;
+}
+
+export interface CreateSubscriptionOrderResponse {
+  success: boolean;
+  order_id: string;
+  key_id: string;
+  amount: number;
+  amount_paise: number;
+  currency: string;
+  plan_name: string;
+  billing_cycle: string;
+  is_test_mode: boolean;
+  is_configured: boolean;
+  payment_method?: string;
+  message: string;
+  qr_info?: {
+    image_url: string;
+    api_image_url: string;
+    vpa: string;
+    payee_name: string;
+    amount: number;
+    amount_formatted: string;
+    currency: string;
+    plan_name: string;
+    billing_period: string;
+    upi_intent_uri: string;
+    instructions: string;
+  };
+}
+
+export interface VerifySubscriptionPaymentPayload {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+  plan_name?: string;
+  billing_cycle?: string;
+}
+
+export interface VerifySubscriptionPaymentResponse {
+  success: boolean;
+  message: string;
+  payment_id?: string;
+  order_id?: string;
+  plan_name?: string;
+  amount?: number;
+  currency?: string;
+  subscription_start_date?: string;
+  subscription_end_date?: string;
+  shop?: Shop;
+}
+
+export interface SubmitUPIPaymentPayload {
+  order_id: string;
+  utr_number: string;
+  plan_name?: string;
+  billing_cycle?: string;
+}
+
+export interface SubmitUPIPaymentResponse {
+  success: boolean;
+  status: string;
+  message: string;
+  order_id: string;
+  utr_number?: string;
+  amount: number;
+  currency: string;
+  plan_name: string;
+  subscription_start_date?: string;
+  subscription_end_date?: string;
+  shop?: Shop;
+}
+
+export interface SubscriptionPaymentStatusResponse {
+  order_id: string;
+  status: 'created' | 'waiting_for_payment' | 'pending_verification' | 'paid' | 'failed' | 'cancelled' | string;
+  payment_id?: string;
+  amount: number;
+  currency: string;
+  plan_name: string;
+  created_at?: string;
+  paid_at?: string;
+  is_test_mode?: boolean;
+  utr_number?: string;
+  error_reason?: string;
+}
+
 
 export interface Product {
   id: number;
@@ -933,6 +1024,92 @@ export const api = {
       const msg = typeof err.detail === 'string' ? err.detail : (err.detail?.[0]?.msg || 'Checkout failed');
       throw new Error(msg);
     }
+    return await res.json();
+  },
+
+  createSubscriptionOrder: async (
+    payload: CreateSubscriptionOrderPayload = {}
+  ): Promise<CreateSubscriptionOrderResponse> => {
+    const res = await fetch(`${API_BASE_URL}/api/subscription/create-order`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to create payment order' }));
+      const msg = typeof err.detail === 'string' ? err.detail : (err.detail?.[0]?.msg || 'Order creation failed');
+      throw new Error(msg);
+    }
+    return await res.json();
+  },
+
+  verifySubscriptionPayment: async (
+    payload: VerifySubscriptionPaymentPayload
+  ): Promise<VerifySubscriptionPaymentResponse> => {
+    const res = await fetch(`${API_BASE_URL}/api/subscription/verify-payment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to verify payment' }));
+      const msg = typeof err.detail === 'string' ? err.detail : (err.detail?.[0]?.msg || 'Payment verification failed');
+      throw new Error(msg);
+    }
+    return await res.json();
+  },
+
+  cancelSubscriptionOrder: async (
+    order_id: string,
+    reason?: string
+  ): Promise<{ success: boolean; message: string }> => {
+    const res = await fetch(`${API_BASE_URL}/api/subscription/cancel-order`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order_id, reason }),
+      credentials: 'include',
+    });
+    return await res.json().catch(() => ({ success: true, message: 'Cancelled' }));
+  },
+
+  getSubscriptionPaymentStatus: async (
+    order_id: string
+  ): Promise<SubscriptionPaymentStatusResponse> => {
+    const res = await fetch(`${API_BASE_URL}/api/subscription/payment-status/${order_id}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch payment status' }));
+      throw new Error(err.detail || 'Status check failed');
+    }
+    return await res.json();
+  },
+
+  submitUPIPaymentReference: async (
+    payload: SubmitUPIPaymentPayload
+  ): Promise<SubmitUPIPaymentResponse> => {
+    const res = await fetch(`${API_BASE_URL}/api/subscription/submit-upi-ref`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to submit UPI reference' }));
+      const msg = typeof err.detail === 'string' ? err.detail : (err.detail?.[0]?.msg || 'UPI verification failed');
+      throw new Error(msg);
+    }
+    return await res.json();
+  },
+
+  getSubscriptionQRInfo: async (): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/api/subscription/qr-info`, {
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error('Failed to fetch QR payment info');
     return await res.json();
   },
 
@@ -1896,6 +2073,216 @@ export const api = {
     }
     return await res.json();
   },
+
+  // --- Support & Feedback System (Customer) ---
+  createSupportTicket: async (payload: CreateTicketPayload): Promise<SupportTicket> => {
+    const res = await fetch(`${API_BASE_URL}/api/support/tickets`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to create support ticket' }));
+      throw new Error(err.detail || 'Failed to create support ticket');
+    }
+    return await res.json();
+  },
+
+  getCustomerTickets: async (filters?: { search?: string; status?: string; category?: string; priority?: string }): Promise<SupportTicket[]> => {
+    const params = new URLSearchParams();
+    if (filters?.search) params.append('search', filters.search);
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.category) params.append('category', filters.category);
+    if (filters?.priority) params.append('priority', filters.priority);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+
+    const res = await fetch(`${API_BASE_URL}/api/support/tickets${qs}`, {
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch support tickets' }));
+      throw new Error(err.detail || 'Failed to fetch support tickets');
+    }
+    return await res.json();
+  },
+
+  getCustomerTicketDetail: async (ticketId: number): Promise<SupportTicket> => {
+    const res = await fetch(`${API_BASE_URL}/api/support/tickets/${ticketId}`, {
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch ticket details' }));
+      throw new Error(err.detail || 'Failed to fetch ticket details');
+    }
+    return await res.json();
+  },
+
+  sendCustomerTicketMessage: async (ticketId: number, payload: SendTicketMessagePayload): Promise<TicketMessage> => {
+    const res = await fetch(`${API_BASE_URL}/api/support/tickets/${ticketId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to send message' }));
+      throw new Error(err.detail || 'Failed to send message');
+    }
+    return await res.json();
+  },
+
+  getCustomerSupportUnreadCount: async (): Promise<{ unread_count: number }> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/support/unread-count`, {
+        credentials: 'include',
+      });
+      if (!res.ok) return { unread_count: 0 };
+      return await res.json();
+    } catch {
+      return { unread_count: 0 };
+    }
+  },
+
+  submitCustomerFeedback: async (payload: CreateFeedbackPayload): Promise<CustomerFeedback> => {
+    const res = await fetch(`${API_BASE_URL}/api/support/feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to submit feedback' }));
+      throw new Error(err.detail || 'Failed to submit feedback');
+    }
+    return await res.json();
+  },
+
+  getCustomerFeedbacks: async (): Promise<CustomerFeedback[]> => {
+    const res = await fetch(`${API_BASE_URL}/api/support/feedback`, {
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch feedback' }));
+      throw new Error(err.detail || 'Failed to fetch feedback');
+    }
+    return await res.json();
+  },
+
+  // --- Support & Feedback System (Admin) ---
+  getAdminSupportOverview: async (): Promise<SupportOverview> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/support/overview`, {
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch support overview' }));
+      throw new Error(err.detail || 'Failed to fetch support overview');
+    }
+    return await res.json();
+  },
+
+  getAdminTickets: async (params?: { search?: string; status?: string; category?: string; priority?: string; page?: number; page_size?: number }): Promise<AdminTicketsResponse> => {
+    const q = new URLSearchParams();
+    if (params?.search) q.append('search', params.search);
+    if (params?.status) q.append('status', params.status);
+    if (params?.category) q.append('category', params.category);
+    if (params?.priority) q.append('priority', params.priority);
+    if (params?.page) q.append('page', String(params.page));
+    if (params?.page_size) q.append('page_size', String(params.page_size));
+    const qs = q.toString() ? `?${q.toString()}` : '';
+
+    const res = await fetch(`${API_BASE_URL}/api/admin/support/tickets${qs}`, {
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch admin support tickets' }));
+      throw new Error(err.detail || 'Failed to fetch admin support tickets');
+    }
+    return await res.json();
+  },
+
+  getAdminTicketDetail: async (ticketId: number): Promise<SupportTicket> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/support/tickets/${ticketId}`, {
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch ticket detail' }));
+      throw new Error(err.detail || 'Failed to fetch ticket detail');
+    }
+    return await res.json();
+  },
+
+  sendAdminTicketMessage: async (ticketId: number, payload: SendTicketMessagePayload): Promise<TicketMessage> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/support/tickets/${ticketId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to send admin message' }));
+      throw new Error(err.detail || 'Failed to send admin message');
+    }
+    return await res.json();
+  },
+
+  updateAdminTicket: async (ticketId: number, payload: { status?: string; priority?: string; assigned_admin?: string }): Promise<SupportTicket> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/support/tickets/${ticketId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to update ticket' }));
+      throw new Error(err.detail || 'Failed to update ticket');
+    }
+    return await res.json();
+  },
+
+  getAdminFeedbacks: async (params?: { search?: string; status?: string; category?: string; rating?: number }): Promise<CustomerFeedback[]> => {
+    const q = new URLSearchParams();
+    if (params?.search) q.append('search', params.search);
+    if (params?.status) q.append('status', params.status);
+    if (params?.category) q.append('category', params.category);
+    if (params?.rating) q.append('rating', String(params.rating));
+    const qs = q.toString() ? `?${q.toString()}` : '';
+
+    const res = await fetch(`${API_BASE_URL}/api/admin/support/feedback${qs}`, {
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch feedback' }));
+      throw new Error(err.detail || 'Failed to fetch feedback');
+    }
+    return await res.json();
+  },
+
+  updateAdminFeedback: async (feedbackId: number, payload: { status?: string; admin_notes?: string }): Promise<CustomerFeedback> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/support/feedback/${feedbackId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to update feedback' }));
+      throw new Error(err.detail || 'Failed to update feedback');
+    }
+    return await res.json();
+  },
+
+  convertFeedbackToTicket: async (feedbackId: number): Promise<SupportTicket> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/support/feedback/${feedbackId}/convert-to-ticket`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to convert feedback to ticket' }));
+      throw new Error(err.detail || 'Failed to convert feedback to ticket');
+    }
+    return await res.json();
+  },
 };
 
 
@@ -2204,5 +2591,104 @@ export interface PromoCodeItem {
   active: boolean;
   created_at: string;
 }
+
+// --- Support & Feedback System Interfaces ---
+export interface TicketMessage {
+  id: number;
+  ticket_id: number;
+  sender_id?: number | null;
+  sender_role: 'customer' | 'admin' | string;
+  sender_name: string;
+  message: string;
+  attachment_name?: string | null;
+  attachment_data?: string | null;
+  created_at: string;
+}
+
+export interface SupportTicket {
+  id: number;
+  ticket_number: string;
+  shop_id: number;
+  store_name?: string | null;
+  customer_name?: string | null;
+  customer_phone?: string | null;
+  customer_email?: string | null;
+  subject: string;
+  category: string;
+  description: string;
+  priority: 'Low' | 'Normal' | 'High' | string;
+  status: 'Open' | 'In Progress' | 'Waiting for Customer' | 'Resolved' | 'Closed' | string;
+  assigned_admin?: string | null;
+  attachment_name?: string | null;
+  has_customer_unread: boolean;
+  has_admin_unread: boolean;
+  created_at: string;
+  updated_at: string;
+  messages_count?: number;
+  latest_reply_by?: string | null;
+  latest_reply_at?: string | null;
+  messages?: TicketMessage[];
+}
+
+export interface CreateTicketPayload {
+  subject: string;
+  category: string;
+  description: string;
+  priority?: string;
+  attachment_name?: string | null;
+  attachment_data?: string | null;
+}
+
+export interface SendTicketMessagePayload {
+  message: string;
+  attachment_name?: string | null;
+  attachment_data?: string | null;
+  status?: string | null;
+}
+
+export interface CustomerFeedback {
+  id: number;
+  shop_id: number;
+  store_name?: string | null;
+  customer_name?: string | null;
+  customer_phone?: string | null;
+  category: 'Feature Suggestion' | 'User Experience' | 'Bug Report' | 'General Feedback' | string;
+  rating: number; // 1 to 5
+  subject?: string | null;
+  comments: string;
+  status: 'New' | 'Under Review' | 'Planned' | 'Implemented' | 'Declined' | string;
+  admin_notes?: string | null;
+  converted_ticket_id?: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateFeedbackPayload {
+  category: string;
+  rating: number;
+  subject?: string | null;
+  comments: string;
+}
+
+export interface SupportOverview {
+  total_tickets: number;
+  open_tickets: number;
+  in_progress_tickets: number;
+  waiting_for_customer_tickets: number;
+  resolved_tickets: number;
+  closed_tickets: number;
+  unanswered_tickets: number;
+  total_feedback: number;
+  average_rating: number;
+}
+
+export interface AdminTicketsResponse {
+  tickets: SupportTicket[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
 
 

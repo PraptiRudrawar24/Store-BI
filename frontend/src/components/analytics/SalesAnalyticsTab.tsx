@@ -10,6 +10,7 @@ import {
 import { api, type SalesAnalyticsResponse } from '../../api/client';
 import { formatINR } from '../../utils';
 import { Card, CardHeader, CardContent } from '../ui/Card';
+import { AnimatedNumber } from '@/components/core/animated-number';
 import { Button } from '../ui/Button';
 import { WeekdayHourHeatmap } from './WeekdayHourHeatmap';
 import { CHART_COLORS } from '../../utils/chartColors';
@@ -282,9 +283,18 @@ export function SalesAnalyticsTab() {
                 {data.has_data ? data.highlights.best_day : '–'}
               </div>
               <div className="text-xs font-medium text-secondary mt-0.5">
-                {data.has_data && data.highlights.best_day_sales > 0
-                  ? `${formatINR(data.highlights.best_day_sales)} revenue`
-                  : '–'}
+                {data.has_data && data.highlights.best_day_sales > 0 ? (
+                  <>
+                    <AnimatedNumber
+                      value={data.highlights.best_day_sales}
+                      isCurrency
+                      springOptions={{ bounce: 0, duration: 2000 }}
+                    />{' '}
+                    revenue
+                  </>
+                ) : (
+                  '–'
+                )}
               </div>
             </div>
             <div className="w-9 h-9 rounded-[6px] bg-secondary/10 flex items-center justify-center text-secondary shrink-0">
@@ -304,9 +314,18 @@ export function SalesAnalyticsTab() {
                 {data.has_data ? data.highlights.slowest_day : '–'}
               </div>
               <div className="text-xs font-medium text-text-medium mt-0.5">
-                {data.has_data && data.highlights.slowest_day_sales > 0
-                  ? `${formatINR(data.highlights.slowest_day_sales)} revenue`
-                  : '–'}
+                {data.has_data && data.highlights.slowest_day_sales > 0 ? (
+                  <>
+                    <AnimatedNumber
+                      value={data.highlights.slowest_day_sales}
+                      isCurrency
+                      springOptions={{ bounce: 0, duration: 2000 }}
+                    />{' '}
+                    revenue
+                  </>
+                ) : (
+                  '–'
+                )}
               </div>
             </div>
             <div className="w-9 h-9 rounded-[6px] bg-canvas flex items-center justify-center text-text-medium shrink-0 border border-border">
@@ -326,9 +345,17 @@ export function SalesAnalyticsTab() {
                 {data.has_data ? data.highlights.busiest_hour : '–'}
               </div>
               <div className="text-xs font-medium text-primary mt-0.5">
-                {data.has_data && data.highlights.busiest_hour_tx > 0
-                  ? `${data.highlights.busiest_hour_tx} transactions`
-                  : '–'}
+                {data.has_data && data.highlights.busiest_hour_tx > 0 ? (
+                  <>
+                    <AnimatedNumber
+                      value={data.highlights.busiest_hour_tx}
+                      springOptions={{ bounce: 0, duration: 2000 }}
+                    />{' '}
+                    transactions
+                  </>
+                ) : (
+                  '–'
+                )}
               </div>
             </div>
             <div className="w-9 h-9 rounded-[6px] bg-primary/10 flex items-center justify-center text-primary shrink-0">
@@ -342,33 +369,48 @@ export function SalesAnalyticsTab() {
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div className="p-3 rounded-[8px] bg-surface border border-border">
           <span className="text-[11px] text-text-medium block font-medium">Total sales</span>
-          <span className="text-lg font-bold text-text-high tabular-nums block mt-0.5">
-            {formatINR(data.total_sales)}
-          </span>
+          <AnimatedNumber
+            value={data.total_sales}
+            isCurrency
+            springOptions={{ bounce: 0, duration: 2000 }}
+            className="text-lg font-bold text-text-high tabular-nums block mt-0.5"
+          />
         </div>
         <div className="p-3 rounded-[8px] bg-surface border border-border">
           <span className="text-[11px] text-text-medium block font-medium">Total profit</span>
-          <span className="text-lg font-bold text-secondary tabular-nums block mt-0.5">
-            {formatINR(data.total_profit)}
-          </span>
+          <AnimatedNumber
+            value={data.total_profit}
+            isCurrency
+            springOptions={{ bounce: 0, duration: 2000 }}
+            className="text-lg font-bold text-secondary tabular-nums block mt-0.5"
+          />
         </div>
         <div className="p-3 rounded-[8px] bg-surface border border-border">
           <span className="text-[11px] text-text-medium block font-medium">Transactions</span>
-          <span className="text-lg font-bold text-text-high tabular-nums block mt-0.5">
-            {data.total_transactions}
-          </span>
+          <AnimatedNumber
+            value={data.total_transactions}
+            springOptions={{ bounce: 0, duration: 2000 }}
+            className="text-lg font-bold text-text-high tabular-nums block mt-0.5"
+          />
         </div>
         <div className="p-3 rounded-[8px] bg-surface border border-border">
           <span className="text-[11px] text-text-medium block font-medium">Average bill</span>
-          <span className="text-lg font-bold text-text-high tabular-nums block mt-0.5">
-            {formatINR(data.average_bill)}
-          </span>
+          <AnimatedNumber
+            value={data.average_bill}
+            isCurrency
+            springOptions={{ bounce: 0, duration: 2000 }}
+            className="text-lg font-bold text-text-high tabular-nums block mt-0.5"
+          />
         </div>
         <div className="p-3 rounded-[8px] bg-surface border border-border col-span-2 sm:col-span-1">
           <span className="text-[11px] text-text-medium block font-medium">Profit margin</span>
-          <span className="text-lg font-bold text-text-high tabular-nums block mt-0.5">
-            {data.profit_margin_pct.toFixed(1)}%
-          </span>
+          <AnimatedNumber
+            value={data.profit_margin_pct}
+            decimals={1}
+            suffix="%"
+            springOptions={{ bounce: 0, duration: 2000 }}
+            className="text-lg font-bold text-text-high tabular-nums block mt-0.5"
+          />
         </div>
       </div>
 

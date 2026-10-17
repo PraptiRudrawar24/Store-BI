@@ -14,7 +14,9 @@ import {
 } from '../../api/client';
 import { formatINR } from '../../utils';
 import { Card, CardHeader, CardContent } from '../ui/Card';
+import { AnimatedNumber } from '@/components/core/animated-number';
 import { Button } from '../ui/Button';
+import { cn } from '../ui/utils';
 
 import { CHART_COLORS } from '../../utils/chartColors';
 
@@ -274,9 +276,12 @@ export function ProfitabilityAnalyticsTab() {
           <span className="text-[11px] font-semibold text-text-medium block">
             Gross sales
           </span>
-          <span className="text-lg sm:text-xl font-bold text-text-high tabular-nums block mt-1">
-            {isZeroState ? '₹0' : formatINR(data.total_sales)}
-          </span>
+          <AnimatedNumber
+            value={isZeroState ? 0 : data.total_sales}
+            isCurrency
+            springOptions={{ bounce: 0, duration: 2000 }}
+            className="text-lg sm:text-xl font-bold text-text-high tabular-nums block mt-1"
+          />
           <span className="text-[11px] text-text-low mt-0.5 block">Total revenue</span>
         </Card>
 
@@ -285,9 +290,12 @@ export function ProfitabilityAnalyticsTab() {
           <span className="text-[11px] font-semibold text-text-medium block">
             Cost of goods (COGS)
           </span>
-          <span className="text-lg sm:text-xl font-bold text-text-high tabular-nums block mt-1">
-            {isZeroState ? '₹0' : formatINR(data.total_cogs)}
-          </span>
+          <AnimatedNumber
+            value={isZeroState ? 0 : data.total_cogs}
+            isCurrency
+            springOptions={{ bounce: 0, duration: 2000 }}
+            className="text-lg sm:text-xl font-bold text-text-high tabular-nums block mt-1"
+          />
           <span className="text-[11px] text-text-low mt-0.5 block">Wholesale acquisition</span>
         </Card>
 
@@ -297,12 +305,21 @@ export function ProfitabilityAnalyticsTab() {
             Gross margin
           </span>
           <div className="flex items-baseline gap-1.5 mt-1">
-            <span className="text-lg sm:text-xl font-bold text-[#10B981] tabular-nums">
-              {isZeroState ? '0.0%' : `${data.overall_gross_margin_pct.toFixed(1)}%`}
-            </span>
+            <AnimatedNumber
+              value={isZeroState ? 0 : data.overall_gross_margin_pct}
+              decimals={1}
+              suffix="%"
+              springOptions={{ bounce: 0, duration: 2000 }}
+              className="text-lg sm:text-xl font-bold text-[#10B981] tabular-nums"
+            />
           </div>
           <span className="text-[11px] text-text-medium mt-0.5 block tabular-nums">
-            {isZeroState ? '₹0' : formatINR(data.gross_profit)} gross profit
+            <AnimatedNumber
+              value={isZeroState ? 0 : data.gross_profit}
+              isCurrency
+              springOptions={{ bounce: 0, duration: 2000 }}
+            />{' '}
+            gross profit
           </span>
         </Card>
 
@@ -311,9 +328,12 @@ export function ProfitabilityAnalyticsTab() {
           <span className="text-[11px] font-semibold text-text-medium block">
             Expenses
           </span>
-          <span className="text-lg sm:text-xl font-bold text-[#F43F5E] tabular-nums block mt-1">
-            {isZeroState ? '₹0' : formatINR(data.total_expenses)}
-          </span>
+          <AnimatedNumber
+            value={isZeroState ? 0 : data.total_expenses}
+            isCurrency
+            springOptions={{ bounce: 0, duration: 2000 }}
+            className="text-lg sm:text-xl font-bold text-[#F43F5E] tabular-nums block mt-1"
+          />
           <span className="text-[11px] text-text-low mt-0.5 block">Operating overhead</span>
         </Card>
 
@@ -321,24 +341,33 @@ export function ProfitabilityAnalyticsTab() {
         <Card
           showTrail
           trailColor={isZeroState || data.net_profit >= 0 ? 'emerald' : 'rose'}
-          className={`p-3 sm:p-4 border-l-4 col-span-2 lg:col-span-1 shadow-sm ${
+          className={cn(
+            'p-3 sm:p-4 border-l-4 col-span-2 lg:col-span-1 shadow-sm',
             isZeroState || data.net_profit >= 0 ? 'border-l-[#10B981]' : 'border-l-[#F43F5E]'
-          }`}
+          )}
         >
           <span className="text-[11px] font-semibold text-text-medium block">
             Net profit
           </span>
           <div className="flex items-baseline gap-1.5 mt-1">
-            <span
-              className={`text-lg sm:text-xl font-bold tabular-nums ${
+            <AnimatedNumber
+              value={isZeroState ? 0 : data.net_profit}
+              isCurrency
+              springOptions={{ bounce: 0, duration: 2000 }}
+              className={cn(
+                'text-lg sm:text-xl font-bold tabular-nums',
                 isZeroState || data.net_profit >= 0 ? 'text-[#10B981]' : 'text-[#F43F5E]'
-              }`}
-            >
-              {isZeroState ? '₹0' : formatINR(data.net_profit)}
-            </span>
+              )}
+            />
           </div>
           <span className="text-[11px] font-medium text-text-medium mt-0.5 block tabular-nums">
-            {isZeroState ? '0.0%' : `${data.overall_net_margin_pct.toFixed(1)}%`} net margin
+            <AnimatedNumber
+              value={isZeroState ? 0 : data.overall_net_margin_pct}
+              decimals={1}
+              suffix="%"
+              springOptions={{ bounce: 0, duration: 2000 }}
+            />{' '}
+            net margin
           </span>
         </Card>
       </div>

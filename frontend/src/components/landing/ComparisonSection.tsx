@@ -46,14 +46,14 @@ export function ComparisonSection() {
               </ul>
             </div>
 
-            {/* With Inventra Automation */}
+            {/* With Store BI Automation */}
             <div className="space-y-4 p-5 rounded-[6px] bg-primary-light/15 border border-primary/25">
               <div className="flex items-center gap-2 text-primary font-bold text-sm">
                 <CheckCircle2 className="w-5 h-5 shrink-0 text-primary" strokeWidth={2} />
-                <span>{comparison.inventra.title}</span>
+                <span>{comparison.storeBi.title}</span>
               </div>
               <ul className="space-y-3 text-sm text-text-high">
-                {comparison.inventra.points.map((pt, idx) => (
+                {comparison.storeBi.points.map((pt, idx) => (
                   <li key={idx} className="flex items-start gap-2.5">
                     <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" strokeWidth={2.5} />
                     <span>{pt}</span>

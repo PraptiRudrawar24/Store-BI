@@ -39,7 +39,7 @@ export function LandingPage() {
         {/* 4. Features Bento Grid */}
         <FeaturesSection />
 
-        {/* 5. Spreadsheet Chaos vs Inventra Intel Comparison */}
+        {/* 5. Spreadsheet Chaos vs Store BI Comparison */}
         <ComparisonSection />
 
         {/* 6. Transparent Pricing Plans */}

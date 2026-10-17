@@ -17,6 +17,7 @@ import {
 import { api, type InventoryAnalyticsResponse } from '../../api/client';
 import { formatINR } from '../../utils';
 import { Card, CardHeader, CardContent } from '../ui/Card';
+import { AnimatedNumber } from '@/components/core/animated-number';
 import { Button } from '../ui/Button';
 
 export function InventoryAnalyticsTab() {
@@ -119,9 +120,12 @@ export function InventoryAnalyticsTab() {
               <span className="text-[11px] font-semibold text-text-medium block">
                 Stock value (at cost)
               </span>
-              <div className="text-xl sm:text-2xl font-bold text-text-high mt-1 tabular-nums">
-                {isZeroState ? '₹0' : formatINR(data.summary.stock_value_at_cost)}
-              </div>
+              <AnimatedNumber
+                value={isZeroState ? 0 : data.summary.stock_value_at_cost}
+                isCurrency
+                springOptions={{ bounce: 0, duration: 2000 }}
+                className="text-xl sm:text-2xl font-bold text-text-high mt-1 tabular-nums block"
+              />
               <p className="text-[11px] text-text-low mt-0.5">Total wholesale holding value</p>
             </div>
             <div className="w-9 h-9 rounded-[6px] bg-primary/10 flex items-center justify-center text-primary shrink-0">
@@ -137,9 +141,11 @@ export function InventoryAnalyticsTab() {
               <span className="text-[11px] font-semibold text-text-medium block">
                 Total products
               </span>
-              <div className="text-xl sm:text-2xl font-bold text-text-high mt-1 tabular-nums">
-                {isZeroState ? 0 : data.summary.number_of_products}
-              </div>
+              <AnimatedNumber
+                value={isZeroState ? 0 : data.summary.number_of_products}
+                springOptions={{ bounce: 0, duration: 2000 }}
+                className="text-xl sm:text-2xl font-bold text-text-high mt-1 tabular-nums block"
+              />
               <p className="text-[11px] text-text-low mt-0.5">Active catalog SKU items</p>
             </div>
             <div className="w-9 h-9 rounded-[6px] bg-[#3B82F6]/10 flex items-center justify-center text-[#3B82F6] shrink-0">
@@ -155,9 +161,11 @@ export function InventoryAnalyticsTab() {
               <span className="text-[11px] font-semibold text-text-medium block">
                 Low-stock items
               </span>
-              <div className="text-xl sm:text-2xl font-bold text-text-high mt-1 tabular-nums">
-                {isZeroState ? 0 : data.summary.low_stock_count}
-              </div>
+              <AnimatedNumber
+                value={isZeroState ? 0 : data.summary.low_stock_count}
+                springOptions={{ bounce: 0, duration: 2000 }}
+                className="text-xl sm:text-2xl font-bold text-text-high mt-1 tabular-nums block"
+              />
               <p className="text-[11px] text-text-low mt-0.5">At or below reorder threshold</p>
             </div>
             <div className="w-9 h-9 rounded-[6px] bg-warning-bg flex items-center justify-center text-warning shrink-0">
@@ -173,9 +181,13 @@ export function InventoryAnalyticsTab() {
               <span className="text-[11px] font-semibold text-text-medium block">
                 Inventory turnover
               </span>
-              <div className="text-xl sm:text-2xl font-bold text-text-high mt-1 tabular-nums">
-                {isZeroState ? '0x' : `${data.summary.inventory_turnover.toFixed(2)}x`}
-              </div>
+              <AnimatedNumber
+                value={isZeroState ? 0 : data.summary.inventory_turnover}
+                decimals={2}
+                suffix="x"
+                springOptions={{ bounce: 0, duration: 2000 }}
+                className="text-xl sm:text-2xl font-bold text-text-high mt-1 tabular-nums block"
+              />
               <p className="text-[11px] text-text-low mt-0.5">COGS divided by current stock</p>
             </div>
             <div className="w-9 h-9 rounded-[6px] bg-[#10B981]/10 flex items-center justify-center text-[#10B981] shrink-0">

@@ -28,6 +28,7 @@ import {
 } from '../../api/client';
 import { formatINR } from '../../utils';
 import { Card, CardHeader, CardContent } from '../ui/Card';
+import { AnimatedNumber } from '@/components/core/animated-number';
 import { Button } from '../ui/Button';
 import { CHART_COLORS } from '../../utils/chartColors';
 import { cn } from '../ui/utils';
@@ -556,7 +557,11 @@ export function AnalyticsOverviewDashboard() {
 
                 <div>
                   <div className="text-2xl sm:text-3xl font-extrabold text-text-high tabular-nums">
-                    {formatINR(kpi?.sales || 0)}
+                    <AnimatedNumber
+                      value={kpi?.sales || 0}
+                      isCurrency
+                      springOptions={{ bounce: 0, duration: 2000 }}
+                    />
                   </div>
                   <div className="flex items-center gap-2 mt-2">
                     <span
@@ -579,10 +584,21 @@ export function AnalyticsOverviewDashboard() {
                 <div className="pt-3 border-t border-border/80 flex items-center justify-between text-xs text-text-medium tabular-nums">
                   <span className="flex items-center gap-1">
                     <ReceiptText className="w-3.5 h-3.5 text-text-low" />
-                    <span>{kpi?.transactions || 0} bills today</span>
+                    <span>
+                      <AnimatedNumber
+                        value={kpi?.transactions || 0}
+                        springOptions={{ bounce: 0, duration: 2000 }}
+                      />{' '}
+                      bills today
+                    </span>
                   </span>
                   <span className="font-semibold text-[#10B981]">
-                    {formatINR(kpi?.profit || 0)} profit
+                    <AnimatedNumber
+                      value={kpi?.profit || 0}
+                      isCurrency
+                      springOptions={{ bounce: 0, duration: 2000 }}
+                    />{' '}
+                    profit
                   </span>
                 </div>
               </CardContent>
@@ -611,7 +627,11 @@ export function AnalyticsOverviewDashboard() {
 
                 <div>
                   <div className="text-2xl sm:text-3xl font-extrabold text-text-high tabular-nums">
-                    {formatINR(kpi?.sales || 0)}
+                    <AnimatedNumber
+                      value={kpi?.sales || 0}
+                      isCurrency
+                      springOptions={{ bounce: 0, duration: 2000 }}
+                    />
                   </div>
                   <div className="flex items-center gap-2 mt-2">
                     <span
@@ -634,10 +654,21 @@ export function AnalyticsOverviewDashboard() {
                 <div className="pt-3 border-t border-border/80 flex items-center justify-between text-xs text-text-medium tabular-nums">
                   <span className="flex items-center gap-1">
                     <ReceiptText className="w-3.5 h-3.5 text-text-low" />
-                    <span>{kpi?.transactions || 0} bills this week</span>
+                    <span>
+                      <AnimatedNumber
+                        value={kpi?.transactions || 0}
+                        springOptions={{ bounce: 0, duration: 2000 }}
+                      />{' '}
+                      bills this week
+                    </span>
                   </span>
                   <span className="font-semibold text-[#10B981]">
-                    {formatINR(kpi?.profit || 0)} profit
+                    <AnimatedNumber
+                      value={kpi?.profit || 0}
+                      isCurrency
+                      springOptions={{ bounce: 0, duration: 2000 }}
+                    />{' '}
+                    profit
                   </span>
                 </div>
               </CardContent>
@@ -666,7 +697,11 @@ export function AnalyticsOverviewDashboard() {
 
                 <div>
                   <div className="text-2xl sm:text-3xl font-extrabold text-text-high tabular-nums">
-                    {formatINR(kpi?.sales || 0)}
+                    <AnimatedNumber
+                      value={kpi?.sales || 0}
+                      isCurrency
+                      springOptions={{ bounce: 0, duration: 2000 }}
+                    />
                   </div>
                   <div className="flex items-center gap-2 mt-2">
                     <span
@@ -689,10 +724,21 @@ export function AnalyticsOverviewDashboard() {
                 <div className="pt-3 border-t border-border/80 flex items-center justify-between text-xs text-text-medium tabular-nums">
                   <span className="flex items-center gap-1">
                     <ReceiptText className="w-3.5 h-3.5 text-text-low" />
-                    <span>{kpi?.transactions || 0} bills this month</span>
+                    <span>
+                      <AnimatedNumber
+                        value={kpi?.transactions || 0}
+                        springOptions={{ bounce: 0, duration: 2000 }}
+                      />{' '}
+                      bills this month
+                    </span>
                   </span>
                   <span className="font-semibold text-[#10B981]">
-                    {formatINR(kpi?.profit || 0)} profit
+                    <AnimatedNumber
+                      value={kpi?.profit || 0}
+                      isCurrency
+                      springOptions={{ bounce: 0, duration: 2000 }}
+                    />{' '}
+                    profit
                   </span>
                 </div>
               </CardContent>

@@ -27,6 +27,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
+import { AnimatedNumber } from '@/components/core/animated-number';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/Toast';
@@ -887,15 +888,28 @@ export function AdminBusinessDetailPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             <div className="p-4 rounded-[8px] bg-canvas border border-border">
               <span className="text-xs font-semibold text-text-medium">Total sales recorded</span>
-              <p className="text-2xl font-bold font-mono text-text-high mt-1">{usage.sales_count}</p>
+              <AnimatedNumber
+                value={usage.sales_count}
+                springOptions={{ bounce: 0, duration: 2000 }}
+                className="text-2xl font-bold font-mono text-text-high mt-1 block"
+              />
               <span className="text-[11px] text-text-medium block mt-0.5">
-                Volume: {formatINR(usage.total_sales_volume)}
+                Volume:{' '}
+                <AnimatedNumber
+                  value={usage.total_sales_volume}
+                  isCurrency
+                  springOptions={{ bounce: 0, duration: 2000 }}
+                />
               </span>
             </div>
 
             <div className="p-4 rounded-[8px] bg-canvas border border-border">
               <span className="text-xs font-semibold text-text-medium">Catalogue inventory items</span>
-              <p className="text-2xl font-bold font-mono text-text-high mt-1">{usage.products_count}</p>
+              <AnimatedNumber
+                value={usage.products_count}
+                springOptions={{ bounce: 0, duration: 2000 }}
+                className="text-2xl font-bold font-mono text-text-high mt-1 block"
+              />
               <span className="text-[11px] text-emerald-700 font-semibold block mt-0.5">
                 Synchronized with ledger
               </span>
@@ -903,7 +917,11 @@ export function AdminBusinessDetailPage() {
 
             <div className="p-4 rounded-[8px] bg-canvas border border-border">
               <span className="text-xs font-semibold text-text-medium">OCR bills scanned</span>
-              <p className="text-2xl font-bold font-mono text-text-high mt-1">{usage.invoices_count}</p>
+              <AnimatedNumber
+                value={usage.invoices_count}
+                springOptions={{ bounce: 0, duration: 2000 }}
+                className="text-2xl font-bold font-mono text-text-high mt-1 block"
+              />
               <span className="text-[11px] text-text-medium block mt-0.5">
                 Supplier purchases
               </span>

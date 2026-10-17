@@ -1,13 +1,20 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Upload, BarChart3, Sparkles } from 'lucide-react';
+import {
+  LayoutDashboard,
+  ReceiptText,
+  Package,
+  ChartColumnIncreasing,
+  Sparkles,
+} from 'lucide-react';
 import { cn } from '../ui/utils';
 
 export function BottomNav() {
   const tabs = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/upload', label: 'Inventory management', icon: Upload },
-    { to: '/analytics', label: 'Analytics', icon: BarChart3 },
-    { to: '/insights', label: 'AI insight', icon: Sparkles },
+    { to: '/pos', label: 'POS Billing', icon: ReceiptText },
+    { to: '/upload', label: 'Inventory', icon: Package },
+    { to: '/analytics', label: 'Analytics', icon: ChartColumnIncreasing },
+    { to: '/insights', label: 'AI Insight', icon: Sparkles },
   ];
 
   return (
@@ -24,7 +31,7 @@ export function BottomNav() {
             to={tab.to}
             className={({ isActive }) =>
               cn(
-                'flex flex-col items-center justify-center flex-1 h-full min-h-[48px] min-w-[48px] py-1 transition-colors',
+                'flex flex-col items-center justify-center flex-1 h-full min-h-[48px] min-w-[44px] py-1 transition-colors',
                 isActive
                   ? 'text-primary font-semibold'
                   : 'text-text-medium hover:text-text-high'
@@ -39,7 +46,7 @@ export function BottomNav() {
                     <span className="absolute -top-1 w-1.5 h-1.5 rounded-full bg-primary" />
                   )}
                 </div>
-                <span className="text-[11px] leading-tight mt-1 tracking-tight truncate max-w-[80px]">
+                <span className="text-[10px] leading-tight mt-1 tracking-tight truncate max-w-[68px]">
                   {tab.label}
                 </span>
               </>

@@ -210,7 +210,7 @@ export function downloadReceiptImage(sale: CompletedSale): void {
 
   ctx.font = '10px "JetBrains Mono", monospace';
   ctx.fillStyle = '#64748b';
-  ctx.fillText('Powered by Store BI • Inventra Retail Intelligence', width / 2, y);
+  ctx.fillText('Powered by Store BI • Retail Intelligence', width / 2, y);
 
   // Trigger browser download
   const dataUrl = canvas.toDataURL('image/png');

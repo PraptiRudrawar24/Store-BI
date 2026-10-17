@@ -1,5 +1,5 @@
 /**
- * Inventra Retail Intelligence Landing Page Content Configuration
+ * Store BI Retail Intelligence Landing Page Content Configuration
  * Easily update headlines, copy, stats, features, pricing and links in one place.
  */
 
@@ -43,12 +43,12 @@ export interface PricingPlan {
 
 export const landingContent = {
   meta: {
-    title: 'Inventra Intel — Modern Retail & Supermarket Business Intelligence',
+    title: 'Store BI — Modern Retail & Supermarket Business Intelligence',
     description:
       'Automate inventory velocity, capture multi-counter billing terminals, calculate exact net margin per SKU, and predict stockouts. Built explicitly for supermarkets and grocery chains.',
   },
   brand: {
-    name: 'Inventra',
+    name: 'Store BI',
     tagline: 'Retail Intelligence',
     badge: 'PRO',
   },
@@ -79,7 +79,7 @@ export const landingContent = {
       'Multi-Store Ready',
     ],
     liveWindow: {
-      title: 'Inventra Live Intelligence Engine',
+      title: 'Store BI Live Intelligence Engine',
       syncStatus: 'Real-Time Sync',
       kpis: [
         {
@@ -130,7 +130,7 @@ export const landingContent = {
     eyebrow: 'Engineered for Retail Efficiency',
     headline: 'Everything Supermarket Owners Need. Zero Fluff.',
     subhead:
-      'Say goodbye to delayed tally entries and guesswork. Inventra bridges the gap between your physical POS counters, distributor bills, and daily net margins.',
+      'Say goodbye to delayed tally entries and guesswork. Store BI bridges the gap between your physical POS counters, distributor bills, and daily net margins.',
     items: [
       {
         id: 'ocr-scanner',
@@ -172,7 +172,7 @@ export const landingContent = {
   },
   comparison: {
     eyebrow: 'Tangible Store Returns',
-    headline: 'Spreadsheet Chaos vs Inventra Intel',
+    headline: 'Spreadsheet Chaos vs Store BI',
     stat: 'Average +₹85,000 / Mo',
     statSub: 'Recovered profit per 2,000 sq ft retail store',
     traditional: {
@@ -183,13 +183,16 @@ export const landingContent = {
         'Sudden OOS on top grocery brands loses loyal walk-in shoppers.',
       ],
     },
-    inventra: {
-      title: 'With Inventra Intel Automation',
+    storeBi: {
+      title: 'With Store BI Automation',
       points: [
         'Instant paper bill scan maps distributor prices in seconds.',
         'Automatic 30-day early warnings prevent expiry write-offs.',
         'Proactive distributor PO generation ensures 99.4% shelf availability.',
       ],
+    },
+    get inventra() {
+      return this.storeBi;
     },
   },
   pricing: {
@@ -254,7 +257,7 @@ export const landingContent = {
       { label: 'Privacy Policy', href: '#privacy' },
       { label: 'Terms of Service', href: '#terms' },
     ],
-    copyright: '© 2025 Inventra Intel Technologies Pvt. Ltd. All rights reserved.',
+    copyright: '© 2025 Store BI Technologies Pvt. Ltd. All rights reserved.',
     sslNote: 'Encrypted with 256-Bit SSL',
     locationNote: 'Pune, Maharashtra, India',
   },

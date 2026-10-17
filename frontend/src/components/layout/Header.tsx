@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Search, Bell, LogOut, Settings, Store, ChevronDown, ShieldCheck, Sun, Moon } from 'lucide-react';
+import { Search, Bell, LogOut, Settings, Store, ChevronDown, ShieldCheck, Sun, Moon, Menu } from 'lucide-react';
 import { Badge } from '../ui/Badge';
 import { useAuth } from '../../context/AuthContext';
 import { useAlerts } from '../../context/AlertsContext';
@@ -9,7 +9,11 @@ import { PurchaseSubscriptionModal } from '../subscription/PurchaseSubscriptionM
 
 import { ProductSearchBar } from '../search/ProductSearchBar';
 
-export function Header() {
+interface HeaderProps {
+  onOpenMobileMenu?: () => void;
+}
+
+export function Header({ onOpenMobileMenu }: HeaderProps = {}) {
   const { user, logout } = useAuth();
   const { alertCount } = useAlerts();
   const { theme, toggleTheme } = useTheme();
@@ -69,18 +73,41 @@ export function Header() {
 
       {/* Left: Mobile Brand & Desktop Search Field */}
       <div className="flex items-center gap-4 flex-1 max-w-md">
-        {/* Mobile Logo Presentation */}
-        <div className="flex items-center gap-2.5 lg:hidden">
-          <img
-            src="/logo/store-bi-logo.jpeg"
-            alt="Store BI logo"
-            className="w-8 h-8 rounded-[8px] object-cover border border-border"
-          />
-          <div className="flex flex-col">
-            <span className="font-bold text-base text-text-high leading-tight">Store BI</span>
-            <span className="text-[11px] text-text-medium leading-tight truncate max-w-[120px]">
-              {user?.name || 'Retail store'}
-            </span>
+        {/* Mobile Menu Button & Brand Presentation */}
+        <div className="flex items-center gap-2 lg:hidden">
+          {onOpenMobileMenu && (
+            <button
+              type="button"
+              onClick={onOpenMobileMenu}
+              className="w-10 h-10 -ml-1.5 rounded-[6px] border border-border bg-surface flex items-center justify-center text-text-medium hover:text-text-high hover:bg-canvas transition-colors cursor-pointer"
+              aria-label="Open navigation sidebar"
+              title="Open menu"
+            >
+              <Menu className="w-5 h-5" strokeWidth={2} />
+            </button>
+          )}
+          <div
+            className="flex items-center gap-2.5 cursor-pointer"
+            onClick={onOpenMobileMenu}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                onOpenMobileMenu?.();
+              }
+            }}
+          >
+            <img
+              src="/logo/store-bi-logo.jpeg"
+              alt="Store BI logo"
+              className="w-8 h-8 rounded-[8px] object-cover border border-border"
+            />
+            <div className="flex flex-col">
+              <span className="font-bold text-base text-text-high leading-tight">Store BI</span>
+              <span className="text-[11px] text-text-medium leading-tight truncate max-w-[120px]">
+                {user?.name || 'Retail store'}
+              </span>
+            </div>
           </div>
         </div>
 

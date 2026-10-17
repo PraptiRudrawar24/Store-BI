@@ -214,7 +214,7 @@ export function ReceiptModal({
               Thank you for shopping with us!
             </p>
             <p className="text-[10px] text-slate-500 font-mono mt-0.5">
-              Powered by Store BI • Inventra Retail Intelligence
+              Powered by Store BI • Retail Intelligence
             </p>
           </div>
         </div>

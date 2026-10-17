@@ -7,6 +7,7 @@ import { TrendingUp, Loader2 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { CHART_COLORS } from '../../utils/chartColors';
 import { TransitionPanel } from '@/components/core/transition-panel';
+import { AnimatedNumber } from '@/components/core/animated-number';
 
 interface SalesTrendCardProps {
   onRecordSaleClick?: () => void;
@@ -85,14 +86,30 @@ function TrendView({
           <div>
             <span className="text-[11px] text-text-medium block">Total sales</span>
             <span className="text-base font-bold text-text-high tabular-nums">
-              {data ? formatINR(data.total_sales) : '—'}
+              {data ? (
+                <AnimatedNumber
+                  value={data.total_sales}
+                  isCurrency
+                  springOptions={{ bounce: 0, duration: 2000 }}
+                />
+              ) : (
+                '—'
+              )}
             </span>
           </div>
           <div className="h-7 w-[1px] bg-border" />
           <div>
             <span className="text-[11px] text-text-medium block">Total profit</span>
             <span className="text-base font-bold text-secondary tabular-nums">
-              {data ? formatINR(data.total_profit) : '—'}
+              {data ? (
+                <AnimatedNumber
+                  value={data.total_profit}
+                  isCurrency
+                  springOptions={{ bounce: 0, duration: 2000 }}
+                />
+              ) : (
+                '—'
+              )}
             </span>
           </div>
         </div>

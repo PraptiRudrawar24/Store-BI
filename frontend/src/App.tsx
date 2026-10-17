@@ -23,6 +23,8 @@ import { AdminPlansPricesPage } from './pages/admin/AdminPlansPricesPage';
 import { AdminPlaceholderPage } from './pages/admin/AdminPlaceholderPage';
 import { LandingPage } from './pages/LandingPage';
 import { PosBillingPage } from './pages/PosBillingPage';
+import { SupportPage } from './pages/SupportPage';
+import { AdminSupportPage } from './pages/admin/AdminSupportPage';
 
 /**
  * ProtectedLayout: Guards owner app shell routes (/dashboard, /pos, /analytics, etc.)
@@ -110,6 +112,7 @@ export default function App() {
                   <Route path="overview" element={<AdminOverviewPage />} />
                   <Route path="businesses" element={<AdminBusinessesPage />} />
                   <Route path="businesses/:id" element={<AdminBusinessDetailPage />} />
+                  <Route path="support" element={<AdminSupportPage />} />
                   <Route path="plans" element={<AdminPlansPricesPage />} />
                   <Route path="plans-and-prices" element={<Navigate to="/admin/plans" replace />} />
                   <Route path="payments" element={<AdminPlaceholderPage />} />
@@ -125,6 +128,7 @@ export default function App() {
                 <Route path="/upload" element={<DataUploadPage />} />
                 <Route path="/analytics" element={<AnalyticsPage />} />
                 <Route path="/insights" element={<InsightsPage />} />
+                <Route path="/support" element={<SupportPage />} />
                 
                 {/* Secondary operational management */}
                 <Route path="/products" element={<ProductsPage />} />

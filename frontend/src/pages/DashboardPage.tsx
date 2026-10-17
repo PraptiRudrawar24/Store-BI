@@ -12,6 +12,7 @@ import {
   Store,
 } from 'lucide-react';
 import { StatCard } from '../components/ui/StatCard';
+import { AnimatedNumber } from '@/components/core/animated-number';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
@@ -75,7 +76,11 @@ function ComparisonRow({
           <div className="flex items-center justify-between text-xs">
             <span className="text-[11px] text-text-medium font-medium">Today</span>
             <span className="font-bold text-text-high tabular-nums">
-              {isCurrency ? formatINR(todayVal) : todayVal.toLocaleString('en-IN')}
+              <AnimatedNumber
+                value={todayVal}
+                isCurrency={isCurrency}
+                springOptions={{ bounce: 0, duration: 2000 }}
+              />
             </span>
           </div>
           <div className="h-2 w-full bg-surface border border-border rounded-full overflow-hidden">
@@ -91,7 +96,11 @@ function ComparisonRow({
           <div className="flex items-center justify-between text-xs">
             <span className="text-[11px] text-text-medium font-medium">Yesterday</span>
             <span className="font-semibold text-text-medium tabular-nums">
-              {isCurrency ? formatINR(yesterdayVal) : yesterdayVal.toLocaleString('en-IN')}
+              <AnimatedNumber
+                value={yesterdayVal}
+                isCurrency={isCurrency}
+                springOptions={{ bounce: 0, duration: 2000 }}
+              />
             </span>
           </div>
           <div className="h-2 w-full bg-surface border border-border rounded-full overflow-hidden">
@@ -375,6 +384,8 @@ export function DashboardPage() {
           <StatCard
             label="Sales"
             value={formatINR(kpis.sales)}
+            numericValue={kpis.sales}
+            isCurrency
             trendText={
               kpis.sales_change_pct !== null
                 ? `${kpis.sales_change_pct > 0 ? '+' : ''}${kpis.sales_change_pct}%`
@@ -388,6 +399,8 @@ export function DashboardPage() {
           <StatCard
             label="Profit"
             value={formatINR(kpis.profit)}
+            numericValue={kpis.profit}
+            isCurrency
             trendText={
               kpis.profit_change_pct !== null
                 ? `${kpis.profit_change_pct > 0 ? '+' : ''}${kpis.profit_change_pct}%`
@@ -401,6 +414,7 @@ export function DashboardPage() {
           <StatCard
             label="Number of transactions"
             value={kpis.transactions.toLocaleString('en-IN')}
+            numericValue={kpis.transactions}
             trendText={
               kpis.transactions_change_pct !== null
                 ? `${kpis.transactions_change_pct > 0 ? '+' : ''}${kpis.transactions_change_pct}%`

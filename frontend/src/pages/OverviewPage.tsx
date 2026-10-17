@@ -174,6 +174,8 @@ export function OverviewPage() {
         <StatCard
           label="Total revenue"
           value={formatINR(summary.total_revenue)}
+          numericValue={summary.total_revenue}
+          isCurrency
           previousValue={0}
           subtext="vs previous period"
           icon={<IndianRupee className="w-4 h-4" strokeWidth={2} />}
@@ -181,6 +183,8 @@ export function OverviewPage() {
         <StatCard
           label="Net profit"
           value={formatINR(summary.net_income)}
+          numericValue={summary.net_income}
+          isCurrency
           previousValue={0}
           subtext="after expenses"
           icon={<TrendingUp className="w-4 h-4" strokeWidth={2} />}
@@ -188,6 +192,7 @@ export function OverviewPage() {
         <StatCard
           label="Sales count"
           value={summary.total_sales_count.toLocaleString('en-IN')}
+          numericValue={summary.total_sales_count}
           previousValue={0}
           subtext="total bills"
           icon={<ShoppingBag className="w-4 h-4" strokeWidth={2} />}
@@ -195,6 +200,7 @@ export function OverviewPage() {
         <StatCard
           label="Active products"
           value={summary.total_products_count.toLocaleString('en-IN')}
+          numericValue={summary.total_products_count}
           previousValue={0}
           subtext="in store catalog"
           icon={<Package className="w-4 h-4" strokeWidth={2} />}

@@ -12,6 +12,7 @@ import {
   Lightbulb,
 } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
+import { AnimatedNumber } from '@/components/core/animated-number';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/Toast';
 import { api } from '../../api/client';
@@ -96,9 +97,11 @@ export function AdminOverviewPage() {
             </div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-text-high tracking-tight mb-1 tabular-nums">
-              {stats ? stats.new_registrations.toLocaleString('en-IN') : '0'}
-            </div>
+            <AnimatedNumber
+              value={stats ? stats.new_registrations : 0}
+              springOptions={{ bounce: 0, duration: 2000 }}
+              className="text-2xl font-bold text-text-high tracking-tight mb-1 tabular-nums"
+            />
             <div className="flex items-center gap-1.5 text-xs">
               {stats && stats.registrations_change_pct !== null ? (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold text-[11px]">
@@ -121,9 +124,11 @@ export function AdminOverviewPage() {
             </div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-text-high tracking-tight mb-1 tabular-nums">
-              {stats ? stats.active_trials.toLocaleString('en-IN') : '0'}
-            </div>
+            <AnimatedNumber
+              value={stats ? stats.active_trials : 0}
+              springOptions={{ bounce: 0, duration: 2000 }}
+              className="text-2xl font-bold text-text-high tracking-tight mb-1 tabular-nums"
+            />
             <div className="flex items-center gap-1.5 text-xs text-amber-700 font-medium">
               <span className="text-[11px]">
                 {stats ? stats.trials_ending_soon : 0} ending in next 48h
@@ -141,9 +146,11 @@ export function AdminOverviewPage() {
             </div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-text-high tracking-tight mb-1 tabular-nums">
-              {stats ? stats.paid_businesses.toLocaleString('en-IN') : '0'}
-            </div>
+            <AnimatedNumber
+              value={stats ? stats.paid_businesses : 0}
+              springOptions={{ bounce: 0, duration: 2000 }}
+              className="text-2xl font-bold text-text-high tracking-tight mb-1 tabular-nums"
+            />
             <div className="flex items-center gap-1.5 text-xs">
               <span className="text-emerald-700 font-bold text-[11px]">
                 +{stats ? stats.paid_change_count : 0} this mo
@@ -163,9 +170,13 @@ export function AdminOverviewPage() {
             </div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-text-high tracking-tight mb-1 tabular-nums">
-              {stats ? stats.conversion_rate.toFixed(1) : '0.0'}%
-            </div>
+            <AnimatedNumber
+              value={stats ? stats.conversion_rate : 0}
+              decimals={1}
+              suffix="%"
+              springOptions={{ bounce: 0, duration: 2000 }}
+              className="text-2xl font-bold text-text-high tracking-tight mb-1 tabular-nums"
+            />
             <div className="flex items-center gap-1.5 text-xs">
               {stats && stats.conversion_rate_change_pct !== null ? (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold text-[11px]">
@@ -188,9 +199,12 @@ export function AdminOverviewPage() {
             </div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-text-high tracking-tight mb-1 tabular-nums">
-              {stats ? formatINR(stats.monthly_revenue) : '₹0'}
-            </div>
+            <AnimatedNumber
+              value={stats ? stats.monthly_revenue : 0}
+              isCurrency
+              springOptions={{ bounce: 0, duration: 2000 }}
+              className="text-2xl font-bold text-text-high tracking-tight mb-1 tabular-nums"
+            />
             <div className="flex items-center gap-1.5 text-xs">
               {stats && stats.revenue_change_pct !== null ? (
                 <span className="text-emerald-700 font-bold text-[11px]">

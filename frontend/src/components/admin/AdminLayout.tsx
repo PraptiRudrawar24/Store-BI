@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Sun,
   Moon,
+  Headset,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -28,6 +29,7 @@ export function AdminLayout() {
   const navLinks = [
     { to: '/admin/overview', label: 'Overview', icon: LayoutDashboard },
     { to: '/admin/businesses', label: 'Businesses', icon: Store },
+    { to: '/admin/support', label: 'Support & Tickets', icon: Headset },
     { to: '/admin/plans', label: 'Plans and prices', icon: Tag },
     { to: '/admin/payments', label: 'Payments', icon: CreditCard },
     { to: '/admin/reports', label: 'Reports', icon: BarChart3 },

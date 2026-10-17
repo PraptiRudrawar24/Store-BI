@@ -16,6 +16,7 @@ import {
 } from '../../api/client';
 import { formatINR } from '../../utils';
 import { Card, CardHeader, CardContent } from '../ui/Card';
+import { AnimatedNumber } from '@/components/core/animated-number';
 import { Button } from '../ui/Button';
 import { Sparkline } from './Sparkline';
 
@@ -254,9 +255,12 @@ export function ProductAnalyticsTab() {
         <Card showTrail trailColor="neutral" className="p-3.5 flex items-center justify-between shadow-sm">
           <div>
             <span className="text-[11px] text-text-medium block font-medium">Catalog items</span>
-            <span className="text-xl font-bold text-text-high tabular-nums block mt-0.5">
-              {data.total_products} products
-            </span>
+            <AnimatedNumber
+              value={data.total_products}
+              suffix=" products"
+              springOptions={{ bounce: 0, duration: 2000 }}
+              className="text-xl font-bold text-text-high tabular-nums block mt-0.5"
+            />
           </div>
           <div className="w-9 h-9 rounded-[6px] bg-canvas border border-border flex items-center justify-center text-text-medium">
             <Package className="w-5 h-5" />
@@ -266,9 +270,12 @@ export function ProductAnalyticsTab() {
         <Card showTrail trailColor="cyan" className="p-3.5 flex items-center justify-between shadow-sm">
           <div>
             <span className="text-[11px] text-text-medium block font-medium">Units sold in period</span>
-            <span className="text-xl font-bold text-primary tabular-nums block mt-0.5">
-              {data.total_units} units
-            </span>
+            <AnimatedNumber
+              value={data.total_units}
+              suffix=" units"
+              springOptions={{ bounce: 0, duration: 2000 }}
+              className="text-xl font-bold text-primary tabular-nums block mt-0.5"
+            />
           </div>
           <div className="w-9 h-9 rounded-[6px] bg-primary/10 flex items-center justify-center text-primary">
             <TrendingUp className="w-5 h-5" />
@@ -278,9 +285,12 @@ export function ProductAnalyticsTab() {
         <Card showTrail trailColor="indigo" className="p-3.5 flex items-center justify-between shadow-sm">
           <div>
             <span className="text-[11px] text-text-medium block font-medium">Product revenue</span>
-            <span className="text-xl font-bold text-secondary tabular-nums block mt-0.5">
-              {formatINR(data.total_sales)}
-            </span>
+            <AnimatedNumber
+              value={data.total_sales}
+              isCurrency
+              springOptions={{ bounce: 0, duration: 2000 }}
+              className="text-xl font-bold text-secondary tabular-nums block mt-0.5"
+            />
           </div>
           <div className="w-9 h-9 rounded-[6px] bg-secondary/10 flex items-center justify-center text-secondary">
             <BarChart3 className="w-5 h-5" />

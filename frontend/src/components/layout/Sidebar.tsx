@@ -2,17 +2,19 @@ import * as React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
-  Upload,
-  BarChart3,
+  ReceiptText,
+  Package,
+  ChartColumnIncreasing,
   Sparkles,
   Store,
   LogOut,
   Settings,
-  Receipt,
+  Headset,
 } from 'lucide-react';
-import { cn } from '../ui/utils';
+import { Dock, DockIcon, DockItem, DockLabel } from '@/components/core/dock';
 import { Badge } from '../ui/Badge';
 import { useAuth } from '../../context/AuthContext';
+import { api } from '../../api/client';
 import { PurchaseSubscriptionModal } from '../subscription/PurchaseSubscriptionModal';
 
 interface SidebarProps {
@@ -22,13 +24,38 @@ interface SidebarProps {
 export function Sidebar({ onCloseMobile }: SidebarProps) {
   const { user, logout } = useAuth();
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = React.useState(false);
+  const [unreadSupportCount, setUnreadSupportCount] = React.useState(0);
+
+  React.useEffect(() => {
+    let mounted = true;
+    const checkUnread = async () => {
+      try {
+        const res = await api.getCustomerSupportUnreadCount();
+        if (mounted) setUnreadSupportCount(res.unread_count);
+      } catch {
+        // ignore
+      }
+    };
+    checkUnread();
+    const interval = setInterval(checkUnread, 30000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/pos', label: 'POS Billing', icon: Receipt },
-    { to: '/upload', label: 'Inventory management', icon: Upload },
-    { to: '/analytics', label: 'Analytics', icon: BarChart3 },
-    { to: '/insights', label: 'AI insight', icon: Sparkles },
+    { to: '/pos', label: 'POS Billing', icon: ReceiptText },
+    { to: '/upload', label: 'Inventory Management', icon: Package },
+    { to: '/analytics', label: 'Analytics', icon: ChartColumnIncreasing },
+    { to: '/insights', label: 'AI Insight', icon: Sparkles },
+    {
+      to: '/support',
+      label: 'Support & Feedback',
+      icon: Headset,
+      badge: unreadSupportCount > 0 ? unreadSupportCount : undefined,
+    },
   ];
 
   const trialDays = user?.trial_days_left ?? 5;
@@ -37,10 +64,10 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
   const totalMonthDays = user?.subscription_total_days_in_month ?? 30;
 
   return (
-    <aside className="w-full h-full bg-surface dark:bg-surface-low border-r border-border flex flex-col justify-between">
-      <div>
+    <aside className="w-full h-full bg-surface dark:bg-surface-low border-r border-border flex flex-col justify-between overflow-y-auto">
+      <div className="flex flex-col flex-1 min-h-0">
         {/* Brand Header */}
-        <div className="h-20 px-4 flex flex-col justify-center border-b border-border">
+        <div className="h-20 px-4 flex flex-col justify-center border-b border-border shrink-0">
           <div className="flex items-center gap-3">
             <img
               src="/logo/store-bi-logo.jpeg"
@@ -59,34 +86,36 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
           </div>
         </div>
 
-        {/* Navigation Links */}
-        <nav className="p-3 flex flex-col gap-1.5" role="navigation">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                onClick={onCloseMobile}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-3 px-3.5 h-12 min-h-[48px] rounded-[6px] text-sm font-semibold transition-colors',
-                    isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-text-medium hover:text-text-high hover:bg-canvas dark:hover:bg-surface-high'
-                  )
-                }
-              >
-                <Icon className="w-5 h-5 shrink-0" strokeWidth={2} />
-                <span>{item.label}</span>
-              </NavLink>
-            );
-          })}
+        {/* Navigation Links with Animated Vertical Dock */}
+        <nav className="p-3 flex-1 overflow-y-auto" role="navigation" aria-label="Sidebar navigation">
+          <Dock orientation="vertical" className="w-full gap-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <DockItem
+                  key={item.to}
+                  to={item.to}
+                  onClick={onCloseMobile}
+                  aria-label={item.label}
+                >
+                  <DockIcon>
+                    <div className="relative flex items-center justify-center">
+                      <Icon className="w-5 h-5 shrink-0" strokeWidth={2} />
+                      {item.badge !== undefined && (
+                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-primary border-2 border-surface animate-pulse" />
+                      )}
+                    </div>
+                  </DockIcon>
+                  <DockLabel>{item.label}</DockLabel>
+                </DockItem>
+              );
+            })}
+          </Dock>
         </nav>
       </div>
 
       {/* Footer Area: Trial / Subscription chip near the bottom + Shop info */}
-      <div className="p-3 border-t border-border flex flex-col gap-2.5">
+      <div className="p-3 border-t border-border flex flex-col gap-2.5 shrink-0">
         {/* Status card in left down corner */}
         {!isPaid ? (
           <div className="p-3 rounded-[8px] bg-canvas dark:bg-surface border border-border flex flex-col gap-2 shadow-sm">
@@ -106,7 +135,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
             <button
               type="button"
               onClick={() => setIsPurchaseModalOpen(true)}
-              className="w-full py-2 px-2.5 rounded-[6px] bg-primary hover:bg-primary-hover text-primary-foreground text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+              className="w-full py-2 px-2.5 rounded-[6px] bg-primary hover:bg-primary-hover text-primary-foreground text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-sm cursor-pointer"
               title="Purchase Store BI subscription"
             >
               <Sparkles className="w-3.5 h-3.5 shrink-0" />
@@ -132,7 +161,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
             <button
               type="button"
               onClick={() => setIsPurchaseModalOpen(true)}
-              className="w-full py-1.5 px-2.5 rounded-[6px] border border-border hover:bg-canvas dark:hover:bg-surface-high text-text-high text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+              className="w-full py-1.5 px-2.5 rounded-[6px] border border-border hover:bg-canvas dark:hover:bg-surface-high text-text-high text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               title="Manage or upgrade subscription"
             >
               <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
@@ -167,7 +196,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
             <button
               onClick={logout}
               title="Sign out"
-              className="w-12 h-12 min-h-[48px] min-w-[48px] flex items-center justify-center rounded-[6px] text-text-medium hover:text-destructive hover:bg-canvas dark:hover:bg-surface-high transition-colors"
+              className="w-12 h-12 min-h-[48px] min-w-[48px] flex items-center justify-center rounded-[6px] text-text-medium hover:text-destructive hover:bg-canvas dark:hover:bg-surface-high transition-colors cursor-pointer"
             >
               <LogOut className="w-5 h-5" strokeWidth={2} />
             </button>

@@ -12,6 +12,7 @@ import { landingContent } from '../../content/landingContent';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../ui/Button';
 import { HeroForecastChart } from './HeroForecastChart';
+import { TextEffect } from '@/components/core/text-effect';
 
 export function HeroSection() {
   const navigate = useNavigate();
@@ -43,11 +44,21 @@ export function HeroSection() {
               </span>
             </div>
 
-            {/* Main Headline */}
-            <h1 className="text-4xl sm:text-5xl lg:text-[52px] font-extrabold text-text-high leading-[1.14] tracking-tight">
-              {hero.headlineStart}
-              <span className="text-primary">{hero.headlineHighlight}</span>
-            </h1>
+            {/* Main Brand Heading with TextEffect */}
+            <div>
+              <TextEffect
+                as="h1"
+                per="char"
+                preset="fade"
+                className="text-5xl sm:text-6xl lg:text-[68px] font-black text-text-high leading-[1.08] tracking-tight"
+              >
+                Store BI
+              </TextEffect>
+              <h2 className="mt-3 text-2xl sm:text-3xl lg:text-[34px] font-bold text-text-high/90 leading-[1.2] tracking-tight">
+                {hero.headlineStart}
+                <span className="text-primary">{hero.headlineHighlight}</span>
+              </h2>
+            </div>
 
             {/* Subheadline */}
             <p className="text-base sm:text-lg text-text-medium max-w-xl leading-relaxed">
