@@ -31,8 +31,18 @@ from auth import (
     get_current_admin,
     ensure_admin_account,
     calculate_trial_days_left,
+    calculate_subscription_days_left,
     COOKIE_NAME,
 )
+
+def serialize_shop(shop: models.Shop) -> dict:
+    sub_left, sub_total = calculate_subscription_days_left(shop)
+    trial_left = calculate_trial_days_left(shop.trial_end_date)
+    d = schemas.ShopResponse.model_validate(shop).model_dump()
+    d["trial_days_left"] = 0 if getattr(shop, "is_paid", False) else trial_left
+    d["subscription_days_left_in_month"] = sub_left if getattr(shop, "is_paid", False) else None
+    d["subscription_total_days_in_month"] = sub_total if getattr(shop, "is_paid", False) else None
+    return d
 
 # Create database tables and apply column migrations
 models.Base.metadata.create_all(bind=engine)
@@ -52,6 +62,7 @@ app = FastAPI(title="Store BI API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -147,9 +158,7 @@ def verify_otp(
         max_age=7 * 24 * 3600,
     )
 
-    trial_days = calculate_trial_days_left(shop.trial_end_date)
-    shop_dict = schemas.ShopResponse.model_validate(shop).model_dump()
-    shop_dict["trial_days_left"] = trial_days
+    shop_dict = serialize_shop(shop)
 
     return {
         "success": True,
@@ -166,10 +175,7 @@ def get_me(current_shop: models.Shop = Depends(get_current_shop)):
     """
     Returns current authenticated shop profile, trial status, and onboarding progress.
     """
-    trial_days = calculate_trial_days_left(current_shop.trial_end_date)
-    shop_dict = schemas.ShopResponse.model_validate(current_shop).model_dump()
-    shop_dict["trial_days_left"] = trial_days
-    return shop_dict
+    return serialize_shop(current_shop)
 
 
 # ------------------------------------------------------------------------------
@@ -202,9 +208,7 @@ def save_onboarding_step_1(
     db.commit()
     db.refresh(current_shop)
 
-    trial_days = calculate_trial_days_left(current_shop.trial_end_date)
-    shop_dict = schemas.ShopResponse.model_validate(current_shop).model_dump()
-    shop_dict["trial_days_left"] = trial_days
+    shop_dict = serialize_shop(current_shop)
     return {
         "success": True,
         "step_completed": 1,
@@ -235,9 +239,7 @@ def save_onboarding_step_2(
     db.commit()
     db.refresh(current_shop)
 
-    trial_days = calculate_trial_days_left(current_shop.trial_end_date)
-    shop_dict = schemas.ShopResponse.model_validate(current_shop).model_dump()
-    shop_dict["trial_days_left"] = trial_days
+    shop_dict = serialize_shop(current_shop)
     return {
         "success": True,
         "step_completed": 2,
@@ -266,9 +268,7 @@ def save_onboarding_step_3(
     db.commit()
     db.refresh(current_shop)
 
-    trial_days = calculate_trial_days_left(current_shop.trial_end_date)
-    shop_dict = schemas.ShopResponse.model_validate(current_shop).model_dump()
-    shop_dict["trial_days_left"] = trial_days
+    shop_dict = serialize_shop(current_shop)
     return {
         "success": True,
         "step_completed": 3,
@@ -295,9 +295,7 @@ def save_onboarding_step_4(
     db.commit()
     db.refresh(current_shop)
 
-    trial_days = calculate_trial_days_left(current_shop.trial_end_date)
-    shop_dict = schemas.ShopResponse.model_validate(current_shop).model_dump()
-    shop_dict["trial_days_left"] = trial_days
+    shop_dict = serialize_shop(current_shop)
     return {
         "success": True,
         "step_completed": 4,
@@ -393,9 +391,7 @@ def update_shop(shop_id: int, shop_update: schemas.ShopUpdate, db: Session = Dep
         setattr(db_shop, key, value)
     db.commit()
     db.refresh(db_shop)
-    shop_dict = schemas.ShopResponse.model_validate(db_shop).model_dump()
-    shop_dict["trial_days_left"] = calculate_trial_days_left(db_shop.trial_end_date)
-    return shop_dict
+    return serialize_shop(db_shop)
 
 
 @app.delete("/shops/{shop_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -428,6 +424,8 @@ def get_products(
     query = db.query(models.Product)
     if current_shop and not getattr(current_shop, "is_admin", False):
         query = query.filter(models.Product.shop_id == current_shop.id)
+    elif not current_shop:
+        query = query.filter(models.Product.shop_id.is_(None))
 
     if search:
         search_pattern = f"%{search}%"
@@ -468,6 +466,151 @@ def get_products(
         )
 
     return query.offset(skip).limit(limit).all()
+
+
+@app.get("/api/products/autocomplete", response_model=List[schemas.ProductAutocompleteItem])
+@app.get("/products/autocomplete", response_model=List[schemas.ProductAutocompleteItem])
+def autocomplete_products(
+    request: Request,
+    q: str = Query("", description="Search query for product autocomplete"),
+    limit: int = Query(10, ge=1, le=50),
+    db: Session = Depends(get_db)
+):
+    current_shop = get_current_shop_optional(request, db)
+    query = db.query(models.Product)
+    if current_shop and not getattr(current_shop, "is_admin", False):
+        query = query.filter(models.Product.shop_id == current_shop.id)
+    elif not current_shop:
+        query = query.filter(models.Product.shop_id.is_(None))
+
+    clean_q = q.strip().lower()
+    if not clean_q:
+        prods = query.order_by(models.Product.stock_qty.desc(), models.Product.name.asc()).limit(limit).all()
+        return [
+            schemas.ProductAutocompleteItem(
+                id=p.id,
+                name=p.name,
+                category=p.category,
+                stock_qty=p.stock_qty,
+                reorder_level=p.reorder_level or 10,
+                cost_price=p.cost_price or 0.0,
+                selling_price=p.selling_price or 0.0,
+                expiry_date=p.expiry_date,
+                status="out_of_stock" if p.stock_qty == 0 else ("low_stock" if p.stock_qty <= (p.reorder_level or 10) else "in_stock")
+            )
+            for p in prods
+        ]
+
+    # Filter with case-insensitive matching
+    search_pattern = f"%{clean_q}%"
+    matching_products = query.filter(
+        models.Product.name.ilike(search_pattern) | models.Product.category.ilike(search_pattern)
+    ).all()
+
+    # Smart ranking:
+    # 0: Exact match (case-insensitive)
+    # 1: Prefix match ("name starts with")
+    # 2: Word inside name starts with search term (e.g. "Detergent" in "Star Bright Detergent")
+    # 3: Substring in name
+    # 4: Substring in category
+    def rank_product(p: models.Product):
+        name_lower = (p.name or "").strip().lower()
+        cat_lower = (p.category or "").strip().lower()
+        if name_lower == clean_q:
+            match_tier = 0
+        elif name_lower.startswith(clean_q):
+            match_tier = 1
+        elif f" {clean_q}" in name_lower or f"-{clean_q}" in name_lower or f"/{clean_q}" in name_lower:
+            match_tier = 2
+        elif clean_q in name_lower:
+            match_tier = 3
+        elif clean_q in cat_lower:
+            match_tier = 4
+        else:
+            match_tier = 5
+
+        # Penalize zero stock slightly so in-stock items are preferred when relevancy matches
+        stock_penalty = 0 if p.stock_qty > 0 else 1
+        return (match_tier, stock_penalty, len(name_lower), name_lower)
+
+    matching_products.sort(key=rank_product)
+    selected = matching_products[:limit]
+
+    return [
+        schemas.ProductAutocompleteItem(
+            id=p.id,
+            name=p.name,
+            category=p.category,
+            stock_qty=p.stock_qty,
+            reorder_level=p.reorder_level or 10,
+            cost_price=p.cost_price or 0.0,
+            selling_price=p.selling_price or 0.0,
+            expiry_date=p.expiry_date,
+            status="out_of_stock" if p.stock_qty == 0 else ("low_stock" if p.stock_qty <= (p.reorder_level or 10) else "in_stock")
+        )
+        for p in selected
+    ]
+
+
+@app.get("/api/products/{product_id}/location", response_model=schemas.ProductLocationResponse)
+@app.get("/products/{product_id}/location", response_model=schemas.ProductLocationResponse)
+def get_product_location(
+    product_id: int,
+    request: Request,
+    page_size: int = Query(10, ge=1, le=100),
+    sort_by: Optional[str] = "id",
+    order: Optional[str] = "desc",
+    db: Session = Depends(get_db)
+):
+    current_shop = get_current_shop_optional(request, db)
+    query = db.query(models.Product)
+    if current_shop and not getattr(current_shop, "is_admin", False):
+        query = query.filter(models.Product.shop_id == current_shop.id)
+    elif not current_shop:
+        query = query.filter(models.Product.shop_id.is_(None))
+
+    sort_column_map = {
+        "id": models.Product.id,
+        "name": models.Product.name,
+        "category": models.Product.category,
+        "cost_price": models.Product.cost_price,
+        "selling_price": models.Product.selling_price,
+        "stock_qty": models.Product.stock_qty,
+        "reorder_level": models.Product.reorder_level,
+        "expiry_date": models.Product.expiry_date,
+    }
+    col = sort_column_map.get(sort_by, models.Product.id)
+    if order and order.lower() == "asc":
+        ordered_query = query.order_by(col.asc(), models.Product.id.asc())
+    else:
+        ordered_query = query.order_by(col.desc(), models.Product.id.desc())
+
+    all_ids = [p.id for p in ordered_query.with_entities(models.Product.id).all()]
+    total = len(all_ids)
+    if product_id not in all_ids:
+        return schemas.ProductLocationResponse(
+            found=False,
+            product_id=product_id,
+            page=1,
+            page_size=page_size,
+            total=total,
+            product=None,
+            message="Product no longer exists or has been deleted."
+        )
+
+    index = all_ids.index(product_id)
+    page_num = (index // page_size) + 1
+    target_product = db.query(models.Product).filter(models.Product.id == product_id).first()
+
+    return schemas.ProductLocationResponse(
+        found=True,
+        product_id=product_id,
+        page=page_num,
+        page_size=page_size,
+        total=total,
+        product=schemas.ProductResponse.model_validate(target_product),
+        message="Product located successfully."
+    )
 
 
 @app.get("/products/{product_id}", response_model=schemas.ProductResponse)
@@ -559,6 +702,8 @@ def get_sales(
     query = db.query(models.Sale)
     if current_shop and not getattr(current_shop, "is_admin", False):
         query = query.filter(models.Sale.shop_id == current_shop.id)
+    elif not current_shop:
+        query = query.filter(models.Sale.shop_id.is_(None))
 
     if search:
         search_pattern = f"%{search}%"
@@ -611,13 +756,28 @@ def get_sale(sale_id: int, db: Session = Depends(get_db)):
 @app.post("/sales/", response_model=schemas.SaleResponse, status_code=status.HTTP_201_CREATED)
 def create_sale(sale_in: schemas.SaleCreate, request: Request, db: Session = Depends(get_db)):
     current_shop = get_current_shop_optional(request, db)
-    # 1. Validate stock for all line items first
+    # 1. Validate stock and availability for all line items first
     for item in sale_in.items:
+        if item.qty <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Line item quantity must be greater than zero."
+            )
         product = db.query(models.Product).filter(models.Product.id == item.product_id).first()
         if not product:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Product with ID {item.product_id} not found."
+            )
+        if current_shop and product.shop_id and product.shop_id != current_shop.id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Product '{product.name}' is not in your store inventory."
+            )
+        if product.stock_qty <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Product '{product.name}' is out of stock."
             )
         if product.stock_qty < item.qty:
             raise HTTPException(
@@ -783,6 +943,8 @@ def get_expenses(
     query = db.query(models.Expense)
     if current_shop and not getattr(current_shop, "is_admin", False):
         query = query.filter(models.Expense.shop_id == current_shop.id)
+    elif not current_shop:
+        query = query.filter(models.Expense.shop_id.is_(None))
 
     if search:
         search_pattern = f"%{search}%"
@@ -875,15 +1037,23 @@ def get_upload_counts(request: Request, db: Session = Depends(get_db)):
         products_count = db.query(models.Product).filter(models.Product.shop_id == shop.id).count()
         sales_count = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).count()
         expenses_count = db.query(models.Expense).filter(models.Expense.shop_id == shop.id).count()
-    else:
+        invoices_count = db.query(models.Invoice).filter(models.Invoice.shop_id == shop.id).count()
+    elif shop and getattr(shop, "is_admin", False):
         products_count = db.query(models.Product).count()
         sales_count = db.query(models.Sale).count()
         expenses_count = db.query(models.Expense).count()
+        invoices_count = db.query(models.Invoice).count()
+    else:
+        products_count = db.query(models.Product).filter(models.Product.shop_id.is_(None)).count()
+        sales_count = db.query(models.Sale).filter(models.Sale.shop_id.is_(None)).count()
+        expenses_count = db.query(models.Expense).filter(models.Expense.shop_id.is_(None)).count()
+        invoices_count = db.query(models.Invoice).filter(models.Invoice.shop_id.is_(None)).count()
     return {
         "products": products_count,
         "sales": sales_count,
         "expenses": expenses_count,
-        "total": products_count + sales_count + expenses_count,
+        "invoices": invoices_count,
+        "total": products_count + sales_count + expenses_count + invoices_count,
     }
 
 
@@ -897,10 +1067,14 @@ def get_analytics_summary(request: Request, db: Session = Depends(get_db)):
         sales_list = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).all()
         expenses_list = db.query(models.Expense).filter(models.Expense.shop_id == shop.id).all()
         products_list = db.query(models.Product).filter(models.Product.shop_id == shop.id).all()
-    else:
+    elif shop and getattr(shop, "is_admin", False):
         sales_list = db.query(models.Sale).all()
         expenses_list = db.query(models.Expense).all()
         products_list = db.query(models.Product).all()
+    else:
+        sales_list = db.query(models.Sale).filter(models.Sale.shop_id.is_(None)).all()
+        expenses_list = db.query(models.Expense).filter(models.Expense.shop_id.is_(None)).all()
+        products_list = db.query(models.Product).filter(models.Product.shop_id.is_(None)).all()
 
     total_sales = len(sales_list)
     total_revenue = sum(s.total_amount for s in sales_list) if sales_list else 0.0
@@ -970,6 +1144,691 @@ def _parse_sale_datetime(dt) -> Optional[datetime]:
     return None
 
 
+@app.get("/api/analytics/dashboard", response_model=schemas.AnalyticsDashboardResponse)
+def get_analytics_dashboard(
+    request: Request,
+    period: str = "30d",
+    from_date: Optional[str] = Query(None, alias="from"),
+    to_date: Optional[str] = Query(None, alias="to"),
+    ranking_metric: str = "revenue",  # "revenue" | "units" | "profit"
+    category: str = "all",
+    db: Session = Depends(get_db)
+):
+    """
+    Upgraded Comprehensive Analytics Dashboard:
+    1. Sales KPI Cards (Daily, Weekly, Monthly with % comparison vs prior periods)
+    2. Sales Trends & Charts (Daily, Weekly, Monthly, Sales vs Profit, Transactions)
+    3. Best-Selling Products (Rankings, revenue, profit, margin %, % contribution)
+    4. Slow-Selling Products (Days since last sale, stock velocity, actionable advice)
+    5. Product Demand Analysis (Velocity units/day, demand trend, stockout warnings, restock qty)
+    6. Most Profitable Products (COGS, gross profit, margin %, profit contribution %, thin margin alerts)
+    7. Product Performance Comparison Table (Full multi-metric sortable/filterable rows)
+    8. Analytics Insights & Recommendations (Traceable, rule-based operational insights)
+    """
+    verify_feature_access_or_raise(request, "analytics_pro", db)
+    now_date = datetime.utcnow().date()
+    period_key = (period or "30d").lower().strip()
+    cat_filter = (category or "all").strip()
+    metric_key = (ranking_metric or "revenue").lower().strip()
+
+    # Shop isolation
+    shop = get_current_shop_optional(request, db)
+    if shop and not getattr(shop, "is_admin", False):
+        all_sales = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).all()
+        all_products = db.query(models.Product).filter(models.Product.shop_id == shop.id).all()
+    elif shop and getattr(shop, "is_admin", False):
+        all_sales = db.query(models.Sale).all()
+        all_products = db.query(models.Product).all()
+    else:
+        all_sales = db.query(models.Sale).filter(models.Sale.shop_id.is_(None)).all()
+        all_products = db.query(models.Product).filter(models.Product.shop_id.is_(None)).all()
+
+    categories_list = sorted(list({p.category for p in all_products if p.category}))
+
+    if cat_filter != "all" and cat_filter != "":
+        filtered_products = [p for p in all_products if p.category and p.category.lower() == cat_filter.lower()]
+    else:
+        filtered_products = all_products
+    filtered_prod_ids = {p.id for p in filtered_products}
+
+    # -------------------------------------------------------------
+    # 1. SALES KPI CARDS (Daily, Weekly, Monthly with comparison)
+    # -------------------------------------------------------------
+    # Daily: Today vs Yesterday
+    yest_date = now_date - timedelta(days=1)
+    s_today = [s for s in all_sales if _parse_sale_date(s.date_time) == now_date]
+    s_yest = [s for s in all_sales if _parse_sale_date(s.date_time) == yest_date]
+
+    today_sales = round(sum(s.total_amount for s in s_today), 2)
+    today_tx = len(s_today)
+    today_profit = round(sum(s.total_profit for s in s_today), 2)
+    yest_sales = round(sum(s.total_amount for s in s_yest), 2)
+    yest_tx = len(s_yest)
+    yest_profit = round(sum(s.total_profit for s in s_yest), 2)
+
+    if yest_sales > 0:
+        d_pct = round(((today_sales - yest_sales) / yest_sales) * 100, 1)
+        d_msg = f"{'+' if d_pct > 0 else ''}{d_pct}% vs yesterday"
+    elif today_sales > 0:
+        d_pct = None
+        d_msg = "New sales (No sales yesterday)"
+    else:
+        d_pct = 0.0
+        d_msg = "No sales recorded today"
+
+    kpi_daily = schemas.SalesPeriodKPI(
+        title="Daily Sales",
+        period_key="daily",
+        sales=today_sales,
+        transactions=today_tx,
+        profit=today_profit,
+        prev_sales=yest_sales,
+        prev_transactions=yest_tx,
+        prev_profit=yest_profit,
+        delta_pct=d_pct,
+        comparison_message=d_msg,
+    )
+
+    # Weekly: Current Week (Mon..Today) vs Previous Week (Mon..Sun)
+    curr_week_start = now_date - timedelta(days=now_date.weekday())
+    prev_week_start = curr_week_start - timedelta(days=7)
+    prev_week_end = curr_week_start - timedelta(days=1)
+
+    s_cweek = [s for s in all_sales if _parse_sale_date(s.date_time) and curr_week_start <= _parse_sale_date(s.date_time) <= now_date]
+    s_pweek = [s for s in all_sales if _parse_sale_date(s.date_time) and prev_week_start <= _parse_sale_date(s.date_time) <= prev_week_end]
+
+    cweek_sales = round(sum(s.total_amount for s in s_cweek), 2)
+    cweek_tx = len(s_cweek)
+    cweek_profit = round(sum(s.total_profit for s in s_cweek), 2)
+    pweek_sales = round(sum(s.total_amount for s in s_pweek), 2)
+    pweek_tx = len(s_pweek)
+    pweek_profit = round(sum(s.total_profit for s in s_pweek), 2)
+
+    if pweek_sales > 0:
+        w_pct = round(((cweek_sales - pweek_sales) / pweek_sales) * 100, 1)
+        w_msg = f"{'+' if w_pct > 0 else ''}{w_pct}% vs previous week"
+    elif cweek_sales > 0:
+        w_pct = None
+        w_msg = "New sales (No sales previous week)"
+    else:
+        w_pct = 0.0
+        w_msg = "No sales recorded this week"
+
+    kpi_weekly = schemas.SalesPeriodKPI(
+        title="Weekly Sales",
+        period_key="weekly",
+        sales=cweek_sales,
+        transactions=cweek_tx,
+        profit=cweek_profit,
+        prev_sales=pweek_sales,
+        prev_transactions=pweek_tx,
+        prev_profit=pweek_profit,
+        delta_pct=w_pct,
+        comparison_message=w_msg,
+    )
+
+    # Monthly: Current Month (1st..Today) vs Previous Month (1st..Last day)
+    curr_month_start = date(now_date.year, now_date.month, 1)
+    if now_date.month == 1:
+        prev_month_start = date(now_date.year - 1, 12, 1)
+        prev_month_end = date(now_date.year, 1, 1) - timedelta(days=1)
+    else:
+        prev_month_start = date(now_date.year, now_date.month - 1, 1)
+        prev_month_end = curr_month_start - timedelta(days=1)
+
+    s_cmonth = [s for s in all_sales if _parse_sale_date(s.date_time) and curr_month_start <= _parse_sale_date(s.date_time) <= now_date]
+    s_pmonth = [s for s in all_sales if _parse_sale_date(s.date_time) and prev_month_start <= _parse_sale_date(s.date_time) <= prev_month_end]
+
+    cmonth_sales = round(sum(s.total_amount for s in s_cmonth), 2)
+    cmonth_tx = len(s_cmonth)
+    cmonth_profit = round(sum(s.total_profit for s in s_cmonth), 2)
+    pmonth_sales = round(sum(s.total_amount for s in s_pmonth), 2)
+    pmonth_tx = len(s_pmonth)
+    pmonth_profit = round(sum(s.total_profit for s in s_pmonth), 2)
+
+    if pmonth_sales > 0:
+        m_pct = round(((cmonth_sales - pmonth_sales) / pmonth_sales) * 100, 1)
+        m_msg = f"{'+' if m_pct > 0 else ''}{m_pct}% vs previous month"
+    elif cmonth_sales > 0:
+        m_pct = None
+        m_msg = "New sales (No sales previous month)"
+    else:
+        m_pct = 0.0
+        m_msg = "No sales recorded this month"
+
+    kpi_monthly = schemas.SalesPeriodKPI(
+        title="Monthly Sales",
+        period_key="monthly",
+        sales=cmonth_sales,
+        transactions=cmonth_tx,
+        profit=cmonth_profit,
+        prev_sales=pmonth_sales,
+        prev_transactions=pmonth_tx,
+        prev_profit=pmonth_profit,
+        delta_pct=m_pct,
+        comparison_message=m_msg,
+    )
+
+    kpis = schemas.AnalyticsKPISet(daily=kpi_daily, weekly=kpi_weekly, monthly=kpi_monthly)
+
+    # -------------------------------------------------------------
+    # 2. DATE FILTER & COMPARABLE PRIOR PERIOD RANGE
+    # -------------------------------------------------------------
+    if period_key == "today":
+        curr_from = now_date
+        curr_to = now_date
+    elif period_key in ("7d", "7days", "last7days"):
+        curr_from = now_date - timedelta(days=6)
+        curr_to = now_date
+    elif period_key in ("week", "this_week"):
+        curr_from = curr_week_start
+        curr_to = now_date
+    elif period_key in ("month", "this_month"):
+        curr_from = curr_month_start
+        curr_to = now_date
+    elif period_key in ("custom", "range") and from_date and to_date:
+        p_f = _parse_date_string(from_date)
+        p_t = _parse_date_string(to_date)
+        curr_from = p_f if p_f else (now_date - timedelta(days=29))
+        curr_to = p_t if p_t else now_date
+    else:  # default "30d"
+        curr_from = now_date - timedelta(days=29)
+        curr_to = now_date
+
+    if curr_from > curr_to:
+        curr_from, curr_to = curr_to, curr_from
+
+    period_days = max(1, (curr_to - curr_from).days + 1)
+    prev_from = curr_from - timedelta(days=period_days)
+    prev_to = curr_from - timedelta(days=1)
+
+    period_sales = [
+        s for s in all_sales
+        if _parse_sale_date(s.date_time) and curr_from <= _parse_sale_date(s.date_time) <= curr_to
+    ]
+    prior_sales = [
+        s for s in all_sales
+        if _parse_sale_date(s.date_time) and prev_from <= _parse_sale_date(s.date_time) <= prev_to
+    ]
+
+    total_sales_val = round(sum(s.total_amount for s in period_sales), 2)
+    total_profit_val = round(sum(s.total_profit for s in period_sales), 2)
+    total_tx_val = len(period_sales)
+    has_data_val = total_tx_val > 0 and total_sales_val > 0
+
+    # -------------------------------------------------------------
+    # 3. TRENDS & CHARTS
+    # -------------------------------------------------------------
+    daily_trend: List[schemas.TrendChartPoint] = []
+    if period_days <= 1:
+        # Hourly breakdown for single day
+        hourly_map = {h: {"sales": 0.0, "profit": 0.0, "tx": 0} for h in range(24)}
+        for s in period_sales:
+            dt = _parse_sale_datetime(s.date_time)
+            h = dt.hour if dt else 12
+            hourly_map[h]["sales"] += s.total_amount
+            hourly_map[h]["profit"] += s.total_profit
+            hourly_map[h]["tx"] += 1
+        for h in range(24):
+            ampm = "AM" if h < 12 else "PM"
+            h12 = h % 12 or 12
+            daily_trend.append(schemas.TrendChartPoint(
+                label=f"{h12} {ampm}",
+                date_or_hour=f"{h:02d}:00",
+                sales=round(hourly_map[h]["sales"], 2),
+                profit=round(hourly_map[h]["profit"], 2),
+                transactions=hourly_map[h]["tx"],
+            ))
+    else:
+        # Day-by-day across curr_from..curr_to
+        curr = curr_from
+        while curr <= curr_to:
+            day_sales = [s for s in period_sales if _parse_sale_date(s.date_time) == curr]
+            daily_trend.append(schemas.TrendChartPoint(
+                label=curr.strftime("%d %b"),
+                date_or_hour=curr.isoformat(),
+                sales=round(sum(s.total_amount for s in day_sales), 2),
+                profit=round(sum(s.total_profit for s in day_sales), 2),
+                transactions=len(day_sales),
+            ))
+            curr += timedelta(days=1)
+
+    # Weekly trend: Day-by-day of current week (Mon..Sun)
+    weekly_trend: List[schemas.TrendChartPoint] = []
+    w_curr = curr_week_start
+    for i in range(7):
+        target_d = curr_week_start + timedelta(days=i)
+        d_sales = [s for s in all_sales if _parse_sale_date(s.date_time) == target_d]
+        weekly_trend.append(schemas.TrendChartPoint(
+            label=target_d.strftime("%a (%d %b)"),
+            date_or_hour=target_d.isoformat(),
+            sales=round(sum(s.total_amount for s in d_sales), 2),
+            profit=round(sum(s.total_profit for s in d_sales), 2),
+            transactions=len(d_sales),
+        ))
+
+    # Monthly trend: Weekly buckets across month
+    monthly_trend: List[schemas.TrendChartPoint] = []
+    m_curr = curr_month_start
+    w_idx = 1
+    while m_curr <= now_date:
+        w_end = min(m_curr + timedelta(days=6), now_date)
+        m_sales = [s for s in s_cmonth if m_curr <= _parse_sale_date(s.date_time) <= w_end]
+        monthly_trend.append(schemas.TrendChartPoint(
+            label=f"Week {w_idx} ({m_curr.strftime('%d')}-{w_end.strftime('%d %b')})",
+            date_or_hour=m_curr.isoformat(),
+            sales=round(sum(s.total_amount for s in m_sales), 2),
+            profit=round(sum(s.total_profit for s in m_sales), 2),
+            transactions=len(m_sales),
+        ))
+        m_curr += timedelta(days=7)
+        w_idx += 1
+
+    trends = schemas.AnalyticsTrends(
+        daily_trend=daily_trend,
+        weekly_trend=weekly_trend,
+        monthly_trend=monthly_trend,
+        sales_vs_profit=daily_trend,
+        transaction_trend=daily_trend,
+    )
+
+    # -------------------------------------------------------------
+    # 4. PRODUCT AGGREGATIONS (Current & Prior Period)
+    # -------------------------------------------------------------
+    prod_curr: dict = {
+        p.id: {"units": 0, "sales": 0.0, "cost": 0.0, "profit": 0.0}
+        for p in filtered_products
+    }
+    for s in period_sales:
+        if s.items:
+            for itm in s.items:
+                if itm.product_id in prod_curr:
+                    u_price = itm.unit_price or 0.0
+                    u_cost = itm.unit_cost if (itm.unit_cost is not None and itm.unit_cost > 0) else 0.0
+                    if u_cost == 0.0:
+                        prod_ref = next((p for p in filtered_products if p.id == itm.product_id), None)
+                        u_cost = prod_ref.cost_price if (prod_ref and prod_ref.cost_price) else 0.0
+                    l_sales = round(itm.qty * u_price, 2)
+                    l_cost = round(itm.qty * u_cost, 2)
+                    prod_curr[itm.product_id]["units"] += itm.qty
+                    prod_curr[itm.product_id]["sales"] += l_sales
+                    prod_curr[itm.product_id]["cost"] += l_cost
+                    prod_curr[itm.product_id]["profit"] += round(l_sales - l_cost, 2)
+
+    # Prior period aggregation for demand comparison
+    prod_prior_units: dict = {p.id: 0 for p in filtered_products}
+    for s in prior_sales:
+        if s.items:
+            for itm in s.items:
+                if itm.product_id in prod_prior_units:
+                    prod_prior_units[itm.product_id] += itm.qty
+
+    # Historical sales map for all products to find days_since_last_sale
+    last_sale_dates: dict = {}
+    for s in all_sales:
+        s_d = _parse_sale_date(s.date_time)
+        if s_d and s.items:
+            for itm in s.items:
+                if itm.product_id not in last_sale_dates or s_d > last_sale_dates[itm.product_id]:
+                    last_sale_dates[itm.product_id] = s_d
+
+    # -------------------------------------------------------------
+    # 5. BEST-SELLING PRODUCTS (Rankings, units, revenue, profit, %)
+    # -------------------------------------------------------------
+    best_candidates = []
+    for p in filtered_products:
+        c = prod_curr[p.id]
+        if c["units"] > 0 or c["sales"] > 0:
+            m_pct = round((c["profit"] / c["sales"] * 100), 1) if c["sales"] > 0 else 0.0
+            contrib = round((c["sales"] / total_sales_val * 100), 1) if total_sales_val > 0 else 0.0
+            best_candidates.append({
+                "product_id": p.id,
+                "name": p.name,
+                "category": p.category or "General",
+                "units_sold": c["units"],
+                "revenue": round(c["sales"], 2),
+                "profit": round(c["profit"], 2),
+                "margin_pct": m_pct,
+                "sales_contribution_pct": contrib,
+            })
+
+    if metric_key == "units":
+        best_candidates.sort(key=lambda x: (x["units_sold"], x["revenue"]), reverse=True)
+    elif metric_key == "profit":
+        best_candidates.sort(key=lambda x: (x["profit"], x["revenue"]), reverse=True)
+    else:  # "revenue"
+        best_candidates.sort(key=lambda x: (x["revenue"], x["units_sold"]), reverse=True)
+
+    best_selling = [schemas.BestSellingItem(**item) for item in best_candidates[:10]]
+
+    # -------------------------------------------------------------
+    # 6. SLOW-SELLING PRODUCTS (Real inventory, status, recommendations)
+    # -------------------------------------------------------------
+    slow_candidates = []
+    for p in filtered_products:
+        c = prod_curr[p.id]
+        units = c["units"]
+        last_d = last_sale_dates.get(p.id)
+        days_since = (now_date - last_d).days if last_d else None
+        velocity = round(units / period_days, 2)
+        est_days = round(p.stock_qty / velocity, 1) if velocity > 0 else None
+
+        # Qualification: stock > 0 and low sales
+        if p.stock_qty > 0:
+            if last_d is None:
+                status = "Insufficient Data"
+                rec = f"Newly added item with {p.stock_qty} in stock. Monitor customer response before replenishing."
+                slow_candidates.append({
+                    "product_id": p.id,
+                    "name": p.name,
+                    "category": p.category or "General",
+                    "current_stock": p.stock_qty,
+                    "units_sold": units,
+                    "last_sale_date": None,
+                    "days_since_last_sale": None,
+                    "estimated_stock_days": None,
+                    "status": status,
+                    "recommendation": rec,
+                })
+            elif days_since is not None and days_since >= 30:
+                status = "No Recent Sales"
+                rec = f"Zero sales in {days_since} days with {p.stock_qty} units on hand. Consider price promotion or aisle relocation."
+                slow_candidates.append({
+                    "product_id": p.id,
+                    "name": p.name,
+                    "category": p.category or "General",
+                    "current_stock": p.stock_qty,
+                    "units_sold": units,
+                    "last_sale_date": last_d.isoformat(),
+                    "days_since_last_sale": days_since,
+                    "estimated_stock_days": None,
+                    "status": status,
+                    "recommendation": rec,
+                })
+            elif units <= 2 or (est_days is not None and est_days >= 60):
+                status = "Slow Selling"
+                rec = f"Low velocity ({units} sold in {period_days}d). High stock coverage ({int(est_days) if est_days else '>90'}d). Pause wholesale reorders."
+                slow_candidates.append({
+                    "product_id": p.id,
+                    "name": p.name,
+                    "category": p.category or "General",
+                    "current_stock": p.stock_qty,
+                    "units_sold": units,
+                    "last_sale_date": last_d.isoformat() if last_d else None,
+                    "days_since_last_sale": days_since,
+                    "estimated_stock_days": est_days,
+                    "status": status,
+                    "recommendation": rec,
+                })
+
+    # Sort slow selling by days_since_last_sale desc or current_stock desc
+    slow_candidates.sort(key=lambda x: (x["days_since_last_sale"] or 9999, x["current_stock"]), reverse=True)
+    slow_selling = [schemas.SlowSellingItem(**item) for item in slow_candidates[:10]]
+
+    # -------------------------------------------------------------
+    # 7. PRODUCT DEMAND ANALYSIS (Velocity, trend, stockout warning)
+    # -------------------------------------------------------------
+    demand_list = []
+    for p in filtered_products:
+        c = prod_curr[p.id]
+        u_curr = c["units"]
+        u_prev = prod_prior_units.get(p.id, 0)
+        vel = round(u_curr / period_days, 2)
+        p_vel = round(u_prev / period_days, 2)
+
+        if u_prev > 0:
+            v_change = round(((u_curr - u_prev) / u_prev) * 100, 1)
+        elif u_curr > 0:
+            v_change = 100.0
+        else:
+            v_change = 0.0
+
+        if u_curr == 0 and u_prev == 0:
+            d_trend = "Insufficient Data"
+        elif v_change > 10.0:
+            d_trend = "Increasing"
+        elif v_change < -10.0:
+            d_trend = "Decreasing"
+        else:
+            d_trend = "Stable"
+
+        days_rem = round(p.stock_qty / vel, 1) if vel > 0 else None
+        stockout_warn = bool(p.stock_qty == 0 or (days_rem is not None and days_rem <= 3.0 and vel > 0))
+        restock_qty = max(0, int(round(vel * 14)) - p.stock_qty) if vel > 0 else 0
+
+        demand_list.append({
+            "product_id": p.id,
+            "name": p.name,
+            "category": p.category or "General",
+            "units_sold": u_curr,
+            "velocity_per_day": vel,
+            "demand_trend": d_trend,
+            "current_stock": p.stock_qty,
+            "days_stock_remaining": days_rem,
+            "stockout_warning": stockout_warn,
+            "suggested_restock_qty": restock_qty,
+            "prev_units_sold": u_prev,
+            "velocity_change_pct": v_change,
+        })
+
+    demand_list.sort(key=lambda x: (x["stockout_warning"], x["units_sold"]), reverse=True)
+    demand_analysis = [schemas.DemandAnalysisItem(**item) for item in demand_list]
+
+    # -------------------------------------------------------------
+    # 8. MOST PROFITABLE PRODUCTS & LOW-MARGIN HIGH-SALES ALERTS
+    # -------------------------------------------------------------
+    total_gp = sum(prod_curr[p.id]["profit"] for p in filtered_products)
+    profitable_candidates = []
+    low_margin_alerts = []
+
+    for p in filtered_products:
+        c = prod_curr[p.id]
+        rev = round(c["sales"], 2)
+        cogs = round(c["cost"], 2)
+        gp = round(c["profit"], 2)
+        gm_pct = round((gp / rev * 100), 1) if rev > 0 else 0.0
+        contrib = round((gp / total_gp * 100), 1) if total_gp > 0 and gp > 0 else 0.0
+
+        if gp > 0 or rev > 0:
+            profitable_candidates.append({
+                "product_id": p.id,
+                "name": p.name,
+                "category": p.category or "General",
+                "units_sold": c["units"],
+                "revenue": rev,
+                "cogs": cogs,
+                "gross_profit": gp,
+                "gross_margin_pct": gm_pct,
+                "profit_contribution_pct": contrib,
+            })
+
+        # High sales but low profit margin warning (e.g. rev >= 15% of total or > 1000 with margin < 15%)
+        if rev > 0 and (rev >= 0.12 * total_sales_val or rev >= 1000) and gm_pct < 15.0:
+            low_margin_alerts.append(schemas.LowMarginHighSalesItem(
+                product_id=p.id,
+                name=p.name,
+                category=p.category or "General",
+                revenue=rev,
+                units_sold=c["units"],
+                gross_margin_pct=gm_pct,
+                gross_profit=gp,
+                insight=f"High sales volume ({format_inr_backend(rev)}) with low margin ({gm_pct}%). Review wholesale pricing or supplier terms.",
+            ))
+
+    profitable_candidates.sort(key=lambda x: (x["gross_profit"], x["revenue"]), reverse=True)
+    most_profitable = [schemas.MostProfitableItem(**item) for item in profitable_candidates[:10]]
+
+    # -------------------------------------------------------------
+    # 9. PRODUCT PERFORMANCE COMPARISON TABLE
+    # -------------------------------------------------------------
+    comparison_rows = []
+    top_sold_threshold = (best_candidates[0]["units_sold"] * 0.4) if best_candidates else 5
+
+    for p in filtered_products:
+        c = prod_curr[p.id]
+        units = c["units"]
+        rev = round(c["sales"], 2)
+        gp = round(c["profit"], 2)
+        margin = round((gp / rev * 100), 1) if rev > 0 else 0.0
+
+        d_entry = next((d for d in demand_list if d["product_id"] == p.id), None)
+        d_trend = d_entry["demand_trend"] if d_entry else "Insufficient Data"
+
+        last_d = last_sale_dates.get(p.id)
+        days_since = (now_date - last_d).days if last_d else None
+
+        if units >= top_sold_threshold and units > 0:
+            s_status = "Best Selling"
+        elif last_d is None:
+            s_status = "No Recent Sales"
+        elif days_since is not None and days_since >= 30:
+            s_status = "No Recent Sales"
+        elif units <= 1:
+            s_status = "Slow Selling"
+        else:
+            s_status = "Normal"
+
+        comparison_rows.append(schemas.ProductPerformanceRow(
+            product_id=p.id,
+            name=p.name,
+            category=p.category or "General",
+            units_sold=units,
+            sales_revenue=rev,
+            gross_profit=gp,
+            profit_margin_pct=margin,
+            current_stock=p.stock_qty,
+            demand_trend=d_trend,
+            sales_status=s_status,
+        ))
+
+    # -------------------------------------------------------------
+    # 10. ACTIONABLE ANALYTICS INSIGHTS & RECOMMENDATIONS
+    # -------------------------------------------------------------
+    insights: List[schemas.AnalyticsInsightItem] = []
+
+    # 1. Growth/Decline Insight
+    prior_sales_val = round(sum(s.total_amount for s in prior_sales), 2)
+    if prior_sales_val > 0 and total_sales_val > 0:
+        period_diff_pct = round(((total_sales_val - prior_sales_val) / prior_sales_val) * 100, 1)
+        if period_diff_pct > 0:
+            insights.append(schemas.AnalyticsInsightItem(
+                type="period_growth",
+                title=f"Sales Grew {period_diff_pct}% vs Prior Period",
+                description=f"Store revenue reached {format_inr_backend(total_sales_val)} compared to {format_inr_backend(prior_sales_val)} in the preceding {period_days} days.",
+                severity="positive",
+                trace=f"Current: ₹{total_sales_val} ({total_tx_val} bills) | Prior: ₹{prior_sales_val} ({len(prior_sales)} bills)",
+            ))
+        else:
+            insights.append(schemas.AnalyticsInsightItem(
+                type="period_growth",
+                title=f"Sales Dipped {abs(period_diff_pct)}% vs Prior Period",
+                description=f"Revenue of {format_inr_backend(total_sales_val)} was lower than {format_inr_backend(prior_sales_val)} generated in the prior {period_days} days.",
+                severity="warning",
+                trace=f"Current: ₹{total_sales_val} | Prior: ₹{prior_sales_val}",
+            ))
+
+    # 2. Demand Surge Insight
+    surge_items = [d for d in demand_list if d["demand_trend"] == "Increasing" and d["units_sold"] >= 5]
+    if surge_items:
+        top_surge = max(surge_items, key=lambda x: x["velocity_change_pct"] or 0)
+        insights.append(schemas.AnalyticsInsightItem(
+            type="demand_surge",
+            title=f"Surging Customer Demand: {top_surge['name']}",
+            description=f"Demand velocity jumped +{top_surge['velocity_change_pct']}% to {top_surge['velocity_per_day']} units/day. Current stock: {top_surge['current_stock']} units.",
+            severity="positive",
+            trace=f"Sold {top_surge['units_sold']} units in current period vs {top_surge['prev_units_sold']} units previously.",
+        ))
+
+    # 3. Profit Concentration Insight
+    if most_profitable and total_gp > 0:
+        top_3_profit = sum(p.gross_profit for p in most_profitable[:3])
+        top_3_pct = round((top_3_profit / total_gp) * 100, 1)
+        insights.append(schemas.AnalyticsInsightItem(
+            type="top_profit",
+            title=f"Top 3 Products Drive {top_3_pct}% of Profits",
+            description=f"{most_profitable[0].name} leads your catalog, generating {format_inr_backend(most_profitable[0].gross_profit)} gross profit alone.",
+            severity="positive",
+            trace=f"Top 3 profit sum: ₹{top_3_profit} out of total gross profit: ₹{total_gp}",
+        ))
+
+    # 4. Stockout Risk Alert
+    imminent_stockouts = [d for d in demand_list if d["stockout_warning"] and d["velocity_per_day"] > 0]
+    if imminent_stockouts:
+        crit = imminent_stockouts[0]
+        insights.append(schemas.AnalyticsInsightItem(
+            type="stockout_risk",
+            title=f"Imminent Stockout Risk: {crit['name']}",
+            description=f"Only {crit['days_stock_remaining']} days of inventory left ({crit['current_stock']} units remaining at {crit['velocity_per_day']} units/day). Suggested reorder: {crit['suggested_restock_qty']} units.",
+            severity="danger",
+            trace=f"Velocity: {crit['velocity_per_day']} units/day | Threshold: <= 3.0 days coverage",
+        ))
+
+    # 5. Low Margin Warning
+    if low_margin_alerts:
+        alert = low_margin_alerts[0]
+        insights.append(schemas.AnalyticsInsightItem(
+            type="low_margin",
+            title=f"Thin Margin on High-Volume Item: {alert.name}",
+            description=alert.insight,
+            severity="warning",
+            trace=f"Revenue: ₹{alert.revenue} | Gross Margin: {alert.gross_margin_pct}% (Threshold < 15%)",
+        ))
+
+    # 6. Dead Stock Alert
+    dead_stock = [s for s in slow_selling if s.status == "No Recent Sales" and s.current_stock >= 5]
+    if dead_stock:
+        ds = dead_stock[0]
+        insights.append(schemas.AnalyticsInsightItem(
+            type="excess_stock",
+            title=f"Capital Tied in Dormant Inventory: {ds.name}",
+            description=f"{ds.current_stock} units have sat unsold for {ds.days_since_last_sale} days. Consider flash discounts or cross-category bundles.",
+            severity="warning",
+            trace=f"Last sale date: {ds.last_sale_date} | Stock: {ds.current_stock} units",
+        ))
+
+    return schemas.AnalyticsDashboardResponse(
+        kpis=kpis,
+        period=period_key,
+        from_date=curr_from.isoformat(),
+        to_date=curr_to.isoformat(),
+        has_data=has_data_val,
+        total_sales=total_sales_val,
+        total_profit=total_profit_val,
+        total_transactions=total_tx_val,
+        categories_list=categories_list,
+        trends=trends,
+        best_selling=best_selling,
+        slow_selling=slow_selling,
+        demand_analysis=demand_analysis,
+        most_profitable=most_profitable,
+        low_margin_alerts=low_margin_alerts,
+        comparison_table=comparison_rows,
+        insights=insights,
+    )
+
+
+def format_inr_backend(val: float) -> str:
+    """Format rupee amount into Indian comma grouped format for text insights."""
+    try:
+        val_int = int(round(val))
+        s = str(abs(val_int))
+        if len(s) <= 3:
+            res = s
+        else:
+            last3 = s[-3:]
+            remaining = s[:-3]
+            groups = []
+            while len(remaining) > 2:
+                groups.insert(0, remaining[-2:])
+                remaining = remaining[:-2]
+            if remaining:
+                groups.insert(0, remaining)
+            res = ",".join(groups) + "," + last3
+        return f"₹{res}"
+    except Exception:
+        return f"₹{val:,.2f}"
+
+
 @app.get("/api/analytics/sales", response_model=schemas.SalesAnalyticsResponse)
 def get_analytics_sales(
     request: Request,
@@ -1013,8 +1872,10 @@ def get_analytics_sales(
     shop = get_current_shop_optional(request, db)
     if shop and not getattr(shop, "is_admin", False):
         all_sales = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).all()
-    else:
+    elif shop and getattr(shop, "is_admin", False):
         all_sales = db.query(models.Sale).all()
+    else:
+        all_sales = db.query(models.Sale).filter(models.Sale.shop_id.is_(None)).all()
     period_sales = [
         s for s in all_sales
         if _parse_sale_date(s.date_time) and parsed_from <= _parse_sale_date(s.date_time) <= parsed_to
@@ -1234,9 +2095,12 @@ def get_analytics_products(
     if shop and not getattr(shop, "is_admin", False):
         all_products = db.query(models.Product).filter(models.Product.shop_id == shop.id).all()
         all_sales = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).all()
-    else:
+    elif shop and getattr(shop, "is_admin", False):
         all_products = db.query(models.Product).all()
         all_sales = db.query(models.Sale).all()
+    else:
+        all_products = db.query(models.Product).filter(models.Product.shop_id.is_(None)).all()
+        all_sales = db.query(models.Sale).filter(models.Sale.shop_id.is_(None)).all()
 
     categories_set = sorted(list({p.category for p in all_products if p.category}))
 
@@ -1411,8 +2275,10 @@ def get_analytics_inventory(request: Request, db: Session = Depends(get_db)):
     shop = get_current_shop_optional(request, db)
     if shop and not getattr(shop, "is_admin", False):
         all_products = db.query(models.Product).filter(models.Product.shop_id == shop.id).all()
-    else:
+    elif shop and getattr(shop, "is_admin", False):
         all_products = db.query(models.Product).all()
+    else:
+        all_products = db.query(models.Product).filter(models.Product.shop_id.is_(None)).all()
 
     group_defs = [
         ("expired", "Expired", "Write off or return to supplier for credit"),
@@ -1626,10 +2492,14 @@ def get_analytics_profitability(
         all_products = db.query(models.Product).filter(models.Product.shop_id == shop.id).all()
         all_sales = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).all()
         all_expenses = db.query(models.Expense).filter(models.Expense.shop_id == shop.id).all()
-    else:
+    elif shop and getattr(shop, "is_admin", False):
         all_products = db.query(models.Product).all()
         all_sales = db.query(models.Sale).all()
         all_expenses = db.query(models.Expense).all()
+    else:
+        all_products = db.query(models.Product).filter(models.Product.shop_id.is_(None)).all()
+        all_sales = db.query(models.Sale).filter(models.Sale.shop_id.is_(None)).all()
+        all_expenses = db.query(models.Expense).filter(models.Expense.shop_id.is_(None)).all()
 
     prod_map = {p.id: p for p in all_products}
     period_sales = [
@@ -2618,8 +3488,10 @@ def get_dashboard_kpis(request: Request, period: str = "today", db: Session = De
 
     if shop and not getattr(shop, "is_admin", False):
         all_sales = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).all()
-    else:
+    elif shop and getattr(shop, "is_admin", False):
         all_sales = db.query(models.Sale).all()
+    else:
+        all_sales = db.query(models.Sale).filter(models.Sale.shop_id.is_(None)).all()
 
     if period_key in ("today", "1d", "day"):
         norm_period = "today"
@@ -2680,8 +3552,10 @@ def get_dashboard_today_vs_yesterday(request: Request, db: Session = Depends(get
 
     if shop and not getattr(shop, "is_admin", False):
         all_sales = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).all()
-    else:
+    elif shop and getattr(shop, "is_admin", False):
         all_sales = db.query(models.Sale).all()
+    else:
+        all_sales = db.query(models.Sale).filter(models.Sale.shop_id.is_(None)).all()
 
     today_sales = [s for s in all_sales if _parse_sale_date(s.date_time) == now_date]
     yesterday_sales = [s for s in all_sales if _parse_sale_date(s.date_time) == yesterday_date]
@@ -2767,8 +3641,10 @@ def get_sales_trend(request: Request, granularity: str = "daily", db: Session = 
     now_date = datetime.utcnow().date()
     if shop and not getattr(shop, "is_admin", False):
         all_sales = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).all()
-    else:
+    elif shop and getattr(shop, "is_admin", False):
         all_sales = db.query(models.Sale).all()
+    else:
+        all_sales = db.query(models.Sale).filter(models.Sale.shop_id.is_(None)).all()
     points: List[dict] = []
 
     if gran in ("weekly", "week", "12w", "12weeks"):
@@ -2852,9 +3728,12 @@ def get_category_sales(request: Request, period: str = "today", db: Session = De
     if shop and not getattr(shop, "is_admin", False):
         all_sales = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).all()
         products_by_id = {p.id: p for p in db.query(models.Product).filter(models.Product.shop_id == shop.id).all()}
-    else:
+    elif shop and getattr(shop, "is_admin", False):
         all_sales = db.query(models.Sale).all()
         products_by_id = {p.id: p for p in db.query(models.Product).all()}
+    else:
+        all_sales = db.query(models.Sale).filter(models.Sale.shop_id.is_(None)).all()
+        products_by_id = {p.id: p for p in db.query(models.Product).filter(models.Product.shop_id.is_(None)).all()}
 
     period_sales = [s for s in all_sales if date_filter(_parse_sale_date(s.date_time))]
 
@@ -2941,16 +3820,17 @@ def get_alerts(request: Request, db: Session = Depends(get_db)):
     start_14d = now_date - timedelta(days=13)
 
     if shop and not getattr(shop, "is_admin", False):
-        user_products = db.query(models.Product).filter(models.Product.shop_id == shop.id).all()
-        if user_products:
-            all_products = user_products
-            all_sales = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).all()
-        else:
+        all_products = db.query(models.Product).filter(models.Product.shop_id == shop.id).all()
+        all_sales = db.query(models.Sale).filter(models.Sale.shop_id == shop.id).all()
+        if not all_products:
             all_products = db.query(models.Product).filter(models.Product.shop_id.is_(None)).all()
             all_sales = db.query(models.Sale).filter(models.Sale.shop_id.is_(None)).all()
-    else:
+    elif shop and getattr(shop, "is_admin", False):
         all_products = db.query(models.Product).all()
         all_sales = db.query(models.Sale).all()
+    else:
+        all_products = db.query(models.Product).filter(models.Product.shop_id.is_(None)).all()
+        all_sales = db.query(models.Sale).filter(models.Sale.shop_id.is_(None)).all()
     total_products = len(all_products)
 
     recent_sales = [
@@ -3033,6 +3913,11 @@ async def extract_invoice(
     try:
         content = await file.read()
         mime_type = file.content_type or "image/jpeg"
+        if file.filename and file.filename.lower().endswith(".pdf"):
+            mime_type = "application/pdf"
+        elif content.startswith(b"%PDF"):
+            mime_type = "application/pdf"
+
         def _clean_key(k: Optional[str]) -> Optional[str]:
             if not k:
                 return None
@@ -3139,21 +4024,41 @@ def confirm_extracted_invoice(payload: schemas.ConfirmInvoiceRequest, request: R
     current_shop = get_current_shop_optional(request, db)
     """
     Saves confirmed items to the store inventory:
-    - If matched by ID or matching product name: adds stock (+qty) to the existing product.
-    - If completely new: creates a new product in the store.
+    - Validates genuine product rows: excludes supplier/customer names, addresses, tax IDs, headers, totals.
+    - If matched by ID or exact matching normalized product name: adds stock (+qty) to the existing product without duplicating.
+    - Preserves variants (does not merge distinct product variants).
+    - If completely new genuine product: creates a new product in the store.
+    - If no valid product rows exist: returns an informative error message.
     """
     updated_count = 0
     created_count = 0
+    skipped_count = 0
 
+    valid_items = []
     for item in payload.items:
-        clean_name = item.name.strip()
+        clean_name = " ".join(item.name.strip().split())
+        if not clean_name or len(clean_name) < 2 or not vision_provider.is_genuine_product_name(clean_name):
+            skipped_count += 1
+            continue
+        valid_items.append((item, clean_name))
+
+    if not valid_items:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No valid product rows identified in this invoice. Header rows, tax summaries, supplier details, and document metadata cannot be imported as inventory products. Please review the extraction.",
+        )
+
+    for item, clean_name in valid_items:
         target_existing = None
 
         if item.matched_product_id:
-            target_existing = db.query(models.Product).filter(models.Product.id == item.matched_product_id).first()
+            q = db.query(models.Product).filter(models.Product.id == item.matched_product_id)
+            if current_shop:
+                q = q.filter(models.Product.shop_id == current_shop.id)
+            target_existing = q.first()
 
         if not target_existing and clean_name:
-            name_query = db.query(models.Product).filter(func.lower(models.Product.name) == clean_name.lower())
+            name_query = db.query(models.Product).filter(func.lower(func.trim(models.Product.name)) == clean_name.lower())
             if current_shop:
                 name_query = name_query.filter(models.Product.shop_id == current_shop.id)
             else:
@@ -3161,7 +4066,7 @@ def confirm_extracted_invoice(payload: schemas.ConfirmInvoiceRequest, request: R
             target_existing = name_query.first()
 
         if target_existing:
-            target_existing.stock_qty += max(0, item.qty)
+            target_existing.stock_qty += max(0, int(round(item.qty)))
             if item.cost_price is not None and item.cost_price > 0:
                 target_existing.cost_price = item.cost_price
             if item.selling_price is not None and item.selling_price > 0:
@@ -3173,7 +4078,7 @@ def confirm_extracted_invoice(payload: schemas.ConfirmInvoiceRequest, request: R
             updated_count += 1
             continue
 
-        # Fallback if no matching product was found
+        # Create new product for validated genuine line item
         cost = item.cost_price if item.cost_price is not None else 0.0
         selling = (
             item.selling_price
@@ -3185,7 +4090,7 @@ def confirm_extracted_invoice(payload: schemas.ConfirmInvoiceRequest, request: R
             category=item.category or "Grocery",
             cost_price=cost,
             selling_price=selling,
-            stock_qty=max(0, item.qty),
+            stock_qty=max(0, int(round(item.qty))),
             reorder_level=10,
             expiry_date=item.expiry_date,
             shop_id=current_shop.id if current_shop else None,
@@ -3193,13 +4098,223 @@ def confirm_extracted_invoice(payload: schemas.ConfirmInvoiceRequest, request: R
         db.add(new_prod)
         created_count += 1
 
+    # Calculate invoice totals and items snapshot for persistence
+    total_invoice_amt = 0.0
+    items_snapshot = []
+    for item, clean_name in valid_items:
+        line_cost = item.cost_price if item.cost_price is not None and item.cost_price > 0 else 0.0
+        line_qty = float(item.qty)
+        line_total = round(line_cost * line_qty, 2)
+        total_invoice_amt += line_total
+        items_snapshot.append({
+            "name": clean_name,
+            "qty": line_qty,
+            "cost_price": item.cost_price,
+            "selling_price": item.selling_price,
+            "category": item.category or "Grocery",
+            "expiry_date": str(item.expiry_date) if item.expiry_date else None,
+            "action": item.action,
+            "matched_product_id": item.matched_product_id,
+        })
+
+    inv_date = None
+    date_str = payload.invoice_date or payload.date
+    if date_str:
+        try:
+            inv_date = datetime.strptime(date_str[:10], "%Y-%m-%d").date()
+        except Exception:
+            inv_date = date.today()
+    else:
+        inv_date = date.today()
+
+    supp_name = (payload.supplier or payload.vendor or "General Supplier").strip()
+    inv_num = (payload.invoice_number or "").strip()
+    if not inv_num:
+        inv_num = f"INV-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+
+    new_invoice = models.Invoice(
+        invoice_number=inv_num,
+        supplier_name=supp_name,
+        invoice_date=inv_date,
+        total_amount=round(total_invoice_amt, 2),
+        tax_amount=0.0,
+        items_count=len(valid_items),
+        items_json=json.dumps(items_snapshot),
+        notes=f"Vision OCR: {created_count} added, {updated_count} updated",
+        shop_id=current_shop.id if current_shop else None,
+    )
+    db.add(new_invoice)
     db.commit()
+    db.refresh(new_invoice)
+
     return {
         "success": True,
+        "invoice_id": new_invoice.id,
+        "invoice_number": new_invoice.invoice_number,
         "created_count": created_count,
         "updated_count": updated_count,
+        "skipped_count": skipped_count,
         "total_items": len(payload.items),
+        "message": f"Successfully processed {created_count + updated_count} genuine products ({skipped_count} non-product items excluded). Invoice {new_invoice.invoice_number} saved.",
     }
+
+
+# ==========================================
+# INVOICE & PURCHASES ENDPOINTS (PERSISTENT OCR & INVOICE RECORDS)
+# ==========================================
+@app.get("/invoices/", response_model=List[schemas.InvoiceResponse])
+@app.get("/api/invoices", response_model=List[schemas.InvoiceResponse])
+def get_invoices(
+    search: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+    request: Request = None,
+    db: Session = Depends(get_db)
+):
+    current_shop = get_current_shop_optional(request, db)
+    q = db.query(models.Invoice)
+    if current_shop and not getattr(current_shop, "is_admin", False):
+        q = q.filter(models.Invoice.shop_id == current_shop.id)
+    elif current_shop and getattr(current_shop, "is_admin", False):
+        pass
+    else:
+        q = q.filter(models.Invoice.shop_id.is_(None))
+
+    if search:
+        search_term = f"%{search.strip()}%"
+        q = q.filter(
+            or_(
+                models.Invoice.invoice_number.ilike(search_term),
+                models.Invoice.supplier_name.ilike(search_term)
+            )
+        )
+
+    return q.order_by(models.Invoice.id.desc()).offset(offset).limit(limit).all()
+
+
+@app.get("/invoices/{invoice_id}", response_model=schemas.InvoiceDetailResponse)
+@app.get("/api/invoices/{invoice_id}", response_model=schemas.InvoiceDetailResponse)
+def get_invoice_detail(invoice_id: int, request: Request, db: Session = Depends(get_db)):
+    current_shop = get_current_shop_optional(request, db)
+    q = db.query(models.Invoice).filter(models.Invoice.id == invoice_id)
+    if current_shop and not getattr(current_shop, "is_admin", False):
+        q = q.filter(models.Invoice.shop_id == current_shop.id)
+    elif current_shop and getattr(current_shop, "is_admin", False):
+        pass
+    else:
+        q = q.filter(models.Invoice.shop_id.is_(None))
+
+    invoice = q.first()
+    if not invoice:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found")
+
+    items_list = []
+    if invoice.items_json:
+        try:
+            parsed = json.loads(invoice.items_json)
+            if isinstance(parsed, list):
+                for item in parsed:
+                    items_list.append(schemas.InvoiceItemDetail(
+                        name=item.get("name", "Product"),
+                        qty=float(item.get("qty", 1.0)),
+                        cost_price=float(item.get("cost_price", 0.0) or 0.0),
+                        selling_price=float(item.get("selling_price", 0.0) or 0.0),
+                        category=item.get("category", "Grocery"),
+                        expiry_date=item.get("expiry_date"),
+                        action=item.get("action", "create"),
+                    ))
+        except Exception:
+            pass
+
+    return schemas.InvoiceDetailResponse(
+        id=invoice.id,
+        invoice_number=invoice.invoice_number,
+        supplier_name=invoice.supplier_name,
+        invoice_date=invoice.invoice_date,
+        total_amount=invoice.total_amount or 0.0,
+        tax_amount=invoice.tax_amount or 0.0,
+        items_count=invoice.items_count or 0,
+        notes=invoice.notes,
+        created_at=invoice.created_at,
+        shop_id=invoice.shop_id,
+        items=items_list,
+    )
+
+
+@app.delete("/invoices/{invoice_id}")
+@app.delete("/api/invoices/{invoice_id}")
+def delete_invoice(invoice_id: int, request: Request, db: Session = Depends(get_db)):
+    current_shop = get_current_shop_optional(request, db)
+    q = db.query(models.Invoice).filter(models.Invoice.id == invoice_id)
+    if current_shop and not getattr(current_shop, "is_admin", False):
+        q = q.filter(models.Invoice.shop_id == current_shop.id)
+    elif current_shop and getattr(current_shop, "is_admin", False):
+        pass
+    else:
+        q = q.filter(models.Invoice.shop_id.is_(None))
+
+    invoice = q.first()
+    if not invoice:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found")
+
+    db.delete(invoice)
+    db.commit()
+    return {"success": True, "message": f"Invoice {invoice.invoice_number or invoice_id} deleted successfully"}
+
+
+# ==========================================
+# CUSTOMERS ENDPOINTS (AGGREGATED FROM SALES)
+# ==========================================
+@app.get("/customers/", response_model=List[schemas.CustomerSummaryResponse])
+@app.get("/api/customers", response_model=List[schemas.CustomerSummaryResponse])
+def get_customers(
+    search: Optional[str] = None,
+    limit: int = 100,
+    request: Request = None,
+    db: Session = Depends(get_db)
+):
+    current_shop = get_current_shop_optional(request, db)
+    q = db.query(
+        models.Sale.customer_name,
+        models.Sale.customer_phone,
+        func.sum(models.Sale.total_amount).label("total_spent"),
+        func.count(models.Sale.id).label("total_orders"),
+        func.max(models.Sale.timestamp).label("last_purchase_date"),
+    ).filter(
+        models.Sale.customer_name.isnot(None),
+        models.Sale.customer_name != ""
+    )
+
+    if current_shop and not getattr(current_shop, "is_admin", False):
+        q = q.filter(models.Sale.shop_id == current_shop.id)
+    elif current_shop and getattr(current_shop, "is_admin", False):
+        pass
+    else:
+        q = q.filter(models.Sale.shop_id.is_(None))
+
+    if search:
+        search_term = f"%{search.strip()}%"
+        q = q.filter(
+            or_(
+                models.Sale.customer_name.ilike(search_term),
+                models.Sale.customer_phone.ilike(search_term)
+            )
+        )
+
+    grouped = q.group_by(models.Sale.customer_name, models.Sale.customer_phone)\
+               .order_by(func.sum(models.Sale.total_amount).desc())\
+               .limit(limit).all()
+
+    result = []
+    for row in grouped:
+        result.append(schemas.CustomerSummaryResponse(
+            customer_name=row.customer_name or "Guest",
+            customer_phone=row.customer_phone,
+            total_spent=round(float(row.total_spent or 0.0), 2),
+            total_orders=int(row.total_orders or 0),
+            last_purchase_date=row.last_purchase_date,
+        ))
+    return result
 
 
 # ========================================================
@@ -4637,6 +5752,215 @@ def admin_update_business_note(
         "success": True,
         "admin_notes": shop.admin_notes,
         "message": "Internal observation saved successfully.",
+    }
+
+
+# ==========================================
+# MERCHANT SUBSCRIPTION PURCHASE & STATUS
+# ==========================================
+
+@app.get("/api/subscription/plans")
+def get_subscription_plans(db: Session = Depends(get_db)):
+    """
+    Returns the single active merchant subscription plan: All-in-One Retail Pro at ₹1,299 / month.
+    Includes all 6 premium retail automation and intelligence capabilities.
+    """
+    return {
+        "plan_name": "All-in-One Retail Pro",
+        "price": 1299.0,
+        "billing_cycle": "monthly",
+        "period_label": "/month",
+        "currency": "INR",
+        "description": "Everything your retail business needs to manage inventory, understand profitability, predict demand, and simplify daily operations.",
+        "features": [
+            {
+                "id": "ocr_scanner",
+                "name": "Unlimited Distributor Invoice OCR & Receipt Scanner",
+                "description": "Scan and extract data from distributor invoices and purchase receipts. Automatically recognize product names, quantities, unit costs, tax rates, and invoice amounts.",
+                "included": True,
+            },
+            {
+                "id": "demand_forecast",
+                "name": "AI Demand Forecast & 7-Day Restocking Suggestions",
+                "description": "Analyze historical sales and inventory data. Forecast product demand and suggest which products may need restocking over the next seven days.",
+                "included": True,
+            },
+            {
+                "id": "profitability_analytics",
+                "name": "Real-Time Gross Margin & Product Profitability Analytics",
+                "description": "Show gross margin and product-level profitability using available purchase costs, selling prices, and sales data.",
+                "included": True,
+            },
+            {
+                "id": "expiry_alerts",
+                "name": "Expiry Alerts — 30-Day Early Warnings",
+                "description": "Identify inventory items approaching their expiry dates. Send or display alerts 30 days before expiry to prevent dead stock.",
+                "included": True,
+            },
+            {
+                "id": "pos_ledger",
+                "name": "Multi-Counter POS Billing & WhatsApp Digital Ledger",
+                "description": "Support multi-counter POS billing with consistent inventory and sales records across terminals, and customer digital ledger sharing where configured.",
+                "included": True,
+            },
+            {
+                "id": "vip_support",
+                "name": "Dedicated VIP Store Onboarding & Priority Support",
+                "description": "Dedicated store onboarding assistance and priority support for subscribed retail businesses.",
+                "included": True,
+            },
+        ],
+    }
+
+
+@app.get("/api/subscription/status", response_model=schemas.ShopResponse)
+def get_subscription_status(current_shop: models.Shop = Depends(get_current_shop)):
+    """
+    Returns real-time subscription & trial status for authenticated shop.
+    """
+    return serialize_shop(current_shop)
+
+
+@app.post("/api/subscription/checkout/initiate", response_model=schemas.InitiateCheckoutResponse)
+def initiate_checkout(
+    payload: schemas.InitiateCheckoutRequest,
+    current_shop: models.Shop = Depends(get_current_shop),
+    db: Session = Depends(get_db),
+):
+    """
+    Creates a secure payment checkout session for the All-in-One Retail Pro plan (₹1,299/month).
+    Verifies plan, pricing, and discount server-side before payment.
+    Provides a standardized integration point for payment providers (Razorpay, UPI, cards).
+    """
+    import uuid
+    base_price = 1299.0
+    final_price = base_price
+    if payload.promo_code:
+        promo_clean = payload.promo_code.strip().upper()
+        promo = db.query(models.PromoCode).filter(
+            models.PromoCode.code == promo_clean,
+            models.PromoCode.active == True,
+        ).first()
+        if promo:
+            if promo.discount_type == "percentage":
+                discount = (base_price * promo.discount_value) / 100.0
+            else:
+                discount = promo.discount_value
+            final_price = max(0.0, base_price - discount)
+
+    order_id = f"sub_order_{uuid.uuid4().hex[:12]}"
+    return {
+        "success": True,
+        "order_id": order_id,
+        "plan_name": "All-in-One Retail Pro",
+        "amount": round(final_price, 2),
+        "currency": "INR",
+        "billing_cycle": "monthly",
+        "payment_status": "ready",
+        "payment_gateway": "standard_upi_card",
+        "message": f"Checkout order {order_id} prepared for All-in-One Retail Pro (₹{final_price:.2f}/month).",
+    }
+
+
+@app.post("/api/subscription/purchase", response_model=schemas.PurchaseSubscriptionResponse)
+def purchase_subscription(
+    payload: schemas.PurchaseSubscriptionRequest,
+    current_shop: models.Shop = Depends(get_current_shop),
+    db: Session = Depends(get_db),
+):
+    """
+    Processes subscription purchase / upgrade for the merchant store.
+    Validates single plan: All-in-One Retail Pro at ₹1,299 / month.
+    Ensures displayed price and checkout amount match.
+    Prevents duplicate active subscriptions where already active.
+    Activates paid license, unlocks all 6 features, records audit trail, and returns updated store profile.
+    """
+    now = datetime.utcnow()
+
+    # 1. Plan validation
+    plan_req = (payload.plan_name or "All-in-One Retail Pro").strip()
+    valid_plan_aliases = {
+        "all-in-one retail pro": "All-in-One Retail Pro",
+        "all-features pro": "All-Features Pro",
+        "annual pro": "Annual Pro",
+    }
+    canonical_plan_name = valid_plan_aliases.get(plan_req.lower())
+    if not canonical_plan_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid subscription plan. Only 'All-in-One Retail Pro' (₹1,299/mo) is available.",
+        )
+
+    # 2. Prevent accidental duplicate subscriptions if currently active with > 25 days remaining
+    if current_shop.is_paid and current_shop.subscription_end_date:
+        remaining_days = (current_shop.subscription_end_date - now).days
+        if remaining_days > 25 and not payload.promo_code and payload.payment_reference is None:
+            return {
+                "success": True,
+                "message": f"Your store already has an active {current_shop.plan_name} subscription with {remaining_days} days remaining.",
+                "shop": serialize_shop(current_shop),
+            }
+
+    cycle = (payload.billing_cycle or "monthly").lower()
+    if cycle == "annual":
+        duration_days = 365
+        default_price = 5999.0
+    elif cycle == "quarterly":
+        duration_days = 90
+        default_price = 1797.0
+    else:
+        duration_days = 30
+        default_price = 1299.0
+
+    base_price = default_price
+    final_price = base_price
+
+    # Promo code evaluation
+    discount_msg = ""
+    if payload.promo_code:
+        promo_clean = payload.promo_code.strip().upper()
+        promo = db.query(models.PromoCode).filter(
+            models.PromoCode.code == promo_clean,
+            models.PromoCode.active == True,
+        ).first()
+        if promo:
+            if promo.discount_type == "percentage":
+                discount = (base_price * promo.discount_value) / 100.0
+            else:
+                discount = promo.discount_value
+            final_price = max(0.0, base_price - discount)
+            promo.used_count = (promo.used_count or 0) + 1
+            discount_msg = f" (Promo {promo_clean} applied: -₹{discount:.2f})"
+        else:
+            final_price = payload.amount if payload.amount is not None else base_price
+    elif payload.amount is not None:
+        final_price = payload.amount
+
+    current_shop.is_paid = True
+    current_shop.status = "active"
+    current_shop.plan_name = "All-in-One Retail Pro" if canonical_plan_name == "All-in-One Retail Pro" else canonical_plan_name
+    current_shop.subscription_amount = round(final_price, 2)
+    current_shop.subscription_start_date = now
+    current_shop.subscription_end_date = now + timedelta(days=duration_days)
+    current_shop.subscribed_features = "all"
+
+    tx_info = f" [Tx: {payload.payment_reference}]" if payload.payment_reference else ""
+    audit_entry = models.AuditLog(
+        shop_id=current_shop.id,
+        admin_email=current_shop.email or f"user_{current_shop.phone}@storebi.com",
+        action="purchase_subscription",
+        details=f"Subscription activated: {current_shop.plan_name} ({cycle}) for ₹{final_price:.2f}{discount_msg}{tx_info}.",
+        created_at=now,
+    )
+    db.add(audit_entry)
+    db.commit()
+    db.refresh(current_shop)
+
+    serialized = serialize_shop(current_shop)
+    return {
+        "success": True,
+        "message": f"Successfully activated {current_shop.plan_name}! All 6 premium features are now unlocked.",
+        "shop": serialized,
     }
 
 

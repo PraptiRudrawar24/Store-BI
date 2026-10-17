@@ -3,11 +3,15 @@ import sys
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
+BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # Isolate test database during pytest execution so real user storebi.db is never wiped
 if "pytest" in sys.modules or os.environ.get("TESTING") == "1" or os.environ.get("PYTEST_CURRENT_TEST"):
-    SQLALCHEMY_DATABASE_URL = "sqlite:///./test_storebi.db"
+    test_db_path = os.path.join(BACKEND_DIR, "test_storebi.db").replace("\\", "/")
+    SQLALCHEMY_DATABASE_URL = f"sqlite:///{test_db_path}"
 else:
-    SQLALCHEMY_DATABASE_URL = "sqlite:///./storebi.db"
+    prod_db_path = os.path.join(BACKEND_DIR, "storebi.db").replace("\\", "/")
+    SQLALCHEMY_DATABASE_URL = f"sqlite:///{prod_db_path}"
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
@@ -32,6 +36,10 @@ def migrate_db():
                     conn.execute(text("ALTER TABLE shops ADD COLUMN plan_name VARCHAR DEFAULT 'Free Trial'"))
                 if "subscription_amount" not in cols:
                     conn.execute(text("ALTER TABLE shops ADD COLUMN subscription_amount FLOAT DEFAULT 0.0"))
+                if "subscription_start_date" not in cols:
+                    conn.execute(text("ALTER TABLE shops ADD COLUMN subscription_start_date DATETIME"))
+                if "subscription_end_date" not in cols:
+                    conn.execute(text("ALTER TABLE shops ADD COLUMN subscription_end_date DATETIME"))
                 if "last_active_at" not in cols:
                     conn.execute(text("ALTER TABLE shops ADD COLUMN last_active_at DATETIME"))
                 if "status" not in cols:
@@ -50,14 +58,48 @@ def migrate_db():
             # Ensure shop_id exists on sales for per-user data isolation
             res_s = conn.execute(text("PRAGMA table_info(sales)")).fetchall()
             cols_s = [r[1] for r in res_s]
-            if cols_s and "shop_id" not in cols_s:
-                conn.execute(text("ALTER TABLE sales ADD COLUMN shop_id INTEGER"))
+            if cols_s:
+                if "shop_id" not in cols_s:
+                    conn.execute(text("ALTER TABLE sales ADD COLUMN shop_id INTEGER"))
+                if "customer_name" not in cols_s:
+                    conn.execute(text("ALTER TABLE sales ADD COLUMN customer_name VARCHAR"))
+                if "customer_phone" not in cols_s:
+                    conn.execute(text("ALTER TABLE sales ADD COLUMN customer_phone VARCHAR"))
 
             # Ensure shop_id exists on expenses for per-user data isolation
             res_e = conn.execute(text("PRAGMA table_info(expenses)")).fetchall()
             cols_e = [r[1] for r in res_e]
             if cols_e and "shop_id" not in cols_e:
                 conn.execute(text("ALTER TABLE expenses ADD COLUMN shop_id INTEGER"))
+
+            # Ensure invoices table exists for storing purchase invoices and OCR records
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS invoices (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    shop_id INTEGER,
+                    invoice_number VARCHAR,
+                    supplier_name VARCHAR,
+                    invoice_date DATE,
+                    created_at DATETIME,
+                    currency VARCHAR DEFAULT 'INR',
+                    subtotal FLOAT,
+                    tax_amount FLOAT,
+                    total_amount FLOAT,
+                    items_count INTEGER DEFAULT 0,
+                    notes VARCHAR,
+                    ocr_engine VARCHAR,
+                    status VARCHAR DEFAULT 'confirmed',
+                    items_json TEXT,
+                    FOREIGN KEY(shop_id) REFERENCES shops(id)
+                )
+            """))
+            # Ensure items_count and notes exist if table already existed
+            res_inv = conn.execute(text("PRAGMA table_info(invoices)")).fetchall()
+            inv_cols = [r[1] for r in res_inv]
+            if "items_count" not in inv_cols:
+                conn.execute(text("ALTER TABLE invoices ADD COLUMN items_count INTEGER DEFAULT 0"))
+            if "notes" not in inv_cols:
+                conn.execute(text("ALTER TABLE invoices ADD COLUMN notes VARCHAR"))
 
             conn.commit()
         except Exception:

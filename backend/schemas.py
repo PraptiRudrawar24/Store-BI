@@ -103,6 +103,10 @@ class ShopBase(BaseModel):
     is_paid: bool = False
     plan_name: Optional[str] = "Free Trial"
     status: Optional[str] = "trial"
+    subscription_amount: Optional[float] = 0.0
+    subscription_start_date: Optional[datetime] = None
+    subscription_end_date: Optional[datetime] = None
+    subscribed_features: Optional[str] = "all"
 
 class ShopCreate(ShopBase):
     pass
@@ -127,7 +131,38 @@ class ShopUpdate(BaseModel):
 class ShopResponse(ShopBase):
     id: int
     trial_days_left: Optional[int] = None
+    subscription_days_left_in_month: Optional[int] = None
+    subscription_total_days_in_month: Optional[int] = None
     model_config = ConfigDict(from_attributes=True)
+
+class PurchaseSubscriptionRequest(BaseModel):
+    plan_name: str
+    billing_cycle: str = "monthly"  # "monthly", "quarterly", "annual"
+    amount: Optional[float] = None
+    features: Optional[str] = "all"
+    promo_code: Optional[str] = None
+    payment_reference: Optional[str] = None
+
+class PurchaseSubscriptionResponse(BaseModel):
+    success: bool
+    message: str
+    shop: ShopResponse
+
+class InitiateCheckoutRequest(BaseModel):
+    plan_name: str = "All-in-One Retail Pro"
+    billing_cycle: str = "monthly"
+    promo_code: Optional[str] = None
+
+class InitiateCheckoutResponse(BaseModel):
+    success: bool
+    order_id: str
+    plan_name: str
+    amount: float
+    currency: str = "INR"
+    billing_cycle: str = "monthly"
+    payment_status: str  # "ready"
+    payment_gateway: str  # "standard_upi_card"
+    message: str
 
 
 # --- Product Schemas ---
@@ -159,6 +194,29 @@ class ProductResponse(ProductBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ProductAutocompleteItem(BaseModel):
+    id: int
+    name: str
+    category: Optional[str] = None
+    stock_qty: int = 0
+    reorder_level: int = 10
+    cost_price: float = 0.0
+    selling_price: float = 0.0
+    expiry_date: Optional[date] = None
+    status: str = "in_stock"
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProductLocationResponse(BaseModel):
+    found: bool
+    product_id: int
+    page: int = 1
+    page_size: int = 10
+    total: int = 0
+    product: Optional[ProductResponse] = None
+    message: Optional[str] = None
+
+
 # --- Sale Item Schemas ---
 class SaleItemBase(BaseModel):
     product_id: int
@@ -182,6 +240,8 @@ class SaleBase(BaseModel):
     total_profit: float
     payment_mode: str = "Cash"
     shop_id: Optional[int] = None
+    customer_name: Optional[str] = None
+    customer_phone: Optional[str] = None
 
 class SaleCreate(SaleBase):
     items: List[SaleItemCreate] = []
@@ -191,6 +251,8 @@ class SaleUpdate(BaseModel):
     total_amount: Optional[float] = None
     total_profit: Optional[float] = None
     payment_mode: Optional[str] = None
+    customer_name: Optional[str] = None
+    customer_phone: Optional[str] = None
 
 class SaleResponse(SaleBase):
     id: int
@@ -247,15 +309,25 @@ class ExpensePaginatedResponse(BaseModel):
 class ExtractedInvoiceItem(BaseModel):
     name: str
     description: Optional[str] = None
-    qty: int = 1
-    quantity: Optional[int] = None
+    qty: float = 1.0
+    quantity: Optional[float] = None
     cost_price: Optional[float] = None
     unit_price: Optional[float] = None
+    tax_rate: Optional[float] = None
+    tax_percent: Optional[str] = None
+    tax_amount: Optional[float] = None
+    base_amount: Optional[float] = None
+    is_tax_inclusive: bool = False
     expiry_date: Optional[str] = None
-    confidence: float = 0.9
+    confidence: float = 0.90
+    field_confidence: Optional[Dict[str, float]] = None
+    needs_review: bool = False
     mrp: Optional[float] = None
     line_total: Optional[float] = None
     amount: Optional[float] = None
+    taxable_amount: Optional[float] = None
+    page: Optional[int] = 1
+    raw_text: Optional[str] = None
 
 class ExtractedInvoiceResponse(BaseModel):
     supplier: Optional[str] = None
@@ -267,6 +339,10 @@ class ExtractedInvoiceResponse(BaseModel):
     subtotal: Optional[float] = None
     tax: Optional[float] = None
     total: Optional[float] = None
+    total_amount_for_invoice: Optional[float] = None
+    invoice_grand_total: Optional[float] = None
+    page_count: Optional[int] = 1
+    document_type: Optional[str] = "image"
     items: List[ExtractedInvoiceItem] = []
     is_mock: bool = False
     message: Optional[str] = None
@@ -274,7 +350,7 @@ class ExtractedInvoiceResponse(BaseModel):
 
 class ConfirmInvoiceItem(BaseModel):
     name: str
-    qty: int = 1
+    qty: float = 1.0
     cost_price: Optional[float] = 0.0
     selling_price: Optional[float] = 0.0
     category: Optional[str] = "Grocery"
@@ -615,6 +691,135 @@ class ProfitabilityAnalyticsResponse(BaseModel):
     expenses_monthly_trend: List[MonthlyExpenseTrendPoint] = []
     expense_entries: List[ExpenseEntryItem] = []
     net_profit_steps: List[BreakdownStep] = []
+
+
+# --- Upgraded Comprehensive Analytics Dashboard Schemas ---
+class SalesPeriodKPI(BaseModel):
+    title: str
+    period_key: str
+    sales: float = 0.0
+    transactions: int = 0
+    profit: float = 0.0
+    prev_sales: float = 0.0
+    prev_transactions: int = 0
+    prev_profit: float = 0.0
+    delta_pct: Optional[float] = None
+    comparison_message: str
+
+class AnalyticsKPISet(BaseModel):
+    daily: SalesPeriodKPI
+    weekly: SalesPeriodKPI
+    monthly: SalesPeriodKPI
+
+class TrendChartPoint(BaseModel):
+    label: str
+    date_or_hour: str
+    sales: float = 0.0
+    profit: float = 0.0
+    transactions: int = 0
+
+class AnalyticsTrends(BaseModel):
+    daily_trend: List[TrendChartPoint] = []
+    weekly_trend: List[TrendChartPoint] = []
+    monthly_trend: List[TrendChartPoint] = []
+    sales_vs_profit: List[TrendChartPoint] = []
+    transaction_trend: List[TrendChartPoint] = []
+
+class BestSellingItem(BaseModel):
+    product_id: int
+    name: str
+    category: Optional[str] = "General"
+    units_sold: int = 0
+    revenue: float = 0.0
+    profit: float = 0.0
+    margin_pct: float = 0.0
+    sales_contribution_pct: float = 0.0
+
+class SlowSellingItem(BaseModel):
+    product_id: int
+    name: str
+    category: Optional[str] = "General"
+    current_stock: int = 0
+    units_sold: int = 0
+    last_sale_date: Optional[str] = None
+    days_since_last_sale: Optional[int] = None
+    estimated_stock_days: Optional[float] = None
+    status: str
+    recommendation: str
+
+class DemandAnalysisItem(BaseModel):
+    product_id: int
+    name: str
+    category: Optional[str] = "General"
+    units_sold: int = 0
+    velocity_per_day: float = 0.0
+    demand_trend: str
+    current_stock: int = 0
+    days_stock_remaining: Optional[float] = None
+    stockout_warning: bool = False
+    suggested_restock_qty: int = 0
+    prev_units_sold: int = 0
+    velocity_change_pct: Optional[float] = None
+
+class MostProfitableItem(BaseModel):
+    product_id: int
+    name: str
+    category: Optional[str] = "General"
+    units_sold: int = 0
+    revenue: float = 0.0
+    cogs: float = 0.0
+    gross_profit: float = 0.0
+    gross_margin_pct: float = 0.0
+    profit_contribution_pct: float = 0.0
+
+class LowMarginHighSalesItem(BaseModel):
+    product_id: int
+    name: str
+    category: Optional[str] = "General"
+    revenue: float = 0.0
+    units_sold: int = 0
+    gross_margin_pct: float = 0.0
+    gross_profit: float = 0.0
+    insight: str
+
+class ProductPerformanceRow(BaseModel):
+    product_id: int
+    name: str
+    category: Optional[str] = "General"
+    units_sold: int = 0
+    sales_revenue: float = 0.0
+    gross_profit: float = 0.0
+    profit_margin_pct: float = 0.0
+    current_stock: int = 0
+    demand_trend: str
+    sales_status: str
+
+class AnalyticsInsightItem(BaseModel):
+    type: str
+    title: str
+    description: str
+    severity: str
+    trace: str
+
+class AnalyticsDashboardResponse(BaseModel):
+    kpis: AnalyticsKPISet
+    period: str
+    from_date: str
+    to_date: str
+    has_data: bool = False
+    total_sales: float = 0.0
+    total_profit: float = 0.0
+    total_transactions: int = 0
+    categories_list: List[str] = []
+    trends: AnalyticsTrends
+    best_selling: List[BestSellingItem] = []
+    slow_selling: List[SlowSellingItem] = []
+    demand_analysis: List[DemandAnalysisItem] = []
+    most_profitable: List[MostProfitableItem] = []
+    low_margin_alerts: List[LowMarginHighSalesItem] = []
+    comparison_table: List[ProductPerformanceRow] = []
+    insights: List[AnalyticsInsightItem] = []
+
 
 
 # --- AI Sales Forecast & Demand Forecast Schemas ---
@@ -967,6 +1172,51 @@ class UpdatePromoCodeRequest(BaseModel):
     validity: Optional[str] = None
     max_uses: Optional[int] = None
     active: Optional[bool] = None
+
+
+# --- Invoices & Purchases Schemas ---
+class InvoiceItemDetail(BaseModel):
+    name: str
+    qty: float = 1.0
+    cost_price: Optional[float] = 0.0
+    selling_price: Optional[float] = 0.0
+    category: Optional[str] = "Grocery"
+    expiry_date: Optional[str] = None
+    tax_rate: Optional[float] = None
+    tax_amount: Optional[float] = None
+    line_total: Optional[float] = None
+    action: Optional[str] = "create"
+
+
+class InvoiceResponse(BaseModel):
+    id: int
+    shop_id: Optional[int] = None
+    invoice_number: Optional[str] = None
+    supplier_name: Optional[str] = None
+    invoice_date: Optional[str] = None
+    created_at: Optional[str] = None
+    currency: Optional[str] = "INR"
+    subtotal: Optional[float] = None
+    tax_amount: Optional[float] = None
+    total_amount: Optional[float] = None
+    ocr_engine: Optional[str] = None
+    status: Optional[str] = "confirmed"
+    items_count: int = 0
+    model_config = ConfigDict(from_attributes=True)
+
+
+class InvoiceDetailResponse(InvoiceResponse):
+    items: List[InvoiceItemDetail] = []
+
+
+class CustomerSummaryResponse(BaseModel):
+    customer_name: str
+    customer_phone: Optional[str] = None
+    total_spent: float = 0.0
+    total_profit: float = 0.0
+    visit_count: int = 0
+    last_visit: Optional[str] = None
+
 
 
 

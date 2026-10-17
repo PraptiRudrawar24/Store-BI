@@ -38,6 +38,8 @@ class Shop(Base):
     is_paid = Column(Boolean, default=False)
     plan_name = Column(String, default="Free Trial")
     subscription_amount = Column(Float, default=0.0)
+    subscription_start_date = Column(DateTime, nullable=True)
+    subscription_end_date = Column(DateTime, nullable=True)
     last_active_at = Column(DateTime, default=datetime.utcnow)
     status = Column(String, default="trial")  # "trial", "active", "expired", "suspended"
     admin_notes = Column(String, nullable=True)
@@ -95,6 +97,8 @@ class Sale(Base):
     total_amount = Column(Float)
     total_profit = Column(Float)
     payment_mode = Column(String)
+    customer_name = Column(String, nullable=True)
+    customer_phone = Column(String, nullable=True)
     items = relationship("SaleItem", back_populates="sale", cascade="all, delete-orphan")
 
 class SaleItem(Base):
@@ -116,3 +120,22 @@ class Expense(Base):
     category = Column(String)
     amount = Column(Float)
     note = Column(String)
+
+class Invoice(Base):
+    __tablename__ = "invoices"
+    id = Column(Integer, primary_key=True, index=True)
+    shop_id = Column(Integer, ForeignKey("shops.id"), nullable=True, index=True)
+    invoice_number = Column(String, nullable=True, index=True)
+    supplier_name = Column(String, nullable=True, index=True)
+    invoice_date = Column(Date, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    currency = Column(String, default="INR")
+    subtotal = Column(Float, nullable=True)
+    tax_amount = Column(Float, nullable=True)
+    total_amount = Column(Float, nullable=True)
+    items_count = Column(Integer, default=0)
+    notes = Column(String, nullable=True)
+    ocr_engine = Column(String, nullable=True)
+    status = Column(String, default="confirmed")
+    items_json = Column(String, nullable=True)
+

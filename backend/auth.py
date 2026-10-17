@@ -1,6 +1,7 @@
 import os
+import calendar
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, Tuple
 import jwt
 from fastapi import Request, HTTPException, status, Depends
 from sqlalchemy.orm import Session
@@ -35,6 +36,33 @@ def calculate_trial_days_left(trial_end_date: Optional[datetime]) -> int:
     # 0 to 24h is 1 day, 24 to 48h is 2 days, etc.
     days = delta.days + (1 if delta.seconds > 0 else 0)
     return max(0, days)
+
+def calculate_subscription_days_left(shop: models.Shop) -> Tuple[int, int]:
+    """
+    Computes (days_left_in_month, total_days_in_month) for an active subscribed store.
+    - If user has an explicit subscription_end_date:
+        calculates remaining days in the current billing cycle or current calendar month.
+    - If user has paid subscription without explicit end date:
+        calculates remaining days in current calendar month.
+    """
+    now = datetime.utcnow()
+    _, days_in_month = calendar.monthrange(now.year, now.month)
+
+    end_date = getattr(shop, "subscription_end_date", None)
+    if end_date:
+        if now >= end_date:
+            return 0, days_in_month
+        diff = end_date - now
+        total_remaining = diff.days + (1 if diff.seconds > 0 else 0)
+        # If monthly cycle (<= 31 days)
+        if total_remaining <= 31:
+            return total_remaining, days_in_month
+        # For multi-month plans (e.g. annual), show days remaining in current calendar month cycle
+        days_left_month = max(1, days_in_month - now.day + 1)
+        return min(total_remaining, days_left_month), days_in_month
+
+    days_left_month = max(1, days_in_month - now.day + 1)
+    return days_left_month, days_in_month
 
 def check_shop_feature_access(shop: models.Shop, feature_slug: str) -> bool:
     """
