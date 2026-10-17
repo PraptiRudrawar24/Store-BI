@@ -81,13 +81,22 @@ PORT=8000
 
 ---
 
-## Setup & Running Locally
+### Quick Start (Single Command)
 
-### Prerequisites
-- Node.js (v18 or higher) & npm
-- Python (v3.10 or higher)
+From the project root directory, run:
 
-### 1. Backend Server (FastAPI)
+```cmd
+.\start.bat
+```
+*(or simply double-click `start.bat` in File Explorer, or run `.\start.ps1` in PowerShell)*
+
+This automatically launches both the FastAPI backend and Vite frontend in parallel.
+
+---
+
+### Manual Start (Two Terminals)
+
+#### 1. Backend Server (FastAPI)
 
 ```bash
 # Navigate to backend directory
