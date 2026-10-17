@@ -8,7 +8,6 @@ interface ThemeContextType {
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
 }
-
 const ThemeContext = React.createContext<ThemeContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'storebi_theme';
@@ -41,7 +40,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       applyTheme(newTheme);
       try {
         localStorage.setItem(STORAGE_KEY, newTheme);
-      } catch {}
+      } catch { }
     },
     [applyTheme]
   );

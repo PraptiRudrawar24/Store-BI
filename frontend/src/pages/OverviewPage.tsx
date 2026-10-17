@@ -215,7 +215,7 @@ export function OverviewPage() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Recent Sales */}
-          <Card>
+          <Card showTrail trailColor="indigo" trailSize={95} className="shadow-sm">
             <CardHeader
               title="Recent sales"
               subtitle="Latest checkout transactions"
@@ -264,7 +264,7 @@ export function OverviewPage() {
           </Card>
 
           {/* Catalog Highlights */}
-          <Card>
+          <Card showTrail trailColor="amber" trailSize={95} className="shadow-sm">
             <CardHeader
               title="Product catalog"
               subtitle="Current inventory and reorder status"

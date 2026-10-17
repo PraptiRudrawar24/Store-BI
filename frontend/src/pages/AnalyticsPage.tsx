@@ -1,5 +1,6 @@
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
+  BarChart3,
   TrendingUp,
   Package,
   Boxes,
@@ -8,6 +9,7 @@ import {
 } from 'lucide-react';
 import { Tabs, type TabItem } from '../components/ui/Tabs';
 import { Button } from '../components/ui/Button';
+import { AnalyticsOverviewDashboard } from '../components/analytics/AnalyticsOverviewDashboard';
 import { SalesAnalyticsTab } from '../components/analytics/SalesAnalyticsTab';
 import { ProductAnalyticsTab } from '../components/analytics/ProductAnalyticsTab';
 import { InventoryAnalyticsTab } from '../components/analytics/InventoryAnalyticsTab';
@@ -15,23 +17,28 @@ import { ProfitabilityAnalyticsTab } from '../components/analytics/Profitability
 
 const ANALYTICS_TABS: TabItem[] = [
   {
+    id: 'overview',
+    label: 'Dashboard & Demand',
+    icon: <BarChart3 className="w-4 h-4" />,
+  },
+  {
     id: 'sales',
-    label: 'Sales',
+    label: 'Sales Trends',
     icon: <TrendingUp className="w-4 h-4" />,
   },
   {
     id: 'product',
-    label: 'Product',
+    label: 'Product ABC',
     icon: <Package className="w-4 h-4" />,
   },
   {
     id: 'inventory',
-    label: 'Inventory',
+    label: 'Inventory Health',
     icon: <Boxes className="w-4 h-4" />,
   },
   {
     id: 'profitability',
-    label: 'Profitability',
+    label: 'Profit & Margins',
     icon: <DollarSign className="w-4 h-4" />,
   },
 ];
@@ -40,10 +47,10 @@ export function AnalyticsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const currentTab = searchParams.get('tab') || 'sales';
-  const validTab = ['sales', 'product', 'inventory', 'profitability'].includes(currentTab)
+  const currentTab = searchParams.get('tab') || 'overview';
+  const validTab = ['overview', 'sales', 'product', 'inventory', 'profitability'].includes(currentTab)
     ? currentTab
-    : 'sales';
+    : 'overview';
 
   const handleTabChange = (newTab: string) => {
     setSearchParams({ tab: newTab });
@@ -56,7 +63,7 @@ export function AnalyticsPage() {
         <div>
           <h1 className="text-2xl font-bold text-text-high">Analytics</h1>
           <p className="text-sm text-text-medium mt-0.5">
-            Store performance insights, demand velocity, inventory health, and profitability breakdowns.
+            Executive sales KPIs, product demand velocity, profitability analysis, and inventory insights.
           </p>
         </div>
 
@@ -82,6 +89,8 @@ export function AnalyticsPage() {
       </div>
 
       {/* Tab Content Panels */}
+      {validTab === 'overview' && <AnalyticsOverviewDashboard />}
+
       {validTab === 'sales' && <SalesAnalyticsTab />}
 
       {validTab === 'product' && <ProductAnalyticsTab />}

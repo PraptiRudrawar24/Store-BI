@@ -2,16 +2,42 @@ import * as React from 'react';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { Badge } from '../components/ui/Badge';
 import { useToast } from '../components/ui/Toast';
 import { api } from '../api/client';
 import type { Shop } from '../api/client';
-
 import { useAuth } from '../context/AuthContext';
+import { cn } from '../components/ui/utils';
+import { PurchaseSubscriptionModal } from '../components/subscription/PurchaseSubscriptionModal';
+import { Sparkles, Clock, CheckCircle2, ShieldCheck, Zap } from 'lucide-react';
 
 export function SettingsPage() {
   const toast = useToast();
   const { user, refreshUser } = useAuth();
   const [shop, setShop] = React.useState<Shop | null>(user);
+  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = React.useState(false);
+
+  const isPaid = !!user?.is_paid;
+  const trialDays = user?.trial_days_left ?? 5;
+  const subDaysLeft = user?.subscription_days_left_in_month ?? 18;
+  const totalMonthDays = user?.subscription_total_days_in_month ?? 30;
+  const planName = user?.plan_name || 'All-Features Pro';
+
+  const trialEndDateStr = user?.trial_end_date
+    ? new Date(user.trial_end_date).toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    : null;
+
+  const subEndDateStr = user?.subscription_end_date
+    ? new Date(user.subscription_end_date).toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    : null;
 
   const [form, setForm] = React.useState({
     name: user?.name || '',
@@ -88,9 +114,148 @@ export function SettingsPage() {
       <div>
         <h1 className="text-2xl font-bold text-text-high">Shop settings</h1>
         <p className="text-sm text-text-medium mt-0.5">
-          Configure your retail store profile, GSTIN, and business location.
+          Configure your retail store profile, subscription license, GSTIN, and business location.
         </p>
       </div>
+
+      {/* Subscription & License Card */}
+      <Card>
+        <CardHeader
+          title="Subscription & Store License"
+          subtitle={
+            isPaid
+              ? "Your active Store BI license and monthly billing cycle status"
+              : "Current plan tier, trial validity, and license upgrade options"
+          }
+        />
+        <CardContent>
+          {!isPaid ? (
+            <div className="flex flex-col gap-5">
+              <div className="p-4 sm:p-5 rounded-[10px] bg-canvas dark:bg-surface border border-border flex flex-col gap-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1 rounded-[4px] bg-primary/10 text-primary">
+                      <Clock className="w-4 h-4" />
+                    </span>
+                    <span className="text-xs font-bold text-text-medium uppercase tracking-wider">
+                      Account Status
+                    </span>
+                  </div>
+                  <Badge variant={trialDays <= 1 ? 'warning' : 'info'} dot>
+                    Free Trial (Full Access)
+                  </Badge>
+                </div>
+
+                <div className="space-y-1">
+                  <h3 className="text-xl sm:text-2xl font-extrabold text-text-high">
+                    {trialDays} {trialDays === 1 ? 'day' : 'days'} left in your free trial
+                  </h3>
+                  <p className="text-xs sm:text-sm text-text-medium leading-relaxed">
+                    {trialEndDateStr
+                      ? `Your trial gives you unlimited access to billing, inventory management, OCR distributor bill scanning, and AI analytics until ${trialEndDateStr}. Upgrade now to ensure uninterrupted access.`
+                      : 'Your trial gives you unlimited access to billing, inventory management, OCR distributor bill scanning, and AI analytics. Upgrade now to ensure uninterrupted access.'}
+                  </p>
+                </div>
+
+                {/* Progress bar */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex justify-between text-xs text-text-medium font-medium">
+                    <span>Trial progress</span>
+                    <span className="text-text-high font-semibold">{trialDays} of 5 days remaining</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-border overflow-hidden">
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all duration-500",
+                        trialDays <= 1 ? "bg-warning" : "bg-primary"
+                      )}
+                      style={{ width: `${Math.max(10, Math.min(100, (trialDays / 5) * 100))}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Option for purchasing subscription */}
+                <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-border">
+                  <div className="flex items-center gap-2 text-xs text-text-medium">
+                    <Sparkles className="w-4 h-4 text-primary shrink-0" />
+                    <span>Includes unlimited OCR imports, AI stock forecasts & POS billing</span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={() => setIsPurchaseModalOpen(true)}
+                    className="flex items-center justify-center gap-2 font-bold shadow-raised"
+                  >
+                    <Zap className="w-4 h-4" />
+                    <span>Purchase subscription</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-5">
+              <div className="p-4 sm:p-5 rounded-[10px] bg-canvas dark:bg-surface border border-border flex flex-col gap-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1 rounded-[4px] bg-secondary/10 text-secondary">
+                      <ShieldCheck className="w-4 h-4" />
+                    </span>
+                    <span className="text-xs font-bold text-text-medium uppercase tracking-wider">
+                      License Tier: {planName}
+                    </span>
+                  </div>
+                  <Badge variant="success" dot>
+                    Active Subscription
+                  </Badge>
+                </div>
+
+                {/* How many days left out of month */}
+                <div className="space-y-1">
+                  <h3 className="text-xl sm:text-2xl font-extrabold text-secondary tabular-nums">
+                    {subDaysLeft} days left out of {totalMonthDays} days this month
+                  </h3>
+                  <p className="text-xs sm:text-sm text-text-medium leading-relaxed">
+                    {subEndDateStr
+                      ? `Your store is actively covered on the ${planName} tier. Current monthly cycle renews on ${subEndDateStr}.`
+                      : `Your store is actively covered on the ${planName} tier. Enjoy continuous retail automation and intelligence.`}
+                  </p>
+                </div>
+
+                {/* Progress bar */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex justify-between text-xs text-text-medium font-medium">
+                    <span>Current month cycle</span>
+                    <span className="text-text-high font-semibold">{subDaysLeft} / {totalMonthDays} days remaining</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-border overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-secondary transition-all duration-500"
+                      style={{ width: `${Math.max(10, Math.min(100, (subDaysLeft / totalMonthDays) * 100))}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Manage / Upgrade action */}
+                <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-border">
+                  <div className="flex items-center gap-2 text-xs text-text-medium">
+                    <CheckCircle2 className="w-4 h-4 text-secondary shrink-0" />
+                    <span>All store analytics, OCR & POS features unlocked</span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setIsPurchaseModalOpen(true)}
+                    className="flex items-center justify-center gap-2 font-semibold"
+                  >
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    <span>Change plan / Renew</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader
@@ -167,6 +332,11 @@ export function SettingsPage() {
           </form>
         </CardContent>
       </Card>
+
+      <PurchaseSubscriptionModal
+        isOpen={isPurchaseModalOpen}
+        onClose={() => setIsPurchaseModalOpen(false)}
+      />
     </div>
   );
 }

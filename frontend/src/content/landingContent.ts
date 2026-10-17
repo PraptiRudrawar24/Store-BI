@@ -23,13 +23,19 @@ export interface FeatureItem {
   accent?: 'teal' | 'rose' | 'emerald';
 }
 
+export interface PlanFeature {
+  text: string;
+  included?: boolean;
+}
+
 export interface PricingPlan {
   id: string;
   name: string;
   price: string;
   period?: string;
+  badge?: string;
   description: string;
-  features: string[];
+  features: (string | PlanFeature)[];
   ctaLabel: string;
   ctaHref: string;
   isPopular?: boolean;
@@ -154,15 +160,6 @@ export const landingContent = {
         accent: 'rose',
       },
       {
-        id: 'multi-branch',
-        title: 'Multi-Branch Regional Sync',
-        description:
-          'Manage Pune Central, Kothrud, and Baner outlets from one master console. Shift slow-moving stock between stores with one-click inter-branch transfer challans.',
-        badge: 'Inter-Branch Transfer Engine',
-        icon: 'Network',
-        accent: 'teal',
-      },
-      {
         id: 'lead-time',
         title: 'Dynamic Lead-Time Reordering',
         description:
@@ -170,15 +167,6 @@ export const landingContent = {
         badge: 'Automated Purchase Orders',
         icon: 'Send',
         accent: 'teal',
-      },
-      {
-        id: 'whatsapp-digest',
-        title: 'Daily WhatsApp Store Digest',
-        description:
-          'Get an automated 10:00 PM summary straight to your phone: Total gross receipts, top 5 fast-movers, cash collected vs UPI, and stockouts detected on the floor.',
-        badge: 'Delivered Nightly at 10:00 PM',
-        icon: 'MessageSquare',
-        accent: 'emerald',
       },
     ] as FeatureItem[],
   },
@@ -206,55 +194,29 @@ export const landingContent = {
   },
   pricing: {
     eyebrow: 'Predictable Pricing',
-    headline: 'Transparent Plans for Every Store Size',
-    subhead: 'Zero long-term lock-in. Cancel or adjust counters anytime.',
+    headline: 'One Single Plan for Your Entire Store',
+    subhead:
+      'Everything your retail business needs to manage inventory, understand profitability, predict demand, and simplify daily operations.',
     plans: [
       {
-        id: 'starter',
-        name: 'Single Store POS',
-        price: '₹1,999',
-        period: '/mo',
+        id: 'retail_pro',
+        name: 'All-in-One Retail Pro',
+        price: '₹1,299',
+        period: '/month',
+        badge: 'All Features Included',
         description:
-          'Ideal for standalone grocery outlets and convenience marts with 1-2 billing counters.',
+          'Everything your retail business needs to manage inventory, understand profitability, predict demand, and simplify daily operations.',
         features: [
-          'Up to 2 Billing Counters',
-          'OCR Invoice Scanner (100/mo)',
-          'Nightly WhatsApp Digest',
+          { text: 'Unlimited Distributor Invoice OCR & Receipt Scanner', included: true },
+          { text: 'AI Demand Forecast & 7-Day Restocking Suggestions', included: true },
+          { text: 'Real-Time Gross Margin & Product Profitability Analytics', included: true },
+          { text: 'Expiry Alerts — 30-Day Early Warnings', included: true },
+          { text: 'Multi-Counter POS Billing & WhatsApp Digital Ledger', included: true },
+          { text: 'Dedicated VIP Store Onboarding & Priority Support', included: true },
         ],
-        ctaLabel: 'Get Started',
-        ctaHref: '/login',
-      },
-      {
-        id: 'growth',
-        name: 'Multi-Counter Supermarket',
-        price: '₹4,499',
-        period: '/mo',
-        description:
-          'For mid-to-large supermarkets with 3-6 checkout terminals and multi-category bays.',
-        features: [
-          'Up to 6 POS Billing Terminals',
-          'Unlimited Bill OCR & CSV Import',
-          'ML 30-Day Expiry & Demand Forecast',
-          'Net Profit Breakdown per SKU',
-        ],
-        ctaLabel: 'Start 5-day trial',
-        ctaHref: '/login',
+        ctaLabel: 'Subscribe Now',
+        ctaHref: '/login?plan=pro',
         isPopular: true,
-      },
-      {
-        id: 'enterprise',
-        name: 'Regional Chain / Multi-Branch',
-        price: 'Custom',
-        period: ' / enterprise',
-        description:
-          'For store owners operating 3+ outlets across city zones requiring inter-branch stock logistics.',
-        features: [
-          'Unlimited Outlets & Warehouse Hubs',
-          'Inter-Branch Transfer Orders',
-          'Dedicated Pune Implementation Mgr',
-        ],
-        ctaLabel: 'Contact Enterprise Sales',
-        ctaHref: '/login',
       },
     ] as PricingPlan[],
   },
@@ -278,7 +240,7 @@ export const landingContent = {
       { label: 'Invoice OCR Importer', href: '#features' },
       { label: 'Net Profit Per SKU', href: '#features' },
       { label: '30-Day Expiry Guard', href: '#features' },
-      { label: 'WhatsApp Nightly Digest', href: '#features' },
+      { label: 'Dynamic PO Reordering', href: '#features' },
     ],
     regionalHubs: [
       'Branch: Pune Central',

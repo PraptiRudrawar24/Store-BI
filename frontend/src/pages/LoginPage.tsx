@@ -53,8 +53,9 @@ export function LoginPage() {
   // Theme Context: supports toggling between light and dark modes per user preference
   const { theme, toggleTheme } = useTheme();
 
-  // Determine if this session was launched as a 5-day trial registration flow
-  const isTrialMode = searchParams.get('mode') === 'trial' || !searchParams.has('mode');
+  // Determine if this session was launched as a 5-day trial registration flow or Pro plan
+  const isProMode = searchParams.get('plan') === 'pro' || searchParams.get('mode') === 'pro';
+  const isTrialMode = !isProMode && (searchParams.get('mode') === 'trial' || !searchParams.has('mode'));
 
   // Local component states:
   // - step: Controls whether user is entering their phone number or typing their 6-digit OTP
@@ -196,24 +197,34 @@ export function LoginPage() {
               </span>
             </div>
 
-            {/* Trial Badge Header */}
+            {/* Trial or Pro Badge Header */}
             {isTrialMode && (
               <div className="mb-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-[4px] bg-primary-light/20 border border-primary/25 text-primary text-xs font-semibold">
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>5-Day Full Access Trial • Zero Card Required</span>
               </div>
             )}
+            {isProMode && (
+              <div className="mb-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-[4px] bg-primary-light/20 border border-primary/25 text-primary text-xs font-semibold">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>All-Features Pro Plan • ₹1,299 / month</span>
+              </div>
+            )}
 
             <h1 className="text-xl font-bold text-text-high">
               {step === 'phone'
-                ? isTrialMode
+                ? isProMode
+                  ? 'Get Started with Pro'
+                  : isTrialMode
                   ? 'Start Your 5-Day Free Trial'
                   : 'Welcome to Store BI'
                 : 'Verify Mobile Number'}
             </h1>
             <p className="text-sm text-text-medium mt-1 mb-6">
               {step === 'phone'
-                ? isTrialMode
+                ? isProMode
+                  ? 'Sign in or enter your mobile number to activate your Pro subscription.'
+                  : isTrialMode
                   ? 'Enter your mobile number to sign in or begin store registration.'
                   : 'Sign in to access your retail performance & POS dashboard.'
                 : `Enter the 6-digit code sent to +91 ${phone}`}

@@ -103,9 +103,46 @@ export interface Shop {
   is_paid?: boolean;
   plan_name?: string | null;
   subscription_amount?: number;
+  subscription_days_left_in_month?: number;
+  subscription_total_days_in_month?: number;
+  subscription_start_date?: string | null;
+  subscription_end_date?: string | null;
   last_active_at?: string | null;
   status?: string | null;
   created_at?: string | null;
+}
+
+export interface PurchaseSubscriptionPayload {
+  plan_name: string;
+  billing_cycle?: 'monthly' | 'quarterly' | 'annual';
+  amount?: number;
+  features?: string;
+  promo_code?: string;
+  payment_reference?: string;
+}
+
+export interface InitiateCheckoutPayload {
+  plan_name?: string;
+  billing_cycle?: string;
+  promo_code?: string;
+}
+
+export interface InitiateCheckoutResponse {
+  success: boolean;
+  order_id: string;
+  plan_name: string;
+  amount: number;
+  currency: string;
+  billing_cycle: string;
+  payment_status: string;
+  payment_gateway: string;
+  message: string;
+}
+
+export interface PurchaseSubscriptionResponse {
+  success: boolean;
+  message: string;
+  shop: Shop;
 }
 
 
@@ -135,6 +172,8 @@ export interface Sale {
   total_amount: number;
   total_profit: number;
   payment_mode: string;
+  customer_name?: string;
+  customer_phone?: string;
   items?: SaleItem[];
 }
 
@@ -168,7 +207,66 @@ export interface UploadCounts {
   products: number;
   sales: number;
   expenses: number;
+  invoices?: number;
   total: number;
+}
+
+export interface InvoiceItemDetail {
+  name: string;
+  qty: number;
+  cost_price: number;
+  selling_price: number;
+  category?: string | null;
+  expiry_date?: string | null;
+  action?: string;
+  matched_product_id?: number | null;
+}
+
+export interface InvoiceRecord {
+  id: number;
+  invoice_number?: string | null;
+  supplier_name?: string | null;
+  invoice_date?: string | null;
+  total_amount: number;
+  tax_amount: number;
+  items_count: number;
+  notes?: string | null;
+  created_at?: string | null;
+  shop_id?: number | null;
+}
+
+export interface InvoiceDetailResponse extends InvoiceRecord {
+  items: InvoiceItemDetail[];
+}
+
+export interface CustomerSummary {
+  customer_name: string;
+  customer_phone?: string | null;
+  total_spent: number;
+  total_orders: number;
+  last_purchase_date?: string | null;
+}
+
+export interface ProductAutocompleteItem {
+  id: number;
+  name: string;
+  category?: string | null;
+  stock_qty: number;
+  reorder_level: number;
+  cost_price: number;
+  selling_price: number;
+  expiry_date?: string | null;
+  status: 'in_stock' | 'low_stock' | 'out_of_stock';
+}
+
+export interface ProductLocationResponse {
+  found: boolean;
+  product_id: number;
+  page: number;
+  page_size: number;
+  total: number;
+  product?: Product | null;
+  message?: string | null;
 }
 
 export interface DashboardKpisResponse {
@@ -492,6 +590,145 @@ export interface ProfitabilityAnalyticsResponse {
   net_profit_steps: BreakdownStep[];
 }
 
+// --- Upgraded Analytics Dashboard Interfaces ---
+export interface SalesPeriodKPI {
+  title: string;
+  period_key: string;
+  sales: number;
+  transactions: number;
+  profit: number;
+  prev_sales: number;
+  prev_transactions: number;
+  prev_profit: number;
+  delta_pct: number | null;
+  comparison_message: string;
+}
+
+export interface AnalyticsKPISet {
+  daily: SalesPeriodKPI;
+  weekly: SalesPeriodKPI;
+  monthly: SalesPeriodKPI;
+}
+
+export interface TrendChartPoint {
+  label: string;
+  date_or_hour: string;
+  sales: number;
+  profit: number;
+  transactions: number;
+}
+
+export interface AnalyticsTrends {
+  daily_trend: TrendChartPoint[];
+  weekly_trend: TrendChartPoint[];
+  monthly_trend: TrendChartPoint[];
+  sales_vs_profit: TrendChartPoint[];
+  transaction_trend: TrendChartPoint[];
+}
+
+export interface BestSellingItem {
+  product_id: number;
+  name: string;
+  category: string;
+  units_sold: number;
+  revenue: number;
+  profit: number;
+  margin_pct: number;
+  sales_contribution_pct: number;
+}
+
+export interface SlowSellingItem {
+  product_id: number;
+  name: string;
+  category: string;
+  current_stock: number;
+  units_sold: number;
+  last_sale_date: string | null;
+  days_since_last_sale: number | null;
+  estimated_stock_days: number | null;
+  status: string;
+  recommendation: string;
+}
+
+export interface DemandAnalysisItem {
+  product_id: number;
+  name: string;
+  category: string;
+  units_sold: number;
+  velocity_per_day: number;
+  demand_trend: string;
+  current_stock: number;
+  days_stock_remaining: number | null;
+  stockout_warning: boolean;
+  suggested_restock_qty: number;
+  prev_units_sold: number;
+  velocity_change_pct: number | null;
+}
+
+export interface MostProfitableItem {
+  product_id: number;
+  name: string;
+  category: string;
+  units_sold: number;
+  revenue: number;
+  cogs: number;
+  gross_profit: number;
+  gross_margin_pct: number;
+  profit_contribution_pct: number;
+}
+
+export interface LowMarginHighSalesItem {
+  product_id: number;
+  name: string;
+  category: string;
+  revenue: number;
+  units_sold: number;
+  gross_margin_pct: number;
+  gross_profit: number;
+  insight: string;
+}
+
+export interface ProductPerformanceRow {
+  product_id: number;
+  name: string;
+  category: string;
+  units_sold: number;
+  sales_revenue: number;
+  gross_profit: number;
+  profit_margin_pct: number;
+  current_stock: number;
+  demand_trend: string;
+  sales_status: string;
+}
+
+export interface AnalyticsInsightItem {
+  type: string;
+  title: string;
+  description: string;
+  severity: string;
+  trace: string;
+}
+
+export interface AnalyticsDashboardResponse {
+  kpis: AnalyticsKPISet;
+  period: string;
+  from_date: string;
+  to_date: string;
+  has_data: boolean;
+  total_sales: number;
+  total_profit: number;
+  total_transactions: number;
+  categories_list: string[];
+  trends: AnalyticsTrends;
+  best_selling: BestSellingItem[];
+  slow_selling: SlowSellingItem[];
+  demand_analysis: DemandAnalysisItem[];
+  most_profitable: MostProfitableItem[];
+  low_margin_alerts: LowMarginHighSalesItem[];
+  comparison_table: ProductPerformanceRow[];
+  insights: AnalyticsInsightItem[];
+}
+
 // --- AI Sales Forecast & Demand Forecast Interfaces ---
 export interface SalesHistoryPoint {
   date: string;
@@ -664,6 +901,57 @@ export const api = {
     }
   },
 
+  // --- Subscriptions ---
+  purchaseSubscription: async (
+    payload: PurchaseSubscriptionPayload
+  ): Promise<PurchaseSubscriptionResponse> => {
+    const res = await fetch(`${API_BASE_URL}/api/subscription/purchase`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to purchase subscription' }));
+      const msg = typeof err.detail === 'string' ? err.detail : (err.detail?.[0]?.msg || 'Subscription failed');
+      throw new Error(msg);
+    }
+    return await res.json();
+  },
+
+  initiateCheckout: async (
+    payload: InitiateCheckoutPayload = {}
+  ): Promise<InitiateCheckoutResponse> => {
+    const res = await fetch(`${API_BASE_URL}/api/subscription/checkout/initiate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to initiate checkout' }));
+      const msg = typeof err.detail === 'string' ? err.detail : (err.detail?.[0]?.msg || 'Checkout failed');
+      throw new Error(msg);
+    }
+    return await res.json();
+  },
+
+  getSubscriptionPlans: async (): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/api/subscription/plans`, {
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error('Failed to fetch subscription plans');
+    return await res.json();
+  },
+
+  getSubscriptionStatus: async (): Promise<Shop> => {
+    const res = await fetch(`${API_BASE_URL}/api/subscription/status`, {
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error('Failed to fetch subscription status');
+    return await res.json();
+  },
+
   // --- Summary ---
   getSummary: async (): Promise<AnalyticsSummary> => {
     try {
@@ -828,6 +1116,24 @@ export const api = {
     return await res.json();
   },
 
+  getAnalyticsDashboard: async (params: {
+    period?: string;
+    from?: string;
+    to?: string;
+    ranking_metric?: 'revenue' | 'units' | 'profit';
+    category?: string;
+  } = {}): Promise<AnalyticsDashboardResponse> => {
+    const q = new URLSearchParams();
+    if (params.period) q.append('period', params.period);
+    if (params.from) q.append('from', params.from);
+    if (params.to) q.append('to', params.to);
+    if (params.ranking_metric) q.append('ranking_metric', params.ranking_metric);
+    if (params.category) q.append('category', params.category);
+    const res = await fetch(`${API_BASE_URL}/api/analytics/dashboard?${q.toString()}`, { credentials: 'include' });
+    if (!res.ok) throw new Error('Failed to fetch analytics dashboard');
+    return await res.json();
+  },
+
   // --- Counts Helper ---
   getUploadCounts: async (): Promise<UploadCounts> => {
     try {
@@ -835,7 +1141,7 @@ export const api = {
       if (!res.ok) throw new Error('Failed to fetch counts');
       return await res.json();
     } catch {
-      return { products: 0, sales: 0, expenses: 0, total: 0 };
+      return { products: 0, sales: 0, expenses: 0, invoices: 0, total: 0 };
     }
   },
 
@@ -871,6 +1177,40 @@ export const api = {
     const res = await fetch(`${API_BASE_URL}/products/?${q.toString()}`, { credentials: 'include' });
     if (!res.ok) throw new Error('Failed to fetch products');
     return await res.json();
+  },
+
+  autocompleteProducts: async (q: string, limit = 10): Promise<ProductAutocompleteItem[]> => {
+    try {
+      const params = new URLSearchParams();
+      if (q) params.append('q', q);
+      params.append('limit', String(limit));
+      const res = await fetch(`${API_BASE_URL}/api/products/autocomplete?${params.toString()}`, {
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to autocomplete products');
+      return await res.json();
+    } catch {
+      return [];
+    }
+  },
+
+  getProductLocation: async (productId: number, pageSize = 10, sortBy = 'id', order = 'desc'): Promise<ProductLocationResponse> => {
+    try {
+      const params = new URLSearchParams({
+        page_size: String(pageSize),
+        sort_by: sortBy,
+        order: order,
+      });
+      const res = await fetch(`${API_BASE_URL}/api/products/${productId}/location?${params.toString()}`, {
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        return { found: false, product_id: productId, page: 1, page_size: pageSize, total: 0, message: 'Failed to fetch location' };
+      }
+      return await res.json();
+    } catch {
+      return { found: false, product_id: productId, page: 1, page_size: pageSize, total: 0, message: 'Network error locating product' };
+    }
   },
 
   createProduct: async (data: Omit<Product, 'id'>): Promise<Product> => {
@@ -963,6 +1303,8 @@ export const api = {
     total_profit: number;
     payment_mode: string;
     date_time?: string;
+    customer_name?: string;
+    customer_phone?: string;
     items?: {
       product_id: number;
       qty: number;
@@ -1101,6 +1443,50 @@ export const api = {
       credentials: 'include',
     });
     if (!res.ok) throw new Error('Failed to delete expense');
+  },
+
+  // --- Invoices & OCR Records ---
+  getInvoices: async (params?: { search?: string; limit?: number; offset?: number }): Promise<InvoiceRecord[]> => {
+    try {
+      const q = new URLSearchParams();
+      if (params?.search) q.append('search', params.search);
+      if (params?.limit) q.append('limit', String(params.limit));
+      if (params?.offset) q.append('offset', String(params.offset));
+      const res = await fetch(`${API_BASE_URL}/invoices/?${q.toString()}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch invoices');
+      return await res.json();
+    } catch {
+      return [];
+    }
+  },
+
+  getInvoice: async (invoiceId: number): Promise<InvoiceDetailResponse> => {
+    const res = await fetch(`${API_BASE_URL}/invoices/${invoiceId}`, { credentials: 'include' });
+    if (!res.ok) throw new Error('Failed to fetch invoice details');
+    return await res.json();
+  },
+
+  deleteInvoice: async (invoiceId: number): Promise<{ success: boolean; message: string }> => {
+    const res = await fetch(`${API_BASE_URL}/invoices/${invoiceId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error('Failed to delete invoice');
+    return await res.json();
+  },
+
+  // --- Customers ---
+  getCustomers: async (params?: { search?: string; limit?: number }): Promise<CustomerSummary[]> => {
+    try {
+      const q = new URLSearchParams();
+      if (params?.search) q.append('search', params.search);
+      if (params?.limit) q.append('limit', String(params.limit));
+      const res = await fetch(`${API_BASE_URL}/customers/?${q.toString()}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch customers');
+      return await res.json();
+    } catch {
+      return [];
+    }
   },
 
   // --- Shops ---
@@ -1520,11 +1906,21 @@ export interface ExtractedInvoiceItem {
   quantity?: number;
   cost_price?: number | null;
   unit_price?: number | null;
+  tax_rate?: number | null;
+  tax_percent?: string | null;
+  tax_amount?: number | null;
+  base_amount?: number | null;
+  is_tax_inclusive?: boolean;
   mrp?: number | null;
   line_total?: number | null;
   amount?: number | null;
   expiry_date?: string | null;
   confidence: number;
+  field_confidence?: Record<string, number>;
+  needs_review?: boolean;
+  taxable_amount?: number | null;
+  page?: number;
+  raw_text?: string | null;
 }
 
 export interface ExtractedInvoiceResponse {
@@ -1537,6 +1933,10 @@ export interface ExtractedInvoiceResponse {
   subtotal?: number | null;
   tax?: number | null;
   total?: number | null;
+  total_amount_for_invoice?: number | null;
+  invoice_grand_total?: number | null;
+  page_count?: number;
+  document_type?: string;
   items: ExtractedInvoiceItem[];
   is_mock: boolean;
   message?: string | null;

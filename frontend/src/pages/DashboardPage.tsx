@@ -318,7 +318,7 @@ export function DashboardPage() {
             className="text-xs min-h-[48px] px-4"
           >
             <Upload className="w-4 h-4" strokeWidth={2} />
-            <span>Data upload</span>
+            <span>Inventory management</span>
           </Button>
           <Button
             variant="primary"
@@ -413,7 +413,7 @@ export function DashboardPage() {
       </div>
 
       {/* 3. "Today vs yesterday" Panel */}
-      <Card>
+      <Card showTrail trailColor="indigo" trailSize={100} className="shadow-sm">
         <CardHeader
           title="Today vs yesterday"
           subtitle="Sales, profit, transactions and average bill comparison"

@@ -36,6 +36,9 @@ import {
   type Expense,
   type UploadCounts,
 } from '../api/client';
+import { useSearchParams } from 'react-router-dom';
+import { cn } from '../components/ui/utils';
+import { ProductSearchBar } from '../components/search/ProductSearchBar';
 import { ManualDataEntry } from '../components/manual/ManualDataEntry';
 import { ImageToData } from '../components/image-to-data/ImageToData';
 
@@ -44,10 +47,12 @@ type SubView = 'products' | 'sales' | 'expenses';
 
 export function DataUploadPage() {
   const toast = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Navigation states
   const [activeTab, setActiveTab] = React.useState<MainTab>('entered');
   const [subView, setSubView] = React.useState<SubView>('products');
+  const [highlightedProductId, setHighlightedProductId] = React.useState<number | null>(null);
 
   // Counts state
   const [counts, setCounts] = React.useState<UploadCounts>({
@@ -95,6 +100,69 @@ export function DataUploadPage() {
     }, 250);
     return () => clearTimeout(handler);
   }, [search]);
+
+  // Handle incoming productId from search navigation (or URL param)
+  React.useEffect(() => {
+    const rawProductId = searchParams.get('productId');
+    if (!rawProductId) return;
+
+    const targetId = parseInt(rawProductId, 10);
+    if (isNaN(targetId)) return;
+
+    // Switch to entered tab and products subview
+    setActiveTab('entered');
+    setSubView('products');
+    setSearch('');
+    setDebouncedSearch('');
+
+    // Fetch product location to determine which pagination page it sits on
+    api.getProductLocation(targetId, pageSize, sortBy, sortOrder)
+      .then((loc) => {
+        if (loc.found) {
+          if (loc.page !== currentPage) {
+            setCurrentPage(loc.page);
+          }
+          setHighlightedProductId(targetId);
+        } else {
+          toast.error(loc.message || 'Product no longer exists or has been deleted from inventory.');
+          const p = new URLSearchParams(searchParams);
+          p.delete('productId');
+          p.delete('highlight');
+          setSearchParams(p, { replace: true });
+        }
+      })
+      .catch(() => {
+        setHighlightedProductId(targetId);
+      });
+  }, [searchParams.get('productId'), pageSize, sortBy, sortOrder]);
+
+  // Smooth scroll and auto-fade highlight when the target product is rendered
+  React.useEffect(() => {
+    if (!highlightedProductId) return;
+
+    const productInList = products.find((p) => p.id === highlightedProductId);
+    if (productInList) {
+      const frame = requestAnimationFrame(() => {
+        const rowEl = document.getElementById(`product-row-${highlightedProductId}`);
+        if (rowEl) {
+          rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+
+      const timer = setTimeout(() => {
+        setHighlightedProductId(null);
+        const p = new URLSearchParams(searchParams);
+        p.delete('productId');
+        p.delete('highlight');
+        setSearchParams(p, { replace: true });
+      }, 2800);
+
+      return () => {
+        cancelAnimationFrame(frame);
+        clearTimeout(timer);
+      };
+    }
+  }, [products, highlightedProductId]);
 
   // Load counts
   const loadCounts = React.useCallback(async () => {
@@ -342,7 +410,7 @@ export function DataUploadPage() {
     <div className="flex flex-col gap-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold text-text-high">Data upload</h1>
+        <h1 className="text-2xl font-bold text-text-high">Inventory management</h1>
         <p className="text-sm text-text-medium mt-0.5">
           Review entered shop inventory, sales bills, and daily operating expenses.
         </p>
@@ -419,21 +487,39 @@ export function DataUploadPage() {
               {/* Table Toolbar: Search, Sort indication, Page Size */}
               <div className="p-4 border-b border-border flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                 <div className="relative w-full sm:max-w-xs">
-                  <Search className="w-4 h-4 text-text-medium absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <Input
-                    type="text"
-                    placeholder={`Search ${subView}...`}
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-9 h-10 text-xs"
-                  />
-                  {search && (
-                    <button
-                      onClick={() => setSearch('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-low hover:text-text-high text-xs"
-                    >
-                      Clear
-                    </button>
+                  {subView === 'products' ? (
+                    <ProductSearchBar
+                      placeholder="Search products in inventory..."
+                      onSelectProduct={(p) => {
+                        api.getProductLocation(p.id, pageSize, sortBy, sortOrder).then((loc) => {
+                          if (loc.found) {
+                            if (loc.page !== currentPage) setCurrentPage(loc.page);
+                            setHighlightedProductId(p.id);
+                          } else {
+                            toast.error(loc.message || 'Product not found');
+                          }
+                        });
+                      }}
+                    />
+                  ) : (
+                    <>
+                      <Search className="w-4 h-4 text-text-medium absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <Input
+                        type="text"
+                        placeholder={`Search ${subView}...`}
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="pl-9 h-10 text-xs"
+                      />
+                      {search && (
+                        <button
+                          onClick={() => setSearch('')}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-low hover:text-text-high text-xs"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -541,8 +627,14 @@ export function DataUploadPage() {
                       <TableBody>
                         {products.map((prod) => {
                           const isEditing = editingId === prod.id;
+                          const isHighlighted = highlightedProductId === prod.id;
                           return (
-                            <TableRow key={prod.id}>
+                            <TableRow
+                              key={prod.id}
+                              id={`product-row-${prod.id}`}
+                              data-product-id={prod.id}
+                              className={cn(isHighlighted && 'product-row-highlight')}
+                            >
                               {/* Name Cell */}
                               <TableCell className="font-medium">
                                 {isEditing ? (

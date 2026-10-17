@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Package, Plus, Trash2 } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -11,12 +12,15 @@ import { formatINR } from '../utils';
 import { api } from '../api/client';
 import type { Product } from '../api/client';
 import { useToast } from '../components/ui/Toast';
+import { ProductSearchBar } from '../components/search/ProductSearchBar';
 
 export function ProductsPage() {
   const toast = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = React.useState<Product[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [isAddOpen, setIsAddOpen] = React.useState(false);
+  const [highlightedProductId, setHighlightedProductId] = React.useState<number | null>(null);
 
   const [form, setForm] = React.useState({
     name: '',
@@ -42,6 +46,44 @@ export function ProductsPage() {
   React.useEffect(() => {
     loadProducts();
   }, [loadProducts]);
+
+  // Handle URL query parameter productId for deep-linking & highlighting
+  React.useEffect(() => {
+    const rawId = searchParams.get('productId');
+    if (!rawId) return;
+    const targetId = parseInt(rawId, 10);
+    if (isNaN(targetId)) return;
+
+    if (!loading && products.length > 0) {
+      const exists = products.some((p) => p.id === targetId);
+      if (exists) {
+        setHighlightedProductId(targetId);
+        const timer = setTimeout(() => {
+          const row = document.getElementById(`product-row-${targetId}`);
+          if (row) {
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 100);
+
+        const fadeTimer = setTimeout(() => {
+          setHighlightedProductId(null);
+          const p = new URLSearchParams(searchParams);
+          p.delete('productId');
+          setSearchParams(p, { replace: true });
+        }, 2800);
+
+        return () => {
+          clearTimeout(timer);
+          clearTimeout(fadeTimer);
+        };
+      } else {
+        toast.error('Product not found in current inventory or was deleted.');
+        const p = new URLSearchParams(searchParams);
+        p.delete('productId');
+        setSearchParams(p, { replace: true });
+      }
+    }
+  }, [searchParams.get('productId'), loading, products]);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,10 +135,24 @@ export function ProductsPage() {
             Manage store inventory, cost prices, and reorder levels.
           </p>
         </div>
-        <Button variant="primary" onClick={() => setIsAddOpen(true)}>
-          <Plus className="w-4 h-4" strokeWidth={2} />
-          <span>Add product</span>
-        </Button>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <ProductSearchBar
+            placeholder="Search catalog products..."
+            className="w-full sm:w-72"
+            onSelectProduct={(prod) => {
+              setHighlightedProductId(prod.id);
+              const row = document.getElementById(`product-row-${prod.id}`);
+              if (row) {
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+              setTimeout(() => setHighlightedProductId(null), 2800);
+            }}
+          />
+          <Button variant="primary" onClick={() => setIsAddOpen(true)}>
+            <Plus className="w-4 h-4" strokeWidth={2} />
+            <span>Add product</span>
+          </Button>
+        </div>
       </div>
 
       {products.length === 0 && !loading ? (
@@ -129,8 +185,13 @@ export function ProductsPage() {
               <TableBody>
                 {products.map((p) => {
                   const isLow = p.stock_qty <= p.reorder_level;
+                  const isHighlighted = highlightedProductId === p.id;
                   return (
-                    <TableRow key={p.id}>
+                    <TableRow
+                      key={p.id}
+                      id={`product-row-${p.id}`}
+                      className={isHighlighted ? 'product-row-highlight' : ''}
+                    >
                       <TableCell className="font-semibold">{p.name}</TableCell>
                       <TableCell>
                         <Badge variant="neutral">{p.category}</Badge>

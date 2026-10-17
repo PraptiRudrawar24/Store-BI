@@ -1,6 +1,6 @@
 import * as React from 'react';
 import type { ProductCategory, ProductItem, CartItem, CustomerInfo, PaymentMethod, CompletedSale } from '../types/pos';
-import { INITIAL_POS_PRODUCTS, INITIAL_CART_ITEMS, MOCK_TERMINAL_CONFIG } from '../data/posMockData';
+import { MOCK_TERMINAL_CONFIG } from '../data/posMockData';
 import { calculateCartTotals } from '../utils/money';
 import { BarcodeSearch } from '../components/pos/BarcodeSearch';
 import { CategoryFilter } from '../components/pos/CategoryFilter';
@@ -12,7 +12,7 @@ import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../context/AuthContext';
 import { useAlerts } from '../context/AlertsContext';
 import { api } from '../api/client';
-import type { Product, Sale } from '../api/client';
+import type { Product } from '../api/client';
 
 // Local storage persistence helper to prevent unexpected terminal resets and isolate per user
 const POS_STORAGE_CART = 'storebi_pos_cart';
@@ -33,24 +33,27 @@ export function PosBillingPage() {
   // 1. Sync products from backend database
   const [dbProducts, setDbProducts] = React.useState<Product[]>([]);
 
-  React.useEffect(() => {
-    let active = true;
+  const fetchInventory = React.useCallback(() => {
     api.getProducts().then((res) => {
-      if (active && Array.isArray(res)) {
+      if (Array.isArray(res)) {
         setDbProducts(res);
       }
     }).catch(() => {});
-    return () => { active = false; };
-  }, [user?.id]);
+  }, []);
 
-  // Combined fast pick catalog: User's registered inventory first, plus mock fast-pick items
+  React.useEffect(() => {
+    fetchInventory();
+  }, [fetchInventory, user?.id]);
+
+  // Catalog: Show ONLY products currently available in inventory (stock_qty > 0)
+  // Excludes out of stock, inactive, or unavailable products. Zero mock/static products.
   const products = React.useMemo<ProductItem[]>(() => {
     const list: ProductItem[] = [];
-    const seenNames = new Set<string>();
 
-    // User's own registered inventory items
     dbProducts.forEach((p) => {
-      seenNames.add(p.name.trim().toLowerCase());
+      // Exclude products that are out of stock
+      if (p.stock_qty <= 0) return;
+
       let cat: Exclude<ProductCategory, 'All Items'> = 'Personal Care';
       const cLower = (p.category || '').toLowerCase();
       if (cLower.includes('health') || cLower.includes('pharma') || cLower.includes('med')) {
@@ -79,17 +82,10 @@ export function PosBillingPage() {
       });
     });
 
-    // Fast Pick catalog items (excluding duplicate names if already registered by user)
-    INITIAL_POS_PRODUCTS.forEach((mock) => {
-      if (!seenNames.has(mock.name.trim().toLowerCase())) {
-        list.push(mock);
-      }
-    });
-
     return list;
   }, [dbProducts]);
 
-  // Terminal state: initial load from current user's localStorage
+  // Terminal state: Current bill starts with NO selected products
   const [cart, setCart] = React.useState<CartItem[]>(() => {
     try {
       const key = getPosStorageKey(POS_STORAGE_CART, user?.id);
@@ -98,15 +94,16 @@ export function PosBillingPage() {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) return parsed;
       }
-      return INITIAL_CART_ITEMS;
+      return [];
     } catch {
-      return INITIAL_CART_ITEMS;
+      return [];
     }
   });
 
   const [selectedCategory, setSelectedCategory] = React.useState<ProductCategory>('All Items');
   const [searchQuery, setSearchQuery] = React.useState('');
 
+  // Customer state: MUST start empty when creating a bill, require user input
   const [customer, setCustomer] = React.useState<CustomerInfo>(() => {
     try {
       const key = getPosStorageKey(POS_STORAGE_CUSTOMER, user?.id);
@@ -115,15 +112,15 @@ export function PosBillingPage() {
         const parsed = JSON.parse(stored);
         if (parsed && typeof parsed === 'object') {
           return {
-            name: parsed.name ?? (user?.owner_name || 'Vikram Joshi'),
-            phone: parsed.phone ?? (user?.phone || '9823044129'),
+            name: typeof parsed.name === 'string' ? parsed.name : '',
+            phone: typeof parsed.phone === 'string' ? parsed.phone : '',
           };
         }
       }
     } catch {}
     return {
-      name: user?.owner_name || 'Vikram Joshi',
-      phone: user?.phone || '9823044129',
+      name: '',
+      phone: '',
     };
   });
 
@@ -187,8 +184,8 @@ export function PosBillingPage() {
         const parsed = JSON.parse(storedCust);
         if (parsed && typeof parsed === 'object') {
           setCustomer({
-            name: parsed.name ?? (user?.owner_name || 'Vikram Joshi'),
-            phone: parsed.phone ?? (user?.phone || '9823044129'),
+            name: typeof parsed.name === 'string' ? parsed.name : '',
+            phone: typeof parsed.phone === 'string' ? parsed.phone : '',
           });
         }
       }
@@ -335,9 +332,33 @@ export function PosBillingPage() {
     if (cart.length === 0) return;
     if (window.confirm('Are you sure you want to clear the current transaction cart?')) {
       setCart([]);
+      try {
+        localStorage.removeItem(getPosStorageKey(POS_STORAGE_CART, user?.id));
+      } catch {}
       showToast('Cart cleared', 'info');
     }
-  }, [cart.length, showToast]);
+  }, [cart.length, user?.id, showToast]);
+
+  // Explicit New Bill reset: Resets customer, cart, and discount for a fresh transaction
+  const handleNewBill = React.useCallback(() => {
+    if (cart.length > 0 || customer.name || customer.phone) {
+      if (!window.confirm('Start a new bill? Current unsaved customer details and cart items will be cleared.')) {
+        return;
+      }
+    }
+    setCart([]);
+    setCustomer({ name: '', phone: '' });
+    setDiscountPaise(0);
+    try {
+      localStorage.removeItem(getPosStorageKey(POS_STORAGE_CART, user?.id));
+      localStorage.removeItem(getPosStorageKey(POS_STORAGE_CUSTOMER, user?.id));
+      localStorage.removeItem(getPosStorageKey(POS_STORAGE_DISCOUNT, user?.id));
+    } catch {}
+    showToast('New bill started. Enter customer details and select products.', 'info');
+    setTimeout(() => {
+      barcodeInputRef.current?.focus();
+    }, 150);
+  }, [cart.length, customer, user?.id, showToast]);
 
   // Barcode search / scan submission
   const handleBarcodeSubmit = React.useCallback(() => {
@@ -358,7 +379,7 @@ export function PosBillingPage() {
       showToast(`Added: ${exactMatch.name}`, 'success');
       setSearchQuery('');
     } else {
-      showToast('No matching product found for barcode/SKU', 'info');
+      showToast('No matching product found in available inventory', 'info');
     }
   }, [searchQuery, products, handleAddToCart, showToast]);
 
@@ -382,10 +403,25 @@ export function PosBillingPage() {
   // Complete Sale & Generate Bill (Persists into backend database for analytics)
   const handleCompleteSale = React.useCallback(async () => {
     if (cart.length === 0) {
-      showToast('Cart is empty. Add items before generating bill.', 'info');
+      showToast('Cart is empty. Select products from inventory before generating bill.', 'info');
       return;
     }
     if (isRecording) return;
+
+    // Frontend validation: Ensure no item exceeds available stock
+    for (const item of cart) {
+      if (item.quantity > item.product.stock) {
+        showToast(
+          `Cannot complete bill: Quantity for '${item.product.name}' (${item.quantity}) exceeds available stock (${item.product.stock}).`,
+          'error'
+        );
+        return;
+      }
+      if (item.quantity <= 0) {
+        showToast(`Invalid quantity for '${item.product.name}'. Must be at least 1.`, 'error');
+        return;
+      }
+    }
 
     setIsRecording(true);
     const now = new Date();
@@ -420,87 +456,44 @@ export function PosBillingPage() {
         ? 'Credit'
         : paymentMethod;
 
+    const saleLineItems = cart
+      .filter((item) => item.product.dbId !== undefined)
+      .map((item) => ({
+        product_id: item.product.dbId!,
+        qty: item.quantity,
+        unit_price: Number((item.product.pricePaise / 100).toFixed(2)),
+        unit_cost: Number(((item.product.costPaise || item.product.pricePaise * 0.75) / 100).toFixed(2)),
+      }));
+
+    if (saleLineItems.length !== cart.length) {
+      showToast('Some items in the cart are missing a valid database reference.', 'error');
+      setIsRecording(false);
+      return;
+    }
+
     let createdSaleId: number | null = null;
 
     try {
-      // Resolve line items with matching or newly registered DB products
-      const saleLineItems: { product_id: number; qty: number; unit_price: number; unit_cost: number }[] = [];
-      const currentDbProducts = [...dbProducts];
+      // Record the sale into backend database with real customer details and line items
+      const saleResult = await api.createSale({
+        total_amount: totalAmountRupees,
+        total_profit: totalProfitRupees,
+        payment_mode: paymentModeMapped,
+        date_time: now.toISOString(),
+        customer_name: customer.name.trim() || undefined,
+        customer_phone: customer.phone.trim() || undefined,
+        items: saleLineItems,
+      });
+      createdSaleId = saleResult.id;
 
-      for (const item of cart) {
-        let prodId: number | null = item.product.dbId || null;
-
-        if (!prodId) {
-          const match = currentDbProducts.find(
-            (p) => p.name.toLowerCase() === item.product.name.toLowerCase()
-          );
-          if (match) {
-            prodId = match.id;
-          } else {
-            try {
-              const newProd = await api.createProduct({
-                name: item.product.name,
-                category: item.product.category,
-                selling_price: item.product.pricePaise / 100,
-                cost_price: Number(((item.product.costPaise || item.product.pricePaise * 0.75) / 100).toFixed(2)),
-                stock_qty: Math.max(100, item.product.stock),
-                reorder_level: item.product.lowStockThreshold || 10,
-              });
-              prodId = newProd.id;
-              currentDbProducts.push(newProd);
-            } catch {
-              prodId = null;
-            }
-          }
-        }
-
-        if (prodId) {
-          saleLineItems.push({
-            product_id: prodId,
-            qty: item.quantity,
-            unit_price: Number((item.product.pricePaise / 100).toFixed(2)),
-            unit_cost: Number(((item.product.costPaise || item.product.pricePaise * 0.75) / 100).toFixed(2)),
-          });
-        }
-      }
-
-      // Record the sale into backend database
-      let saleResult: Sale;
-      if (saleLineItems.length === cart.length) {
-        try {
-          saleResult = await api.createSale({
-            total_amount: totalAmountRupees,
-            total_profit: totalProfitRupees,
-            payment_mode: paymentModeMapped,
-            date_time: now.toISOString(),
-            items: saleLineItems,
-          });
-          createdSaleId = saleResult.id;
-        } catch {
-          // Fallback without items if any stock constraint triggers
-          saleResult = await api.createSale({
-            total_amount: totalAmountRupees,
-            total_profit: totalProfitRupees,
-            payment_mode: paymentModeMapped,
-            date_time: now.toISOString(),
-            items: [],
-          });
-          createdSaleId = saleResult.id;
-        }
-      } else {
-        saleResult = await api.createSale({
-          total_amount: totalAmountRupees,
-          total_profit: totalProfitRupees,
-          payment_mode: paymentModeMapped,
-          date_time: now.toISOString(),
-          items: [],
-        });
-        createdSaleId = saleResult.id;
-      }
-
+      // Refresh inventory stock from backend immediately after sale
+      fetchInventory();
       refreshAlerts();
-    } catch (err) {
-      console.warn('Backend sale recording error:', err);
+    } catch (err: any) {
+      console.error('Backend sale error:', err);
+      showToast(err?.message || 'Failed to complete sale due to stock or server error.', 'error');
+      setIsRecording(false);
+      return;
     } finally {
       setIsRecording(false);
     }
@@ -524,15 +517,26 @@ export function PosBillingPage() {
 
     setLastCompletedSale(completedSale);
     setIsReceiptOpen(true);
-    showToast(`Bill ${billNumber} recorded & added to analytics!`, 'success');
+    showToast(`Bill ${billNumber} recorded & inventory updated!`, 'success');
+
+    // Reset current transaction-specific form state after successful checkout
+    setCart([]);
+    setCustomer({ name: '', phone: '' });
+    setDiscountPaise(0);
+    try {
+      localStorage.removeItem(getPosStorageKey(POS_STORAGE_CART, user?.id));
+      localStorage.removeItem(getPosStorageKey(POS_STORAGE_CUSTOMER, user?.id));
+      localStorage.removeItem(getPosStorageKey(POS_STORAGE_DISCOUNT, user?.id));
+    } catch {}
   }, [
     cart,
     totals,
     customer,
     paymentMethod,
     user?.name,
-    dbProducts,
+    user?.id,
     isRecording,
+    fetchInventory,
     refreshAlerts,
     showToast,
   ]);
@@ -541,12 +545,18 @@ export function PosBillingPage() {
   const handleNewSale = React.useCallback(() => {
     setIsReceiptOpen(false);
     setCart([]);
+    setCustomer({ name: '', phone: '' });
     setDiscountPaise(0);
+    try {
+      localStorage.removeItem(getPosStorageKey(POS_STORAGE_CART, user?.id));
+      localStorage.removeItem(getPosStorageKey(POS_STORAGE_CUSTOMER, user?.id));
+      localStorage.removeItem(getPosStorageKey(POS_STORAGE_DISCOUNT, user?.id));
+    } catch {}
     showToast('Ready for next transaction', 'info');
     setTimeout(() => {
       barcodeInputRef.current?.focus();
     }, 150);
-  }, [showToast]);
+  }, [user?.id, showToast]);
 
   // Page-scoped keyboard shortcuts (F2, F4, Ctrl+P, Esc, Enter)
   React.useEffect(() => {
@@ -681,6 +691,7 @@ export function PosBillingPage() {
             onUpdateQuantity={handleUpdateQuantity}
             onRemoveItem={handleRemoveItem}
             onClearCart={handleClearCart}
+            onNewBill={handleNewBill}
             onCompleteSale={handleCompleteSale}
             onApplyDiscountClick={handleApplyDiscount}
           />

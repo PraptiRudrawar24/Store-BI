@@ -342,4 +342,31 @@
   }
 }
 
+/* Product row search highlight animation with smooth 2.5s - 3s fade */
+@keyframes product-highlight-pulse {
+  0% {
+    background-color: rgba(99, 102, 241, 0.28);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.7);
+  }
+  30% {
+    background-color: rgba(99, 102, 241, 0.20);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
+  }
+  70% {
+    background-color: rgba(99, 102, 241, 0.10);
+    box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.3);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
+.product-row-highlight {
+  animation: product-highlight-pulse 2.8s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+  position: relative;
+  z-index: 5;
+}
+
+
 
