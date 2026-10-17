@@ -2,10 +2,16 @@ import * as React from 'react';
 import { Card, CardContent, type CardTrailColor } from './Card';
 import { cn } from './utils';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { AnimatedNumber } from '@/components/core/animated-number';
 
 export interface StatCardProps {
   label: string;
   value: string | number;
+  numericValue?: number;
+  isCurrency?: boolean;
+  decimals?: number;
+  prefix?: string;
+  suffix?: string;
   currentValue?: number;
   previousValue?: number;
   trendText?: string;
@@ -20,6 +26,11 @@ export interface StatCardProps {
 export function StatCard({
   label,
   value,
+  numericValue,
+  isCurrency,
+  decimals,
+  prefix,
+  suffix,
   currentValue,
   previousValue,
   trendText,
@@ -82,7 +93,56 @@ export function StatCard({
 
         <div>
           <div className="text-[32px] font-bold text-text-high tracking-tight tabular-nums mb-1 leading-tight">
-            {value}
+            {(() => {
+              if (numericValue !== undefined) {
+                return (
+                  <AnimatedNumber
+                    value={numericValue}
+                    isCurrency={isCurrency}
+                    decimals={decimals}
+                    prefix={prefix}
+                    suffix={suffix}
+                    springOptions={{ bounce: 0, duration: 2000 }}
+                  />
+                );
+              }
+
+              if (typeof value === 'number') {
+                return (
+                  <AnimatedNumber
+                    value={value}
+                    isCurrency={isCurrency}
+                    decimals={decimals}
+                    prefix={prefix}
+                    suffix={suffix}
+                    springOptions={{ bounce: 0, duration: 2000 }}
+                  />
+                );
+              }
+
+              if (typeof value === 'string') {
+                const isStrCurrency = isCurrency ?? value.includes('₹');
+                const cleanStr = value.replace(/[^0-9.-]/g, '');
+                const parsedVal = cleanStr ? parseFloat(cleanStr) : NaN;
+
+                if (!isNaN(parsedVal)) {
+                  const hasDecimals = value.includes('.') && value.split('.')[1].replace(/[^0-9]/g, '').length > 0;
+                  const strDecimals = decimals ?? (hasDecimals ? value.split('.')[1].replace(/[^0-9]/g, '').length : undefined);
+                  return (
+                    <AnimatedNumber
+                      value={parsedVal}
+                      isCurrency={isStrCurrency}
+                      decimals={strDecimals}
+                      prefix={prefix}
+                      suffix={suffix}
+                      springOptions={{ bounce: 0, duration: 2000 }}
+                    />
+                  );
+                }
+              }
+
+              return value;
+            })()}
           </div>
 
           <div className="flex items-center gap-2 text-xs flex-wrap">
