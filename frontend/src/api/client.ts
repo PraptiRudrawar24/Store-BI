@@ -83,6 +83,9 @@ export interface Shop {
   owner_name?: string | null;
   phone: string;
   email?: string | null;
+  google_id?: string | null;
+  picture?: string | null;
+  is_email_verified?: boolean;
   category?: string | null;
   city?: string | null;
   state?: string | null;
@@ -110,6 +113,17 @@ export interface Shop {
   last_active_at?: string | null;
   status?: string | null;
   created_at?: string | null;
+}
+
+export interface AuthResponse {
+  success: boolean;
+  requires_verification?: boolean;
+  token?: string;
+  is_new_user?: boolean;
+  onboarding_completed?: boolean;
+  onboarding_step?: number;
+  message?: string;
+  shop?: Shop;
 }
 
 export interface PurchaseSubscriptionPayload {
@@ -901,6 +915,39 @@ export interface ProductDemandDetailResponse {
 
 export const api = {
   // --- Auth & Session ---
+
+  loginWithGoogle: async (payload: {
+    credential?: string;
+    email?: string;
+    name?: string;
+    picture?: string;
+    google_id?: string;
+    mode?: 'login' | 'signup';
+  }): Promise<{
+    success: boolean;
+    token: string;
+    is_new_user: boolean;
+    onboarding_completed: boolean;
+    onboarding_step: number;
+    shop: Shop;
+  }> => {
+    const res = await fetch(`${API_BASE_URL}/auth/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Google authentication failed' }));
+      throw new Error(err.detail || 'Google authentication failed');
+    }
+    const data = await res.json();
+    if (data.token) {
+      setAuthToken(data.token);
+    }
+    return data;
+  },
+
   sendOTP: async (phone: string): Promise<{ success: boolean; message: string; dev_mode: boolean; dev_otp: string }> => {
     const res = await fetch(`${API_BASE_URL}/auth/send-otp`, {
       method: 'POST',
@@ -991,6 +1038,182 @@ export const api = {
       removeAuthToken();
     }
   },
+
+  // --- Production Email & Password Authentication ---
+  register: async (payload: {
+    email: string;
+    password: string;
+    confirm_password: string;
+    store_name?: string;
+    owner_name?: string;
+    phone?: string;
+  }): Promise<AuthResponse> => {
+    const res = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Registration failed' }));
+      const msg = typeof err.detail === 'string' ? err.detail : (err.detail?.[0]?.msg || 'Registration failed');
+      throw new Error(msg);
+    }
+    const data = await res.json();
+    if (data.token) {
+      setAuthToken(data.token);
+    }
+    return data;
+  },
+
+  loginWithEmail: async (payload: {
+    email: string;
+    password: string;
+  }): Promise<AuthResponse> => {
+    const res = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Login failed' }));
+      if (err.detail && typeof err.detail === 'object' && err.detail.code === 'EMAIL_NOT_VERIFIED') {
+        const customErr: any = new Error(err.detail.message || 'Please verify your email address.');
+        customErr.code = 'EMAIL_NOT_VERIFIED';
+        customErr.email = err.detail.email;
+        throw customErr;
+      }
+      const msg = typeof err.detail === 'string' ? err.detail : (err.detail?.[0]?.msg || 'Invalid email or password.');
+      throw new Error(msg);
+    }
+    const data = await res.json();
+    if (data.token) {
+      setAuthToken(data.token);
+    }
+    return data;
+  },
+
+  verifyEmail: async (token: string): Promise<AuthResponse> => {
+    const res = await fetch(`${API_BASE_URL}/auth/verify-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Email verification failed' }));
+      const msg = typeof err.detail === 'string' ? err.detail : (err.detail?.[0]?.msg || 'Email verification failed');
+      throw new Error(msg);
+    }
+    const data = await res.json();
+    if (data.token) {
+      setAuthToken(data.token);
+    }
+    return data;
+  },
+
+  resendVerification: async (email: string): Promise<{ success: boolean; message: string }> => {
+    const res = await fetch(`${API_BASE_URL}/auth/resend-verification`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to resend verification link' }));
+      throw new Error(err.detail || 'Failed to resend verification link');
+    }
+    return await res.json();
+  },
+
+  forgotPassword: async (email: string): Promise<{ success: boolean; message: string }> => {
+    const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to request password reset' }));
+      throw new Error(err.detail || 'Failed to request password reset');
+    }
+    return await res.json();
+  },
+
+  resetPassword: async (payload: {
+    token: string;
+    new_password: string;
+    confirm_password: string;
+  }): Promise<AuthResponse> => {
+    const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Password reset failed' }));
+      const msg = typeof err.detail === 'string' ? err.detail : (err.detail?.[0]?.msg || 'Password reset failed');
+      throw new Error(msg);
+    }
+    const data = await res.json();
+    if (data.token) {
+      setAuthToken(data.token);
+    }
+    return data;
+  },
+
+  // --- Real Google OAuth 2.0 PKCE Flow ---
+  getGoogleAuthUrl: async (): Promise<{ url: string }> => {
+    const res = await fetch(`${API_BASE_URL}/auth/google/url`, {
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Google OAuth not configured' }));
+      throw new Error(err.detail || 'Failed to initialize Google authentication');
+    }
+    return await res.json();
+  },
+
+  googleCallback: async (payload: { code: string; state: string }): Promise<AuthResponse> => {
+    const res = await fetch(`${API_BASE_URL}/auth/google/callback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Google authorization failed' }));
+      const msg = typeof err.detail === 'string' ? err.detail : (err.detail?.[0]?.msg || 'Google authorization failed');
+      throw new Error(msg);
+    }
+    const data = await res.json();
+    if (data.token) {
+      setAuthToken(data.token);
+    }
+    return data;
+  },
+
+  googleTokenVerify: async (credential: string): Promise<AuthResponse> => {
+    const res = await fetch(`${API_BASE_URL}/auth/google/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential }),
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Google credential verification failed' }));
+      throw new Error(err.detail || 'Google credential verification failed');
+    }
+    const data = await res.json();
+    if (data.token) {
+      setAuthToken(data.token);
+    }
+    return data;
+  },
+
+
 
   // --- Subscriptions ---
   purchaseSubscription: async (
@@ -2283,6 +2506,207 @@ export const api = {
     }
     return await res.json();
   },
+
+  // --- Super Admin Payments & Payouts API Methods ---
+  getAdminPaymentsOverview: async (range: string = '30d', startDate?: string, endDate?: string): Promise<PaymentOverviewResponse> => {
+    const params = new URLSearchParams({ range });
+    if (startDate) params.set('start_date', startDate);
+    if (endDate) params.set('end_date', endDate);
+    const res = await fetch(`${API_BASE_URL}/api/admin/payments/overview?${params.toString()}`, {
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch payments overview' }));
+      throw new Error(err.detail || 'Failed to fetch payments overview');
+    }
+    return await res.json();
+  },
+
+  getAdminPaymentsTransactions: async (params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    method?: string;
+    gateway?: string;
+    settlement_status?: string;
+    start_date?: string;
+    end_date?: string;
+    min_amount?: number;
+    max_amount?: number;
+  } = {}): Promise<PaymentTransactionsListResponse> => {
+    const sp = new URLSearchParams();
+    if (params.page) sp.set('page', String(params.page));
+    if (params.limit) sp.set('limit', String(params.limit));
+    if (params.search) sp.set('search', params.search);
+    if (params.status && params.status !== 'all') sp.set('status', params.status);
+    if (params.method && params.method !== 'all') sp.set('method', params.method);
+    if (params.gateway && params.gateway !== 'all') sp.set('gateway', params.gateway);
+    if (params.settlement_status && params.settlement_status !== 'all') sp.set('settlement_status', params.settlement_status);
+    if (params.start_date) sp.set('start_date', params.start_date);
+    if (params.end_date) sp.set('end_date', params.end_date);
+    if (params.min_amount !== undefined) sp.set('min_amount', String(params.min_amount));
+    if (params.max_amount !== undefined) sp.set('max_amount', String(params.max_amount));
+
+    const res = await fetch(`${API_BASE_URL}/api/admin/payments/transactions?${sp.toString()}`, {
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch transactions' }));
+      throw new Error(err.detail || 'Failed to fetch transactions');
+    }
+    return await res.json();
+  },
+
+  getAdminPaymentTransactionDetail: async (transactionId: number): Promise<PaymentTransactionItem> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/payments/transactions/${transactionId}`, {
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch transaction detail' }));
+      throw new Error(err.detail || 'Failed to fetch transaction detail');
+    }
+    return await res.json();
+  },
+
+  processAdminTransactionRefund: async (
+    transactionId: number,
+    payload: { amount: number; reason: string; admin_notes?: string }
+  ): Promise<{ success: boolean; message: string; refund_ref: string; gateway_refund_id?: string; transaction_status: string; total_refunded: number; remaining_balance: number }> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/payments/transactions/${transactionId}/refund`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to process refund' }));
+      throw new Error(err.detail || 'Failed to process refund');
+    }
+    return await res.json();
+  },
+
+  getAdminPaymentsRefunds: async (): Promise<RefundItem[]> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/payments/refunds`, {
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch refunds' }));
+      throw new Error(err.detail || 'Failed to fetch refunds');
+    }
+    return await res.json();
+  },
+
+  getAdminSettlementBatches: async (): Promise<SettlementBatchItem[]> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/payments/settlements`, {
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch settlements' }));
+      throw new Error(err.detail || 'Failed to fetch settlements');
+    }
+    return await res.json();
+  },
+
+  getAdminSettlementBatchDetail: async (batchId: number): Promise<SettlementDetailResponse> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/payments/settlements/${batchId}`, {
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch settlement detail' }));
+      throw new Error(err.detail || 'Failed to fetch settlement detail');
+    }
+    return await res.json();
+  },
+
+  uploadAdminSettlementCsv: async (file: File): Promise<SettlementBatchItem> => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch(`${API_BASE_URL}/api/admin/payments/settlements/upload`, {
+      method: 'POST',
+      credentials: 'include',
+      body: fd,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to upload settlement file' }));
+      throw new Error(err.detail || 'Failed to upload settlement file');
+    }
+    return await res.json();
+  },
+
+  reconcileAdminSettlementBatch: async (batchId: number): Promise<SettlementBatchItem> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/payments/settlements/${batchId}/reconcile`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to reconcile batch' }));
+      throw new Error(err.detail || 'Failed to reconcile batch');
+    }
+    return await res.json();
+  },
+
+  resolveAdminSettlementDiscrepancy: async (
+    entryId: number,
+    payload: { resolution_notes: string; mark_as?: string }
+  ): Promise<{ success: boolean; message: string; status: string; batch_status: string }> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/payments/settlements/entries/${entryId}/resolve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to resolve discrepancy' }));
+      throw new Error(err.detail || 'Failed to resolve discrepancy');
+    }
+    return await res.json();
+  },
+
+  getAdminTaxInvoices: async (): Promise<TaxInvoiceItem[]> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/payments/invoices`, {
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch tax invoices' }));
+      throw new Error(err.detail || 'Failed to fetch tax invoices');
+    }
+    return await res.json();
+  },
+
+  getAdminTaxInvoiceDetail: async (invoiceId: number): Promise<TaxInvoiceItem> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/payments/invoices/${invoiceId}`, {
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch tax invoice detail' }));
+      throw new Error(err.detail || 'Failed to fetch tax invoice detail');
+    }
+    return await res.json();
+  },
+
+  generateAdminTaxInvoice: async (transactionId: number): Promise<TaxInvoiceItem> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/payments/invoices/generate/${transactionId}`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to generate tax invoice' }));
+      throw new Error(err.detail || 'Failed to generate tax invoice');
+    }
+    return await res.json();
+  },
+
+  getAdminGatewayStatus: async (): Promise<GatewayConfigStatusResponse> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/payments/gateway-status`, {
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch gateway status' }));
+      throw new Error(err.detail || 'Failed to fetch gateway status');
+    }
+    return await res.json();
+  },
 };
 
 
@@ -2469,6 +2893,9 @@ export interface AdminBusinessItem {
   owner_name: string;
   phone: string;
   email?: string | null;
+  google_id?: string | null;
+  picture?: string | null;
+  is_email_verified?: boolean;
   city: string;
   state: string;
   category: string;
@@ -2613,6 +3040,9 @@ export interface SupportTicket {
   customer_name?: string | null;
   customer_phone?: string | null;
   customer_email?: string | null;
+  google_id?: string | null;
+  picture?: string | null;
+  is_email_verified?: boolean;
   subject: string;
   category: string;
   description: string;
@@ -2690,5 +3120,199 @@ export interface AdminTicketsResponse {
   total_pages: number;
 }
 
+// --- Payment & Settlement Interfaces ---
 
+export interface PaymentTransactionItem {
+  id: number;
+  transaction_ref: string;
+  shop_id?: number | null;
+  shop_name?: string;
+  owner_name?: string;
+  plan_name: string;
+  billing_cycle: string;
+  amount: number;
+  currency: string;
+  status: 'captured' | 'failed' | 'pending' | 'refunded' | 'partially_refunded' | string;
+  payment_method: string;
+  gateway: string;
+  gateway_payment_id?: string | null;
+  gateway_order_id?: string | null;
+  gateway_fee: number;
+  gateway_tax: number;
+  net_settlement: number;
+  settlement_status: 'settled' | 'pending' | 'discrepant' | string;
+  settlement_id?: string | null;
+  refunded_amount: number;
+  failure_code?: string | null;
+  failure_reason?: string | null;
+  customer_email?: string | null;
+  customer_phone?: string | null;
+  created_at: string;
+  invoice_number?: string | null;
+}
 
+export interface PaymentTransactionsListResponse {
+  total_count: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  items: PaymentTransactionItem[];
+}
+
+export interface PaymentOverviewResponse {
+  date_range: string;
+  gross_amount: number;
+  successful_amount: number;
+  failed_amount: number;
+  pending_amount: number;
+  refunds_amount: number;
+  gateway_fees_amount: number;
+  net_settlement_amount: number;
+  awaiting_settlement_amount: number;
+  total_transactions_count: number;
+  successful_count: number;
+  failed_count: number;
+  pending_count: number;
+  refunds_count: number;
+  payment_methods_breakdown: Array<{
+    method: string;
+    count: number;
+    amount: number;
+    share_pct: number;
+  }>;
+  gateways_breakdown: Array<{
+    gateway: string;
+    count: number;
+    amount: number;
+    share_pct: number;
+  }>;
+  settlement_status_breakdown: Array<{
+    status: string;
+    count: number;
+    amount: number;
+  }>;
+  daily_trends: Array<{
+    date: string;
+    label: string;
+    gross_amount: number;
+    net_settlement: number;
+    transactions_count: number;
+  }>;
+  recent_transactions: PaymentTransactionItem[];
+  discrepancy_count: number;
+  failed_alerts: Array<{
+    id: number;
+    ref: string;
+    shop_name: string;
+    amount: number;
+    method: string;
+    failure_code: string;
+    failure_reason: string;
+    created_at: string;
+  }>;
+}
+
+export interface RefundItem {
+  id: number;
+  refund_ref: string;
+  transaction_id: number;
+  transaction_ref: string;
+  shop_id?: number | null;
+  shop_name: string;
+  amount: number;
+  reason: string;
+  status: string;
+  gateway_refund_id?: string | null;
+  requested_by_admin?: string | null;
+  admin_notes?: string | null;
+  created_at: string;
+  processed_at?: string | null;
+}
+
+export interface SettlementBatchItem {
+  id: number;
+  batch_reference: string;
+  gateway: string;
+  provider_settlement_id?: string | null;
+  total_gross: number;
+  total_fee: number;
+  total_tax: number;
+  total_net: number;
+  entry_count: number;
+  matched_count: number;
+  unmatched_count: number;
+  discrepant_count: number;
+  status: 'uploaded' | 'reconciled' | 'discrepancy' | string;
+  file_name?: string | null;
+  uploaded_by?: string | null;
+  uploaded_at: string;
+  reconciled_at?: string | null;
+}
+
+export interface SettlementEntryItem {
+  id: number;
+  batch_id: number;
+  transaction_id?: number | null;
+  transaction_ref?: string | null;
+  provider_payment_id: string;
+  provider_arn_utr?: string | null;
+  gross_amount: number;
+  fee_amount: number;
+  tax_amount: number;
+  net_amount: number;
+  settlement_date?: string | null;
+  status: 'matched' | 'unmatched' | 'partially_matched' | 'discrepant' | string;
+  discrepancy_reason?: string | null;
+  resolution_notes?: string | null;
+  resolved_by?: string | null;
+  resolved_at?: string | null;
+}
+
+export interface SettlementDetailResponse {
+  batch: SettlementBatchItem;
+  entries: SettlementEntryItem[];
+}
+
+export interface TaxInvoiceItem {
+  id: number;
+  invoice_number: string;
+  transaction_id?: number | null;
+  transaction_ref?: string | null;
+  shop_id?: number | null;
+  shop_name: string;
+  customer_owner_name?: string | null;
+  customer_gstin?: string | null;
+  customer_state: string;
+  place_of_supply: string;
+  invoice_date: string;
+  supplier_legal_name: string;
+  supplier_gstin: string;
+  supplier_address: string;
+  sac_code: string;
+  description_of_service: string;
+  taxable_amount: number;
+  is_interstate: boolean;
+  supplier_state?: string;
+  cgst_rate: number;
+  cgst_amount: number;
+  sgst_rate: number;
+  sgst_amount: number;
+  igst_rate: number;
+  igst_amount: number;
+  total_invoice_amount: number;
+  status: string;
+  created_at: string;
+}
+
+export interface GatewayConfigStatusResponse {
+  gateway_name: string;
+  is_live_configured: boolean;
+  key_id_preview: string;
+  webhook_configured: boolean;
+  environment: string;
+  supported_methods: string[];
+  currency: string;
+  supplier_gstin: string;
+  supplier_state: string;
+  webhook_endpoint_url: string;
+}

@@ -48,6 +48,22 @@ def migrate_db():
                     conn.execute(text("ALTER TABLE shops ADD COLUMN admin_notes TEXT"))
                 if "subscribed_features" not in cols:
                     conn.execute(text("ALTER TABLE shops ADD COLUMN subscribed_features VARCHAR"))
+                if "google_id" not in cols:
+                    conn.execute(text("ALTER TABLE shops ADD COLUMN google_id VARCHAR"))
+                if "picture" not in cols:
+                    conn.execute(text("ALTER TABLE shops ADD COLUMN picture VARCHAR"))
+                if "hashed_password" not in cols:
+                    conn.execute(text("ALTER TABLE shops ADD COLUMN hashed_password VARCHAR"))
+                if "is_email_verified" not in cols:
+                    conn.execute(text("ALTER TABLE shops ADD COLUMN is_email_verified BOOLEAN DEFAULT 0"))
+                if "email_verification_token" not in cols:
+                    conn.execute(text("ALTER TABLE shops ADD COLUMN email_verification_token VARCHAR"))
+                if "email_verification_sent_at" not in cols:
+                    conn.execute(text("ALTER TABLE shops ADD COLUMN email_verification_sent_at DATETIME"))
+                if "password_reset_token" not in cols:
+                    conn.execute(text("ALTER TABLE shops ADD COLUMN password_reset_token VARCHAR"))
+                if "password_reset_sent_at" not in cols:
+                    conn.execute(text("ALTER TABLE shops ADD COLUMN password_reset_sent_at DATETIME"))
 
             # Ensure shop_id exists on products for per-user data isolation
             res_p = conn.execute(text("PRAGMA table_info(products)")).fetchall()
@@ -130,7 +146,6 @@ def migrate_db():
             if "utr_number" not in pt_cols:
                 conn.execute(text("ALTER TABLE payment_transactions ADD COLUMN utr_number VARCHAR"))
 
-
             # Ensure support_tickets, ticket_messages, and customer_feedback tables exist
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS support_tickets (
@@ -185,6 +200,9 @@ def migrate_db():
                     FOREIGN KEY(shop_id) REFERENCES shops(id)
                 )
             """))
+
+            # Ensure all tables in metadata are created
+            Base.metadata.create_all(bind=conn)
 
             conn.commit()
         except Exception:
