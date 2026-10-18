@@ -78,12 +78,83 @@ class OnboardingStep3Request(BaseModel):
 class OnboardingStep4Request(BaseModel):
     challenges: List[str]
 
+class GoogleAuthRequest(BaseModel):
+    credential: Optional[str] = None
+    email: Optional[str] = None
+    name: Optional[str] = None
+    picture: Optional[str] = None
+    google_id: Optional[str] = None
+    mode: Optional[str] = "login"
+
+# --- Production Auth Schemas ---
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    confirm_password: str
+    owner_name: Optional[str] = None
+    store_name: Optional[str] = None
+
+    @field_validator('email')
+    @classmethod
+    def validate_email_format(cls, v: str) -> str:
+        clean = v.strip().lower()
+        if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', clean):
+            raise ValueError('Please enter a valid email address')
+        return clean
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+    @field_validator('email')
+    @classmethod
+    def validate_email_format(cls, v: str) -> str:
+        clean = v.strip().lower()
+        if not clean or '@' not in clean:
+            raise ValueError('Please enter a valid email address')
+        return clean
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+    @field_validator('email')
+    @classmethod
+    def validate_email_format(cls, v: str) -> str:
+        clean = v.strip().lower()
+        if not clean or '@' not in clean:
+            raise ValueError('Please enter a valid email address')
+        return clean
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+    confirm_password: str
+
+class VerifyEmailRequest(BaseModel):
+    token: str
+
+class ResendVerificationRequest(BaseModel):
+    email: str
+
+class GoogleAuthUrlResponse(BaseModel):
+    url: str
+
+class GoogleCallbackRequest(BaseModel):
+    code: str
+    state: str
+
+class GoogleTokenRequest(BaseModel):
+    credential: str
+
 # --- Shop Schemas ---
 class ShopBase(BaseModel):
     name: Optional[str] = None
     owner_name: Optional[str] = None
-    phone: str
+    phone: Optional[str] = None
     email: Optional[str] = None
+    google_id: Optional[str] = None
+    picture: Optional[str] = None
+    is_email_verified: bool = False
     category: Optional[str] = None
     city: Optional[str] = None
     state: Optional[str] = None
@@ -802,20 +873,21 @@ class AdminOverviewResponse(BaseModel):
 
 class AdminBusinessItem(BaseModel):
     id: int
-    code: str
-    name: str
-    owner_name: str
-    phone: str
+    code: Optional[str] = ""
+    name: Optional[str] = "Unnamed Business"
+    owner_name: Optional[str] = "Shop Owner"
+    phone: Optional[str] = ""
     email: Optional[str] = None
-    city: str
-    state: str
-    category: str
-    status: str  # "trial" | "active" | "expired"
-    plan_name: str
+    city: Optional[str] = "Pune"
+    state: Optional[str] = "MH"
+    category: Optional[str] = "Grocery & Kirana"
+    status: Optional[str] = "trial"  # "trial" | "active" | "expired"
+    plan_name: Optional[str] = "Free Trial"
     trial_end_date: Optional[str] = None
     last_active: Optional[str] = None
     products_count: int = 0
     sales_count: int = 0
+
 
 
 class AdminBusinessesResponse(BaseModel):
@@ -967,6 +1039,175 @@ class UpdatePromoCodeRequest(BaseModel):
     validity: Optional[str] = None
     max_uses: Optional[int] = None
     active: Optional[bool] = None
+
+
+# --- Payments & Payouts Module Schemas ---
+
+class PaymentTransactionItem(BaseModel):
+    id: int
+    transaction_ref: str
+    shop_id: Optional[int] = None
+    shop_name: Optional[str] = "Unknown Store"
+    owner_name: Optional[str] = "Store Owner"
+    plan_name: str
+    billing_cycle: str
+    amount: float  # INR float converted from amount_paise
+    currency: str = "INR"
+    status: str
+    payment_method: str
+    gateway: str
+    gateway_payment_id: Optional[str] = None
+    gateway_order_id: Optional[str] = None
+    gateway_fee: float
+    gateway_tax: float
+    net_settlement: float
+    settlement_status: str
+    settlement_id: Optional[str] = None
+    refunded_amount: float
+    failure_code: Optional[str] = None
+    failure_reason: Optional[str] = None
+    customer_email: Optional[str] = None
+    customer_phone: Optional[str] = None
+    created_at: str
+    invoice_number: Optional[str] = None
+
+class PaymentTransactionsListResponse(BaseModel):
+    total_count: int
+    page: int
+    page_size: int
+    total_pages: int
+    items: List[PaymentTransactionItem]
+
+class PaymentOverviewResponse(BaseModel):
+    date_range: str
+    gross_amount: float
+    successful_amount: float
+    failed_amount: float
+    pending_amount: float
+    refunds_amount: float
+    gateway_fees_amount: float
+    net_settlement_amount: float
+    awaiting_settlement_amount: float
+    total_transactions_count: int
+    successful_count: int
+    failed_count: int
+    pending_count: int
+    refunds_count: int
+    payment_methods_breakdown: List[Dict[str, Any]]
+    gateways_breakdown: List[Dict[str, Any]]
+    settlement_status_breakdown: List[Dict[str, Any]]
+    daily_trends: List[Dict[str, Any]]
+    recent_transactions: List[PaymentTransactionItem]
+    discrepancy_count: int
+    failed_alerts: List[Dict[str, Any]]
+
+class RefundRequest(BaseModel):
+    amount: float
+    reason: str = "customer_request"
+    admin_notes: Optional[str] = None
+
+class RefundItem(BaseModel):
+    id: int
+    refund_ref: str
+    transaction_id: int
+    transaction_ref: str
+    shop_id: Optional[int] = None
+    shop_name: str
+    amount: float
+    reason: str
+    status: str
+    gateway_refund_id: Optional[str] = None
+    requested_by_admin: Optional[str] = None
+    admin_notes: Optional[str] = None
+    created_at: str
+    processed_at: Optional[str] = None
+
+class SettlementBatchItem(BaseModel):
+    id: int
+    batch_reference: str
+    gateway: str
+    provider_settlement_id: Optional[str] = None
+    total_gross: float
+    total_fee: float
+    total_tax: float
+    total_net: float
+    entry_count: int
+    matched_count: int
+    unmatched_count: int
+    discrepant_count: int
+    status: str
+    file_name: Optional[str] = None
+    uploaded_by: Optional[str] = None
+    uploaded_at: str
+    reconciled_at: Optional[str] = None
+
+class SettlementEntryItem(BaseModel):
+    id: int
+    batch_id: int
+    transaction_id: Optional[int] = None
+    transaction_ref: Optional[str] = None
+    provider_payment_id: str
+    provider_arn_utr: Optional[str] = None
+    gross_amount: float
+    fee_amount: float
+    tax_amount: float
+    net_amount: float
+    settlement_date: Optional[str] = None
+    status: str
+    discrepancy_reason: Optional[str] = None
+    resolution_notes: Optional[str] = None
+    resolved_by: Optional[str] = None
+    resolved_at: Optional[str] = None
+
+class SettlementDetailResponse(BaseModel):
+    batch: SettlementBatchItem
+    entries: List[SettlementEntryItem]
+
+class TaxInvoiceItem(BaseModel):
+    id: int
+    invoice_number: str
+    transaction_id: Optional[int] = None
+    transaction_ref: Optional[str] = None
+    shop_id: Optional[int] = None
+    shop_name: str
+    customer_owner_name: Optional[str] = None
+    customer_gstin: Optional[str] = None
+    customer_state: str
+    place_of_supply: str
+    invoice_date: str
+    supplier_legal_name: str
+    supplier_gstin: str
+    supplier_address: str
+    sac_code: str
+    description_of_service: str
+    taxable_amount: float
+    is_interstate: bool
+    cgst_rate: float
+    cgst_amount: float
+    sgst_rate: float
+    sgst_amount: float
+    igst_rate: float
+    igst_amount: float
+    total_invoice_amount: float
+    status: str
+    created_at: str
+
+class ResolveDiscrepancyRequest(BaseModel):
+    resolution_notes: str
+    mark_as: str = "resolved"  # "resolved" or "waived"
+
+class GatewayConfigStatusResponse(BaseModel):
+    gateway_name: str
+    is_live_configured: bool
+    key_id_preview: str
+    webhook_configured: bool
+    environment: str
+    supported_methods: List[str]
+    currency: str
+    supplier_gstin: str
+    supplier_state: str
+    webhook_endpoint_url: str
+
 
 
 

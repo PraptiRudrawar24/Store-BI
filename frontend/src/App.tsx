@@ -13,6 +13,9 @@ import { SalesPage } from './pages/SalesPage';
 import { ExpensesPage } from './pages/ExpensesPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { LoginPage } from './pages/LoginPage';
+import { GoogleCallbackPage } from './pages/GoogleCallbackPage';
+import { VerifyEmailPage } from './pages/VerifyEmailPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { AdminGuard } from './components/admin/AdminGuard';
 import { AdminLayout } from './components/admin/AdminLayout';
@@ -20,7 +23,9 @@ import { AdminOverviewPage } from './pages/admin/AdminOverviewPage';
 import { AdminBusinessesPage } from './pages/admin/AdminBusinessesPage';
 import { AdminBusinessDetailPage } from './pages/admin/AdminBusinessDetailPage';
 import { AdminPlansPricesPage } from './pages/admin/AdminPlansPricesPage';
+import { AdminPaymentsPage } from './pages/admin/AdminPaymentsPage';
 import { AdminPlaceholderPage } from './pages/admin/AdminPlaceholderPage';
+import { AdminConsolePage } from './pages/admin/AdminConsolePage';
 import { LandingPage } from './pages/LandingPage';
 import { PosBillingPage } from './pages/PosBillingPage';
 
@@ -97,8 +102,11 @@ export default function App() {
               <Route path="/" element={<LandingPage />} />
               <Route path="/landing" element={<LandingPage />} />
 
-              {/* Public Auth */}
+              {/* Public Auth & Recovery Routes */}
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
+              <Route path="/verify-email" element={<VerifyEmailPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
 
               {/* 4-Step Onboarding Wizard */}
               <Route path="/onboarding" element={<OnboardingGuard />} />
@@ -112,9 +120,10 @@ export default function App() {
                   <Route path="businesses/:id" element={<AdminBusinessDetailPage />} />
                   <Route path="plans" element={<AdminPlansPricesPage />} />
                   <Route path="plans-and-prices" element={<Navigate to="/admin/plans" replace />} />
-                  <Route path="payments" element={<AdminPlaceholderPage />} />
+                  <Route path="payments" element={<AdminPaymentsPage />} />
                   <Route path="reports" element={<AdminPlaceholderPage />} />
                   <Route path="settings" element={<AdminPlaceholderPage />} />
+                  <Route path="portal" element={<AdminConsolePage />} />
                 </Route>
               </Route>
 

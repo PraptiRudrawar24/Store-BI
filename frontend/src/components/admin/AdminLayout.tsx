@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Sun,
   Moon,
+  Layers,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -27,6 +28,7 @@ export function AdminLayout() {
 
   const navLinks = [
     { to: '/admin/overview', label: 'Overview', icon: LayoutDashboard },
+    { to: '/admin/portal', label: 'Operations Console (12 Modules)', icon: Layers },
     { to: '/admin/businesses', label: 'Businesses', icon: Store },
     { to: '/admin/plans', label: 'Plans and prices', icon: Tag },
     { to: '/admin/payments', label: 'Payments', icon: CreditCard },
@@ -158,9 +160,17 @@ export function AdminLayout() {
 
             {/* Admin Profile Chip */}
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-xs">
-                {user?.owner_name ? user.owner_name.charAt(0).toUpperCase() : 'A'}
-              </div>
+              {user?.picture ? (
+                <img
+                  src={user.picture}
+                  alt={user.owner_name || 'Admin'}
+                  className="w-8 h-8 rounded-full border border-border object-cover"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-xs">
+                  {user?.owner_name ? user.owner_name.charAt(0).toUpperCase() : 'A'}
+                </div>
+              )}
               <div className="hidden md:flex flex-col text-left">
                 <span className="text-xs font-bold text-text-high leading-tight">
                   {user?.owner_name || 'Operations Lead'}

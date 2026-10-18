@@ -8,6 +8,7 @@ import {
   LogOut,
   Settings,
   Receipt,
+  ShieldCheck,
 } from 'lucide-react';
 import { cn } from '../ui/utils';
 import { Badge } from '../ui/Badge';
@@ -26,6 +27,7 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
     { to: '/upload', label: 'Data upload', icon: Upload },
     { to: '/analytics', label: 'Analytics', icon: BarChart3 },
     { to: '/insights', label: 'AI insight', icon: Sparkles },
+    ...(user?.is_admin ? [{ to: '/admin', label: 'Admin portal', icon: ShieldCheck }] : []),
   ];
 
   const trialDays = user?.trial_days_left ?? 5;
@@ -98,15 +100,23 @@ export function Sidebar({ onCloseMobile }: SidebarProps) {
         {/* Store Profile & Quick Actions */}
         <div className="px-3 py-2 rounded-[6px] bg-surface dark:bg-surface-low border border-border flex items-center justify-between">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-7 h-7 rounded-[6px] bg-canvas dark:bg-surface border border-border flex items-center justify-center shrink-0">
-              <Store className="w-4 h-4 text-text-medium" strokeWidth={2} />
-            </div>
+            {user?.picture ? (
+              <img
+                src={user.picture}
+                alt={user.owner_name || 'Avatar'}
+                className="w-7 h-7 rounded-[6px] border border-border object-cover shrink-0"
+              />
+            ) : (
+              <div className="w-7 h-7 rounded-[6px] bg-canvas dark:bg-surface border border-border flex items-center justify-center shrink-0">
+                <Store className="w-4 h-4 text-text-medium" strokeWidth={2} />
+              </div>
+            )}
             <div className="flex flex-col min-w-0">
               <span className="text-xs font-semibold text-text-high truncate">
                 {user?.owner_name || 'Store owner'}
               </span>
-              <span className="text-[11px] text-text-medium truncate">
-                +91 {user?.phone || '0000000000'}
+              <span className="text-[11px] text-text-medium truncate font-mono">
+                {user?.email || (user?.phone ? `+91 ${user.phone}` : 'Store BI Merchant')}
               </span>
             </div>
           </div>

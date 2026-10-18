@@ -162,3 +162,67 @@ def test_onboarding_four_steps_flow():
     # After logout, /auth/me should fail
     unauthed_res = client.get("/auth/me")
     assert unauthed_res.status_code == 401
+
+def test_google_auth_signup_new_user():
+    client = TestClient(app)
+    response = client.post("/auth/google", json={
+        "email": "newowner@gmail.com",
+        "name": "Suresh Raina",
+        "google_id": "gid_98765",
+        "picture": "https://lh3.googleusercontent.com/a/sample_avatar",
+        "mode": "signup",
+    })
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["is_new_user"] is True
+    assert data["onboarding_completed"] is False
+    assert data["onboarding_step"] == 1
+    assert data["shop"]["email"] == "newowner@gmail.com"
+    assert data["shop"]["owner_name"] == "Suresh Raina"
+    assert data["shop"]["trial_days_left"] == 5
+    assert "store_bi_session" in response.cookies
+
+    # Verify session via /auth/me
+    me_res = client.get("/auth/me")
+    assert me_res.status_code == 200
+    assert me_res.json()["email"] == "newowner@gmail.com"
+
+def test_google_auth_login_existing_user():
+    client = TestClient(app)
+    # First sign up
+    res1 = client.post("/auth/google", json={
+        "email": "returning@storebi.com",
+        "name": "Kavita Rao",
+        "google_id": "gid_55555",
+        "mode": "signup",
+    })
+    assert res1.status_code == 200
+    assert res1.json()["is_new_user"] is True
+
+    # Second login
+    res2 = client.post("/auth/google", json={
+        "email": "returning@storebi.com",
+        "google_id": "gid_55555",
+        "mode": "login",
+    })
+    assert res2.status_code == 200
+    assert res2.json()["is_new_user"] is False
+    assert res2.json()["shop"]["email"] == "returning@storebi.com"
+
+def test_google_auth_admin_role():
+    client = TestClient(app)
+    res = client.post("/auth/google", json={
+        "email": "admin@storebi.com",
+        "name": "Platform Admin",
+        "google_id": "gid_admin_01",
+        "mode": "login",
+    })
+    assert res.status_code == 200
+    assert res.json()["shop"]["is_admin"] is True
+
+def test_google_auth_missing_email():
+    client = TestClient(app)
+    res = client.post("/auth/google", json={})
+    assert res.status_code == 400
+

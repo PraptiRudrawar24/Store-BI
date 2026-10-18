@@ -163,3 +163,63 @@ Verify TypeScript compilation and Vite production bundle:
 cd frontend
 npm run build
 ```
+
+---
+
+## Payments & Payouts Module (v2.5)
+
+Store BI features a production-grade, audit-compliant financial subsystem in the Super Admin Operations Portal (`/admin/payments`).
+
+### 1. Architectural Model
+Store BI operates as a multi-tenant B2B SaaS platform charging kirana and retail shops for software subscriptions and wholesale OCR quotas. Payments collected are Store BI's operational revenues.
+- **Integer Paise Arithmetic**: All monetary quantities are stored and computed in integer paise (`1 INR = 100 paise`), preventing floating-point precision drift and reconciliation rounding errors.
+- **Dynamic GST Invoicing**: B2B Tax Invoices adhere strictly to Indian GST laws (SAC code `998314` - IT Software Services). The engine automatically determines intra-state (CGST 9% + SGST 9%) vs. inter-state (IGST 18%) taxes based on customer place of supply vs. supplier GST state code.
+- **Reconciliation Engine**: Ingests multi-provider bank settlement CSVs, detects duplicate uploads, auto-matches internal transactions within a 50-paise tolerance, detects fee/tax anomalies, categorizes discrepancies, and records admin audit resolution notes.
+- **Refund Protection**: Enforces server-side refundable balance limits ($R \le \text{Gross} - \text{Refunded}$), assigns unique idempotency keys (`ref_<txn_id>_<paise>_<timestamp>`), and requires verified provider callbacks.
+
+### 2. Required Environment Variables
+Add the following keys to `backend/.env` for live payment processing:
+
+```env
+# Razorpay Payment Gateway Configuration
+RAZORPAY_KEY_ID=rzp_live_your_key_id
+RAZORPAY_KEY_SECRET=your_razorpay_secret_key
+RAZORPAY_WEBHOOK_SECRET=your_webhook_hmac_secret
+
+# Store BI Legal & GST Tax Invoicing Configuration
+SUPPLIER_LEGAL_NAME=Madhura Prapti Technologies Private Limited
+SUPPLIER_GSTIN=27AAACM1234F1Z5
+SUPPLIER_STATE=Maharashtra
+SUPPLIER_ADDRESS=Store BI Tech Park, Hinjewadi Phase 1, Pune, Maharashtra 411057
+```
+
+> **Safe Read-Only Fallback**: If `RAZORPAY_KEY_ID` or `RAZORPAY_KEY_SECRET` are omitted, Store BI runs in safe audit/read-only mode, showing explicit "Setup Required" notifications without simulating phantom transactions.
+
+### 3. Database Schema & Migrations
+Database tables are automatically created on backend startup via `backend/database.py`:
+- `payment_transactions`: Internal ledger of gross payments, payment method, gateway fees, taxes on fees, net amounts, and payment status (`success`, `failed`, `pending`, `refunded`, `partially_refunded`).
+- `payment_refunds`: Authorized refund requests, provider references, refund reasons, and admin approval logs.
+- `settlement_batches`: Bank UTR settlement files, upload timestamps, batch totals, and match counts.
+- `settlement_entries`: Individual row items from gateway settlements mapped to internal transactions with discrepancy flags.
+- `tax_invoices`: Sequential B2B GST tax invoices (`SBI-YYYY-XXXX`) and credit notes.
+- `webhook_events`: Idempotent audit store for raw webhook payloads, signatures, and processing status.
+
+### 4. Razorpay Webhook Configuration
+In your [Razorpay Dashboard](https://dashboard.razorpay.com/app/webhooks):
+1. Navigate to **Settings** → **Webhooks** → **Add New Webhook**.
+2. **Webhook URL**: `https://<your-storebi-domain>/api/webhooks/razorpay`
+3. **Secret**: Enter the value configured in `RAZORPAY_WEBHOOK_SECRET`.
+4. **Active Events**:
+   - `payment.captured`
+   - `payment.failed`
+   - `refund.processed`
+   - `settlement.processed`
+
+### 5. Running Payment Test Suite
+Execute the dedicated 9-point unit and integration test suite:
+
+```bash
+cd backend
+.\venv\Scripts\python.exe -m pytest test_payments.py -v
+```
+Tests assert integer paise calculations, intra/inter-state GST math, settlement CSV matching, duplicate upload rejection, refund balance boundary validation, HMAC webhook signature verification, webhook duplicate suppression, and merchant RBAC isolation.

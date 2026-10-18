@@ -134,9 +134,17 @@ export function Header() {
             aria-haspopup="true"
           >
             {/* Store / Owner Avatar */}
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-xs shrink-0 select-none">
-              {(user?.owner_name || user?.name || 'S')[0].toUpperCase()}
-            </div>
+            {user?.picture ? (
+              <img
+                src={user.picture}
+                alt={user.owner_name || 'Owner avatar'}
+                className="w-8 h-8 rounded-full border border-border object-cover shrink-0 select-none"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-xs shrink-0 select-none">
+                {(user?.owner_name || user?.name || user?.email || 'S')[0].toUpperCase()}
+              </div>
+            )}
             <div className="hidden sm:flex flex-col min-w-0">
               <span className="text-xs font-semibold text-text-high leading-tight truncate max-w-[130px]">
                 {user?.owner_name || 'Store owner'}
@@ -158,8 +166,8 @@ export function Header() {
                 <p className="text-xs font-bold text-text-high truncate">
                   {user?.name || 'My store'}
                 </p>
-                <p className="text-[11px] text-text-medium truncate">
-                  +91 {user?.phone || '0000000000'}
+                <p className="text-[11px] text-text-medium truncate font-mono">
+                  {user?.email || (user?.phone ? `+91 ${user.phone}` : 'Store BI Merchant')}
                 </p>
               </div>
 

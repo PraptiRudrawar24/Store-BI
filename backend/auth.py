@@ -108,7 +108,7 @@ def get_current_shop(request: Request, db: Session = Depends(get_db)) -> models.
     if not shop:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required. Please log in with your mobile number.",
+            detail="Authentication required. Please sign in with your Google account.",
         )
     return shop
 

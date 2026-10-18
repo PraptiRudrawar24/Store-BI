@@ -131,9 +131,15 @@ export function OnboardingPage() {
           setSubmitting(false);
           return;
         }
+        const cleanPhone = phone.trim().replace(/\D/g, '');
+        if (cleanPhone && cleanPhone.length !== 10) {
+          toast.error('Mobile number must be 10 digits if provided');
+          setSubmitting(false);
+          return;
+        }
         await saveStep(1, {
           owner_name: ownerName.trim(),
-          phone: phone.trim(),
+          phone: cleanPhone || undefined,
           email: email.trim() || undefined,
           language,
         });
@@ -312,6 +318,31 @@ export function OnboardingPage() {
               {/* STEP 1: Owner and Contact */}
               {step === 1 && (
                 <div className="flex flex-col gap-4">
+                  {user?.email && (
+                    <div className="p-3 rounded-[8px] bg-canvas border border-border flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        {user.picture ? (
+                          <img
+                            src={user.picture}
+                            alt={user.owner_name || 'Google avatar'}
+                            className="w-8 h-8 rounded-full border border-border object-cover"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-xs flex items-center justify-center">
+                            {(user.owner_name || user.email)[0].toUpperCase()}
+                          </div>
+                        )}
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-text-high flex items-center gap-1.5">
+                            Connected via Google
+                            <Badge variant="success" className="text-[9px] py-0 px-1">Verified</Badge>
+                          </span>
+                          <span className="text-[11px] text-text-medium font-mono">{user.email}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <Input
                     label="Owner full name"
                     placeholder="e.g. Ramesh Patel"
@@ -322,15 +353,14 @@ export function OnboardingPage() {
                   />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Input
-                      label="Mobile / WhatsApp number"
-                      placeholder="10-digit number"
+                      label="Mobile / WhatsApp number (Optional)"
+                      placeholder="10-digit number for SMS alerts"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                       prefixLabel="+91"
-                      required
                     />
                     <Input
-                      label="Email address (optional)"
+                      label="Email address"
                       type="email"
                       placeholder="owner@store.in"
                       value={email}

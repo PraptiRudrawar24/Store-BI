@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Store BI — Platform Operations Admin Panel</title>
+  <meta name="description" content="Centralized multi-tenant operations, billing, and stock analytics portal for Store BI retail merchants across India.">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230B5D4B'><path d='M20 4H4v2h16V4zm1 10v-2l-1-5H4l-1 5v2h1v6h10v-6h4v6h2v-6h1zm-9 4H6v-4h6v4z'/></svg>">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+  <div id="app-shell">
+    <!-- Left Navigation Sidebar -->
+    <aside class="sidebar" id="main-sidebar">
+      <!-- Sidebar Header -->
+      <div class="sidebar-header">
+        <div class="logo-badge">
+          <span class="material-symbols-outlined" style="font-size: 20px;">storefront</span>
+        </div>
+        <div class="logo-text">
+          <span class="logo-title">Store BI</span>
+          <span class="logo-sub">Operations Portal</span>
+        </div>
+      </div>
+
+      <!-- Navigation Menu -->
+      <nav class="sidebar-nav">
+        <div class="sidebar-section-title">Overview</div>
+        <a class="nav-item active" data-module="dashboard" onclick="StoreBI_App.navigateTo('dashboard')">
+          <span class="material-symbols-outlined nav-icon">grid_view</span>
+          <span class="nav-label">Dashboard</span>
+        </a>
+        <a class="nav-item" data-module="shops" onclick="StoreBI_App.navigateTo('shops')">
+          <span class="material-symbols-outlined nav-icon">storefront</span>
+          <span class="nav-label">Tenant Shops</span>
+          <span class="badge-count">28</span>
+        </a>
+        <a class="nav-item" data-module="subscriptions" onclick="StoreBI_App.navigateTo('subscriptions')">
+          <span class="material-symbols-outlined nav-icon">sell</span>
+          <span class="nav-label">Subscriptions & Rev</span>
+        </a>
+        <a class="nav-item" href="http://localhost:5173/admin/payments" target="_blank" title="Open complete Payments & Payouts engine in React portal">
+          <span class="material-symbols-outlined nav-icon">payments</span>
+          <span class="nav-label">Payments & Payouts</span>
+          <span class="badge-count" style="background: var(--mint-bg); color: var(--mint-text);">v2.5 Live</span>
+        </a>
+
+        <div class="sidebar-section-title">Operations & Monitoring</div>
+        <a class="nav-item" data-module="pos-monitoring" onclick="StoreBI_App.navigateTo('pos-monitoring')">
+          <span class="material-symbols-outlined nav-icon">receipt_long</span>
+          <span class="nav-label">POS & Billing</span>
+          <span class="badge-count" style="background: var(--amber-bg); color: var(--amber-text);">3</span>
+        </a>
+        <a class="nav-item" data-module="ocr-queue" onclick="StoreBI_App.navigateTo('ocr-queue')">
+          <span class="material-symbols-outlined nav-icon">document_scanner</span>
+          <span class="nav-label">AI Invoice OCR</span>
+        </a>
+        <a class="nav-item" data-module="analytics" onclick="StoreBI_App.navigateTo('analytics')">
+          <span class="material-symbols-outlined nav-icon">analytics</span>
+          <span class="nav-label">Product Analytics</span>
+        </a>
+        <a class="nav-item" data-module="ai-insights" onclick="StoreBI_App.navigateTo('ai-insights')">
+          <span class="material-symbols-outlined nav-icon">psychology</span>
+          <span class="nav-label">AI Insights & Cost</span>
+        </a>
+
+        <div class="sidebar-section-title">Engagement & Support</div>
+        <a class="nav-item" data-module="support" onclick="StoreBI_App.navigateTo('support')">
+          <span class="material-symbols-outlined nav-icon">support_agent</span>
+          <span class="nav-label">Support & Feedback</span>
+          <span class="badge-count" style="background: var(--mint-bg); color: var(--mint-text);">4</span>
+        </a>
+        <a class="nav-item" data-module="communication" onclick="StoreBI_App.navigateTo('communication')">
+          <span class="material-symbols-outlined nav-icon">campaign</span>
+          <span class="nav-label">Broadcasts</span>
+        </a>
+
+        <div class="sidebar-section-title">Platform Management</div>
+        <a class="nav-item" data-module="config" onclick="StoreBI_App.navigateTo('config')">
+          <span class="material-symbols-outlined nav-icon">tune</span>
+          <span class="nav-label">Config & Catalogs</span>
+        </a>
+        <a class="nav-item" data-module="system-health" onclick="StoreBI_App.navigateTo('system-health')">
+          <span class="material-symbols-outlined nav-icon">policy</span>
+          <span class="nav-label">System Health & Logs</span>
+        </a>
+        <a class="nav-item" data-module="admin-users" onclick="StoreBI_App.navigateTo('admin-users')">
+          <span class="material-symbols-outlined nav-icon">admin_panel_settings</span>
+          <span class="nav-label">Admin Users & DPDP</span>
+        </a>
+      </nav>
+
+      <!-- Sidebar Footer -->
+      <div class="sidebar-footer">
+        <div class="system-status-pill">
+          <div style="display: flex; align-items: center;">
+            <span class="status-dot-pulse"></span>
+            <span>Production v2.4</span>
+          </div>
+          <span class="font-mono" style="font-size: 11px; font-weight: 600;">99.98%</span>
+        </div>
+
+        <div class="user-profile-card" onclick="StoreBI_App.navigateTo('admin-users')">
+          <div class="avatar-initials">OL</div>
+          <div class="user-info">
+            <div class="user-name">Operations Lead</div>
+            <div class="user-role-badge">Super Admin</div>
+          </div>
+          <span class="material-symbols-outlined" style="font-size: 18px; color: var(--text-muted);">settings</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Wrapper -->
+    <div class="main-wrapper">
+      <!-- Sticky Top Bar -->
+      <header class="topbar">
+        <!-- Global Search Trigger -->
+        <div class="topbar-left">
+          <button class="global-search-btn" id="topbar-search-trigger">
+            <div class="search-placeholder">
+              <span class="material-symbols-outlined" style="font-size: 18px;">search</span>
+              <span>Search stores, GSTIN, owners, phones...</span>
+            </div>
+            <kbd class="kbd-shortcut">⌘K</kbd>
+          </button>
+        </div>
+
+        <!-- Topbar Controls -->
+        <div class="topbar-right">
+          <!-- Time Range Selector -->
+          <div class="segmented-control">
+            <button class="segmented-btn" data-range="today" onclick="StoreBI_App.setTimeRange('today')">Today</button>
+            <button class="segmented-btn" data-range="7d" onclick="StoreBI_App.setTimeRange('7d')">7 days</button>
+            <button class="segmented-btn active" data-range="30d" onclick="StoreBI_App.setTimeRange('30d')">30 days</button>
+          </div>
+
+          <!-- Theme Toggle (Light / Dark) -->
+          <button class="btn-icon" id="theme-toggle-btn" onclick="StoreBI_App.toggleTheme()" title="Toggle Dark/Light Mode">
+            <span class="material-symbols-outlined" id="theme-toggle-icon">dark_mode</span>
+          </button>
+
+          <!-- Notifications Bell -->
+          <button class="btn-icon" onclick="StoreBI_App.toggleNotifications()" title="System Alerts & Notifications">
+            <span class="material-symbols-outlined">notifications</span>
+            <span class="notification-badge" id="notification-count-badge"></span>
+          </button>
+
+          <!-- Divider -->
+          <div style="height: 20px; width: 1px; background: var(--border);"></div>
+
+          <!-- Profile Badge -->
+          <div style="display: flex; align-items: center; gap: 8px; cursor: pointer;" onclick="StoreBI_App.navigateTo('admin-users')">
+            <div class="avatar-initials" style="width: 28px; height: 28px; font-size: 11px;">OL</div>
+            <span style="font-size: 13px; font-weight: 600;" class="user-display-name">admin@storebi.com</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Active Module Viewport -->
+      <main id="module-viewport">
+        <!-- Rendered by app.js -->
+      </main>
+    </div>
+  </div>
+
+  <!-- Shop Detail Slide-Over Drawer -->
+  <div class="drawer-backdrop" id="shop-drawer-backdrop" onclick="if(event.target === this) StoreBI_App.closeShopDrawer()">
+    <div class="drawer-container">
+      <div class="drawer-header">
+        <div>
+          <h2 style="font-size: 18px; font-weight: 700; color: var(--text-high);" id="drawer-shop-title">Store Details</h2>
+          <span style="font-size: 12px; color: var(--text-muted);">Tenant Configuration & Usage History</span>
+        </div>
+        <button class="btn-icon" onclick="StoreBI_App.closeShopDrawer()">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="drawer-body" id="drawer-shop-body">
+        <!-- Populated dynamically by openShopDrawer() -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Quick Search Modal (⌘K) -->
+  <div class="modal-backdrop" id="search-modal-backdrop" onclick="if(event.target === this) StoreBI_App.closeGlobalSearch()">
+    <div class="modal-box search-modal-box">
+      <div class="search-input-wrapper">
+        <span class="material-symbols-outlined">search</span>
+        <input type="text" id="global-search-input" class="search-input-main" placeholder="Search by store name, owner, phone (+91), city, or module..." autocomplete="off">
+        <kbd class="kbd-shortcut" style="cursor: pointer;" onclick="StoreBI_App.closeGlobalSearch()">ESC</kbd>
+      </div>
+      <div class="search-results-list" id="search-results-list">
+        <!-- Search suggestions and matched items -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Generic Action Modal (Confirmations, Plan Config, Invoices) -->
+  <div class="modal-backdrop" id="generic-modal-backdrop" onclick="if(event.target === this) StoreBI_App.closeModal()">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title" id="generic-modal-title">Modal Title</h3>
+        <button class="btn-icon" onclick="StoreBI_App.closeModal()">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="modal-body" id="generic-modal-body">
+        <!-- Dynamic Body Content -->
+      </div>
+      <div class="modal-footer" id="generic-modal-footer">
+        <!-- Dynamic Action Buttons -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Alert Container -->
+  <div id="toast-container"></div>
+
+  <!-- Core Scripts -->
+  <script src="data/mockData.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
