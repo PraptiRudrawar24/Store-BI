@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { cn } from './utils';
-import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Info, AlertTriangle, X } from 'lucide-react';
 
-export type ToastType = 'success' | 'error' | 'info';
+export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
 export interface ToastItem {
   id: string;
@@ -16,6 +16,7 @@ interface ToastContextType {
   success: (message: string, description?: string) => void;
   error: (message: string, description?: string) => void;
   info: (message: string, description?: string) => void;
+  warning: (message: string, description?: string) => void;
 }
 
 const ToastContext = React.createContext<ToastContextType | undefined>(undefined);
@@ -33,7 +34,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       setToasts((prev) => [...prev, { id, type, message, description }]);
       setTimeout(() => {
         removeToast(id);
-      }, 4000);
+      }, 5000);
     },
     [removeToast]
   );
@@ -50,9 +51,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     (message: string, description?: string) => showToast(message, 'info', description),
     [showToast]
   );
+  const warning = React.useCallback(
+    (message: string, description?: string) => showToast(message, 'warning', description),
+    [showToast]
+  );
 
   return (
-    <ToastContext.Provider value={{ showToast, success, error, info }}>
+    <ToastContext.Provider value={{ showToast, success, error, info, warning }}>
       {children}
       <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full px-4 pointer-events-none">
         {toasts.map((t) => (
@@ -63,6 +68,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               'pointer-events-auto flex items-start gap-3 p-3.5 bg-surface border border-border shadow-raised rounded-[8px] transition-all',
               t.type === 'success' && 'border-success-border',
               t.type === 'error' && 'border-destructive-border',
+              t.type === 'warning' && 'border-amber-500/50 bg-amber-500/5 dark:bg-amber-950/20',
               t.type === 'info' && 'border-border'
             )}
           >
@@ -72,6 +78,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               )}
               {t.type === 'error' && (
                 <AlertCircle className="w-5 h-5 text-destructive" strokeWidth={2} />
+              )}
+              {t.type === 'warning' && (
+                <AlertTriangle className="w-5 h-5 text-amber-500" strokeWidth={2} />
               )}
               {t.type === 'info' && <Info className="w-5 h-5 text-primary" strokeWidth={2} />}
             </div>

@@ -16,19 +16,43 @@ import {
   Moon,
   Headset,
   Layers,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Button } from '../ui/Button';
+import { api } from '../../api/client';
 
 export function AdminLayout() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [globalSearch, setGlobalSearch] = React.useState('');
+  const [pendingRequestsCount, setPendingRequestsCount] = React.useState<number>(0);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    const fetchPendingCount = async () => {
+      try {
+        const res = await api.getAdminSubscriptionRequests({ status: 'pending_review', page: 1, page_size: 1 });
+        if (isMounted && res?.counts) {
+          setPendingRequestsCount(res.counts.pending || 0);
+        }
+      } catch {
+        // silent fail
+      }
+    };
+    fetchPendingCount();
+    const interval = setInterval(fetchPendingCount, 30000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   const navLinks = [
     { to: '/admin/overview', label: 'Overview', icon: LayoutDashboard },
+    { to: '/admin/subscription-requests', label: 'Subscription Requests', icon: ShieldCheck, badge: pendingRequestsCount },
     { to: '/admin/portal', label: 'Operations Console (12 Modules)', icon: Layers },
     { to: '/admin/businesses', label: 'Businesses', icon: Store },
     { to: '/admin/support', label: 'Support & Tickets', icon: Headset },
@@ -69,15 +93,28 @@ export function AdminLayout() {
                   key={item.to}
                   to={item.to}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-3.5 py-2.5 rounded-[8px] text-xs font-semibold transition-colors ${
+                    `flex items-center justify-between px-3.5 py-2.5 rounded-[8px] text-xs font-semibold transition-colors ${
                       isActive
                         ? 'bg-primary text-white'
                         : 'text-text-medium hover:bg-canvas hover:text-text-high'
                     }`
                   }
                 >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  <span>{item.label}</span>
+                  <div className="flex items-center gap-3">
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span>{item.label}</span>
+                  </div>
+                  {item.badge !== undefined && item.badge > 0 && (
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                        item.to === '/admin/subscription-requests'
+                          ? 'bg-amber-500 text-white animate-pulse'
+                          : 'bg-primary/20 text-primary'
+                      }`}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
                 </NavLink>
               );
             })}

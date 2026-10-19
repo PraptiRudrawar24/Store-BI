@@ -30,6 +30,7 @@ interface DockContextType {
   mouseX: MotionValue<number>;
   mouseY: MotionValue<number>;
   orientation: 'horizontal' | 'vertical';
+  isCollapsed: boolean;
   distance: number;
   magnification: number;
   baseItemSize: number;
@@ -38,7 +39,7 @@ interface DockContextType {
 
 const DockContext = createContext<DockContextType | null>(null);
 
-function useDock() {
+export function useDock() {
   const context = useContext(DockContext);
   if (!context) {
     throw new Error('Dock sub-components must be rendered within a <Dock /> provider');
@@ -54,12 +55,13 @@ interface DockItemContextType {
   isHovered: boolean;
   isActive: boolean;
   orientation: 'horizontal' | 'vertical';
+  isCollapsed: boolean;
   scale: MotionValue<number>;
 }
 
 const DockItemContext = createContext<DockItemContextType | null>(null);
 
-function useDockItem() {
+export function useDockItem() {
   return useContext(DockItemContext);
 }
 
@@ -74,6 +76,7 @@ export interface DockProps {
   magnification?: number;
   baseItemSize?: number;
   orientation?: 'horizontal' | 'vertical';
+  isCollapsed?: boolean;
   spring?: SpringOptions;
   as?: React.ElementType;
   id?: string;
@@ -84,11 +87,12 @@ export interface DockProps {
 export function Dock({
   children,
   className,
-  distance = 120,
-  magnification = 54,
+  distance = 110,
+  magnification = 68,
   baseItemSize = 44,
-  orientation = 'horizontal',
-  spring = { mass: 0.1, stiffness: 160, damping: 14 },
+  orientation = 'vertical',
+  isCollapsed = true,
+  spring = { mass: 0.1, stiffness: 240, damping: 18 },
   as: Component = 'div',
   ...props
 }: DockProps) {
@@ -110,12 +114,13 @@ export function Dock({
       mouseX,
       mouseY,
       orientation,
+      isCollapsed,
       distance,
       magnification,
       baseItemSize,
       spring,
     }),
-    [orientation, distance, magnification, baseItemSize, spring]
+    [orientation, isCollapsed, distance, magnification, baseItemSize, spring]
   );
 
   return (
@@ -124,9 +129,9 @@ export function Dock({
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
         className={cn(
-          'flex select-none',
+          'flex select-none overflow-visible',
           orientation === 'vertical'
-            ? 'flex-col w-full gap-1'
+            ? 'flex-col w-full gap-2.5 items-center'
             : 'flex-row items-end gap-3',
           className
         )}
@@ -168,17 +173,15 @@ export function DockItem({
   id,
   style,
 }: DockItemProps) {
-  const { mouseX, mouseY, orientation, distance, magnification, baseItemSize, spring } = useDock();
+  const { mouseX, mouseY, orientation, isCollapsed, distance, magnification, baseItemSize, spring } = useDock();
   const ref = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
   // Static fallback values when reduced motion is requested
   const staticScale = useMotionValue(1);
-  const staticX = useMotionValue(0);
-  const staticSize = useMotionValue(baseItemSize);
 
-  // Calculate distance from cursor to item center along primary axis
+  // Distance from cursor along primary axis
   const mouseDistance = useTransform(
     orientation === 'vertical' ? mouseY : mouseX,
     (val) => {
@@ -191,35 +194,28 @@ export function DockItem({
     }
   );
 
-  // Smooth spring magnification calculation
+  // macOS Dock-style bell-curve magnification wave (matches reference image)
+  const maxScale = Math.max(1.52, magnification / baseItemSize);
   const targetScale = useTransform(
     mouseDistance,
-    [-distance, 0, distance],
-    [1, Math.min(1.2, magnification / baseItemSize), 1]
+    [
+      -distance,
+      -distance * 0.65,
+      -distance * 0.35,
+      0,
+      distance * 0.35,
+      distance * 0.65,
+      distance,
+    ],
+    [1, 1.10, 1.28, maxScale, 1.28, 1.10, 1]
   );
-
   const springScale = useSpring(targetScale, spring);
   const scale = prefersReducedMotion ? staticScale : springScale;
 
-  // Subtle horizontal rail slide on vertical hover (4px nudge to the right)
-  const targetX = useTransform(
-    mouseDistance,
-    [-distance, 0, distance],
-    [0, 4, 0]
-  );
-  const springX = useSpring(targetX, spring);
-  const smoothX = prefersReducedMotion ? staticX : springX;
+  // Layering: elevate magnified items above neighbors
+  const zIndex = useTransform(scale, [1, 1.1, 1.25], [1, 10, 30]);
 
-  // Horizontal dimension magnification for horizontal docks
-  const targetSize = useTransform(
-    mouseDistance,
-    [-distance, 0, distance],
-    [baseItemSize, magnification, baseItemSize]
-  );
-  const springSize = useSpring(targetSize, spring);
-  const size = prefersReducedMotion ? staticSize : springSize;
-
-  // If a route destination `to` is provided, wrap with react-router-dom NavLink
+  // Render navigation item using react-router-dom NavLink if `to` is provided
   if (to) {
     return (
       <NavLink
@@ -227,8 +223,8 @@ export function DockItem({
         onClick={onClick}
         aria-label={ariaLabel}
         className={cn(
-          'block w-full outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-[8px] no-underline',
-          orientation === 'vertical' ? 'my-0.5' : ''
+          'block outline-none focus-visible:ring-2 focus-visible:ring-[#00665F] rounded-xl no-underline overflow-visible w-full',
+          className
         )}
       >
         {({ isActive: navActive }) => {
@@ -239,41 +235,22 @@ export function DockItem({
                 isHovered,
                 isActive: effectiveActive,
                 orientation,
+                isCollapsed,
                 scale,
               }}
             >
               <motion.div
                 ref={ref}
                 id={id}
-                style={
-                  orientation === 'vertical'
-                    ? { x: smoothX, ...style }
-                    : { width: size, height: size, ...style }
-                }
+                style={{ zIndex, ...style }}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
                 onFocus={() => setIsHovered(true)}
                 onBlur={() => setIsHovered(false)}
-                className={cn(
-                  orientation === 'vertical'
-                    ? 'group relative flex items-center w-full min-h-[48px] h-12 px-3.5 rounded-[8px] cursor-pointer outline-none transition-colors duration-150'
-                    : 'group relative flex items-center justify-center rounded-full cursor-pointer outline-none transition-colors',
-                  effectiveActive
-                    ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                    : 'text-text-medium hover:text-text-high hover:bg-canvas dark:hover:bg-surface-high',
-                  className
-                )}
+                className="group relative flex flex-col items-center justify-center cursor-pointer outline-none transition-colors duration-150 overflow-visible w-full py-1"
                 role="link"
                 aria-current={effectiveActive ? 'page' : undefined}
               >
-                {/* Active indicator bar on the left */}
-                {orientation === 'vertical' && effectiveActive && (
-                  <motion.span
-                    layoutId="active-nav-indicator"
-                    className="absolute left-1.5 top-2.5 bottom-2.5 w-1 rounded-full bg-primary-light"
-                    transition={{ type: 'spring', bounce: 0.2, duration: 0.35 }}
-                  />
-                )}
                 {children}
               </motion.div>
             </DockItemContext.Provider>
@@ -283,7 +260,7 @@ export function DockItem({
     );
   }
 
-  // Fallback for non-routing DockItems (e.g. standalone buttons, custom triggers)
+  // Fallback for non-routing DockItems (buttons, modal triggers, logout, toggle)
   const effectiveActive = isActive ?? false;
   return (
     <DockItemContext.Provider
@@ -291,43 +268,25 @@ export function DockItem({
         isHovered,
         isActive: effectiveActive,
         orientation,
+        isCollapsed,
         scale,
       }}
     >
       <motion.div
         ref={ref}
         id={id}
-        style={
-          orientation === 'vertical'
-            ? { x: smoothX, ...style }
-            : { width: size, height: size, ...style }
-        }
+        style={{ zIndex, ...style }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         onFocus={() => setIsHovered(true)}
         onBlur={() => setIsHovered(false)}
         onClick={onClick}
-        className={cn(
-          orientation === 'vertical'
-            ? 'group relative flex items-center w-full min-h-[48px] h-12 px-3.5 rounded-[8px] cursor-pointer outline-none transition-colors duration-150'
-            : 'group relative flex items-center justify-center rounded-full cursor-pointer outline-none transition-colors',
-          effectiveActive
-            ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-            : 'text-text-medium hover:text-text-high hover:bg-canvas dark:hover:bg-surface-high',
-          className
-        )}
+        className="group relative flex flex-col items-center justify-center cursor-pointer outline-none transition-colors duration-150 overflow-visible w-full py-1"
         tabIndex={tabIndex ?? 0}
         role={role ?? 'button'}
         aria-pressed={effectiveActive}
         aria-label={ariaLabel}
       >
-        {orientation === 'vertical' && effectiveActive && (
-          <motion.span
-            layoutId="active-nav-indicator"
-            className="absolute left-1.5 top-2.5 bottom-2.5 w-1 rounded-full bg-primary-light"
-            transition={{ type: 'spring', bounce: 0.2, duration: 0.35 }}
-          />
-        )}
         {children}
       </motion.div>
     </DockItemContext.Provider>
@@ -345,17 +304,16 @@ export interface DockIconProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export function DockIcon({ children, className, ...props }: DockIconProps) {
   const itemContext = useDockItem();
-  const isVertical = itemContext?.orientation === 'vertical';
+  const scale = itemContext?.scale;
 
   return (
     <motion.div
-      style={itemContext?.scale ? { scale: itemContext.scale } : undefined}
+      style={scale ? { scale } : undefined}
       className={cn(
-        'flex items-center justify-center shrink-0 w-6 h-6 transition-colors duration-150',
-        isVertical ? 'mr-3' : '',
+        'w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-colors duration-150 relative shadow-xs',
         itemContext?.isActive
-          ? 'text-primary-foreground'
-          : 'text-text-medium group-hover:text-text-high',
+          ? 'bg-[#00665F] text-white shadow-md shadow-[#00665F]/30 ring-2 ring-[#00665F]/20'
+          : 'bg-slate-100/90 dark:bg-slate-800/90 text-[#475569] dark:text-slate-300 group-hover:bg-[#E6F4F1] group-hover:text-[#00665F] dark:group-hover:bg-teal-950/60 dark:group-hover:text-teal-300 border border-slate-200/80 dark:border-slate-700/80',
         className
       )}
       {...(props as any)}
@@ -366,7 +324,7 @@ export function DockIcon({ children, className, ...props }: DockIconProps) {
 }
 
 // ============================================================================
-// DOCK LABEL COMPONENT
+// DOCK LABEL COMPONENT (SHOWS SECTION NAME JUST BELOW THE ICON)
 // ============================================================================
 
 export interface DockLabelProps extends React.HTMLAttributes<HTMLSpanElement> {
@@ -377,46 +335,46 @@ export interface DockLabelProps extends React.HTMLAttributes<HTMLSpanElement> {
 
 export function DockLabel({ children, className, asTooltip = false, ...props }: DockLabelProps) {
   const itemContext = useDockItem();
-  const isVertical = itemContext?.orientation === 'vertical';
 
-  // In vertical sidebar mode without explicit asTooltip, render inline label beside icon
-  if (isVertical && !asTooltip) {
+  if (asTooltip) {
     return (
-      <span
-        className={cn(
-          'text-sm font-semibold tracking-tight transition-colors duration-150 select-none truncate',
-          itemContext?.isActive
-            ? 'text-primary-foreground font-bold'
-            : 'text-text-medium group-hover:text-text-high',
-          className
+      <AnimatePresence>
+        {itemContext?.isHovered && (
+          <motion.div
+            initial={{ opacity: 0, x: -8, y: '-50%', scale: 0.9 }}
+            animate={{ opacity: 1, x: 0, y: '-50%', scale: 1 }}
+            exit={{ opacity: 0, x: -6, y: '-50%', scale: 0.9 }}
+            transition={{ type: 'spring', bounce: 0.15, duration: 0.2 }}
+            className={cn(
+              'pointer-events-none absolute left-full ml-4 top-1/2 -translate-y-1/2 z-50 whitespace-nowrap rounded-[8px] bg-[#0F172A] text-white px-3 py-1.5 text-xs font-semibold shadow-2xl border border-slate-700/80 select-none flex items-center gap-1.5 tracking-wide',
+              className
+            )}
+            role="tooltip"
+          >
+            <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-y-4 border-y-transparent border-r-4 border-r-[#0F172A]" />
+            <span>{children}</span>
+          </motion.div>
         )}
-        {...props}
-      >
-        {children}
-      </span>
+      </AnimatePresence>
     );
   }
 
-  // Floating tooltip mode (e.g. for horizontal dock or compact icon-only rails)
+  // Section name rendered just below the icon
   return (
-    <AnimatePresence>
-      {itemContext?.isHovered && (
-        <motion.div
-          initial={{ opacity: 0, x: isVertical ? -6 : 0, y: isVertical ? '-50%' : 8, scale: 0.95 }}
-          animate={{ opacity: 1, x: isVertical ? 0 : 0, y: isVertical ? '-50%' : 0, scale: 1 }}
-          exit={{ opacity: 0, x: isVertical ? -4 : 0, y: isVertical ? '-50%' : 4, scale: 0.95 }}
-          transition={{ duration: 0.15 }}
-          className={cn(
-            'pointer-events-none absolute z-50 whitespace-nowrap rounded-[6px] bg-surface dark:bg-surface-high border border-border px-2.5 py-1 text-xs font-semibold text-text-high shadow-raised',
-            isVertical
-              ? 'left-full ml-3 top-1/2'
-              : '-top-8 left-1/2 -translate-x-1/2',
-            className
-          )}
-        >
-          {children}
-        </motion.div>
+    <span
+      className={cn(
+        'text-[10px] sm:text-[10.5px] font-semibold tracking-tight text-center leading-[1.2] mt-1 select-none max-w-[72px] truncate transition-colors duration-150',
+        itemContext?.isActive
+          ? 'text-[#00665F] dark:text-teal-400 font-bold'
+          : 'text-slate-500 dark:text-slate-400 group-hover:text-[#00665F] dark:group-hover:text-teal-300',
+        className
       )}
-    </AnimatePresence>
+      {...props}
+    >
+      {children}
+    </span>
   );
 }
+
+// Alias AppleStyleDock for explicit compatibility
+export { Dock as AppleStyleDock };

@@ -36,6 +36,7 @@ export function AdminGuard() {
         await api.adminDevLogin();
         await refreshUser();
         toast.success('Admin privileges enabled successfully');
+        navigate(location.pathname === '/admin' ? '/admin/overview' : location.pathname, { replace: true });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Failed to authenticate admin session';
         toast.error(msg);
