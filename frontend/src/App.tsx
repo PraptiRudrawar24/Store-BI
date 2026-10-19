@@ -24,12 +24,16 @@ import { AdminBusinessesPage } from './pages/admin/AdminBusinessesPage';
 import { AdminBusinessDetailPage } from './pages/admin/AdminBusinessDetailPage';
 import { AdminPlansPricesPage } from './pages/admin/AdminPlansPricesPage';
 import { AdminPaymentsPage } from './pages/admin/AdminPaymentsPage';
+import { AdminOperationsReportsPage } from './pages/admin/AdminOperationsReportsPage';
 import { AdminPlaceholderPage } from './pages/admin/AdminPlaceholderPage';
 import { AdminConsolePage } from './pages/admin/AdminConsolePage';
 import { LandingPage } from './pages/LandingPage';
 import { PosBillingPage } from './pages/PosBillingPage';
 import { SupportPage } from './pages/SupportPage';
 import { AdminSupportPage } from './pages/admin/AdminSupportPage';
+import { AdminSubscriptionRequestsPage } from './pages/admin/AdminSubscriptionRequestsPage';
+import { SubscriptionProvider, useSubscription } from './context/SubscriptionContext';
+import { SubscriptionExpiredScreen } from './components/subscription/SubscriptionExpiredScreen';
 
 /**
  * ProtectedLayout: Guards owner app shell routes (/dashboard, /pos, /analytics, etc.)
@@ -39,11 +43,13 @@ import { AdminSupportPage } from './pages/admin/AdminSupportPage';
  * 3. Merchants who have not yet completed the 4-step onboarding wizard
  *    are redirected to /onboarding so all required store details are captured.
  * 4. Only fully onboarded and authenticated merchants can view the app shell.
+ * 5. If trial or subscription has expired, shows branded lockout screen with data preservation guarantee.
  */
 function ProtectedLayout() {
   const { user, loading } = useAuth();
+  const { status, loading: subLoading, refreshStatus } = useSubscription();
 
-  if (loading) {
+  if (loading || (user && !user.is_admin && subLoading)) {
     return (
       <div className="min-h-screen bg-canvas flex flex-col items-center justify-center p-4">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -58,6 +64,15 @@ function ProtectedLayout() {
 
   if (!user.onboarding_completed) {
     return <Navigate to="/onboarding" replace />;
+  }
+
+  if (!user.is_admin && status && !status.can_access_features) {
+    return (
+      <SubscriptionExpiredScreen
+        subscriptionStatus={status}
+        onRefreshStatus={refreshStatus}
+      />
+    );
   }
 
   return <Layout />;
@@ -97,9 +112,10 @@ export default function App() {
     <ThemeProvider>
       <ToastProvider>
         <AuthProvider>
-          <AlertsProvider>
-            <BrowserRouter>
-              <Routes>
+          <SubscriptionProvider>
+            <AlertsProvider>
+              <BrowserRouter>
+                <Routes>
               {/* Public Landing Page */}
               <Route path="/" element={<LandingPage />} />
               <Route path="/landing" element={<LandingPage />} />
@@ -118,13 +134,14 @@ export default function App() {
                 <Route element={<AdminLayout />}>
                   <Route index element={<Navigate to="/admin/overview" replace />} />
                   <Route path="overview" element={<AdminOverviewPage />} />
+                  <Route path="subscription-requests" element={<AdminSubscriptionRequestsPage />} />
                   <Route path="businesses" element={<AdminBusinessesPage />} />
                   <Route path="businesses/:id" element={<AdminBusinessDetailPage />} />
                   <Route path="support" element={<AdminSupportPage />} />
                   <Route path="plans" element={<AdminPlansPricesPage />} />
                   <Route path="plans-and-prices" element={<Navigate to="/admin/plans" replace />} />
                   <Route path="payments" element={<AdminPaymentsPage />} />
-                  <Route path="reports" element={<AdminPlaceholderPage />} />
+                  <Route path="reports" element={<AdminOperationsReportsPage />} />
                   <Route path="settings" element={<AdminPlaceholderPage />} />
                   <Route path="portal" element={<AdminConsolePage />} />
                 </Route>
@@ -151,6 +168,7 @@ export default function App() {
             </Routes>
           </BrowserRouter>
           </AlertsProvider>
+        </SubscriptionProvider>
         </AuthProvider>
       </ToastProvider>
     </ThemeProvider>

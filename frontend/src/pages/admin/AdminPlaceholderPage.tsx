@@ -34,7 +34,7 @@ export function AdminPlaceholderPage() {
         title: 'Operations reports',
         description: 'Comprehensive platform cohort retention, geographical store density, and GMV throughput.',
         icon: BarChart3,
-        status: 'In development (v2.5)',
+        status: 'Active (Live)',
         features: [
           'State & Tier-2/3 city adoption heatmaps across Maharashtra and Gujarat',
           'Cohort retention analysis (Day 1, Day 7, Day 30, Day 90)',

@@ -6,6 +6,7 @@ import { Badge } from '../components/ui/Badge';
 import { useToast } from '../components/ui/Toast';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { api, type SubscriptionExpiryWarning } from '../api/client';
 import {
   ArrowLeft,
   ShieldCheck,
@@ -24,6 +25,8 @@ import {
   AlertCircle,
   RefreshCw,
   X,
+  Clock,
+  AlertTriangle,
 } from 'lucide-react';
 
 // Official Google Multi-Color SVG Icon
@@ -75,6 +78,7 @@ export function LoginPage() {
   const [loginEmail, setLoginEmail] = React.useState('');
   const [loginPassword, setLoginPassword] = React.useState('');
   const [showLoginPassword, setShowLoginPassword] = React.useState(false);
+  const [subscriptionNotice, setSubscriptionNotice] = React.useState<SubscriptionExpiryWarning | null>(null);
 
   // Sign Up form state
   const [signupStoreName, setSignupStoreName] = React.useState('');
@@ -98,14 +102,61 @@ export function LoginPage() {
   const hasDigits = /[0-9]/.test(signupPassword);
   const passwordsMatch = signupPassword.length > 0 && signupPassword === signupConfirmPassword;
 
-  // Synchronize activeTab with URL params
+  // Synchronize activeTab with URL params and check for subscription warning query params
   React.useEffect(() => {
     if (modeParam === 'signup' || modeParam === 'trial') {
       setActiveTab('signup');
     } else if (modeParam === 'signin' || modeParam === 'login') {
       setActiveTab('signin');
     }
-  }, [modeParam]);
+
+    const expiredParam = searchParams.get('expired') === 'true' || searchParams.get('state') === 'expired';
+    const warningParam = searchParams.get('subscription_warning') === 'true' || searchParams.get('warning') === 'true';
+    const daysParam = searchParams.get('days_remaining');
+
+    if (expiredParam) {
+      setSubscriptionNotice({
+        has_notification: true,
+        type: 'subscription',
+        days_remaining: 0,
+        is_expired: true,
+        title: 'Subscription Period Ended',
+        message: 'Your Store BI subscription or trial has ended. Please sign in to renew your plan for ₹1,299.',
+        plan_name: 'Store BI Plan',
+        action_label: 'Renew Subscription (₹1,299)',
+      });
+    } else if (warningParam || daysParam === '1') {
+      setSubscriptionNotice({
+        has_notification: true,
+        type: 'trial',
+        days_remaining: 1,
+        is_expired: false,
+        title: '⚠️ 1 Day Remaining on Subscription',
+        message: 'Your trial or monthly subscription has 1 day remaining! Sign in to renew today and ensure uninterrupted billing and inventory access.',
+        plan_name: 'Store BI Plan',
+        action_label: 'Renew Subscription (₹1,299)',
+      });
+    }
+  }, [modeParam, searchParams]);
+
+  // Check email subscription status when user finishes typing email
+  const checkEmailSubscription = React.useCallback(async (email: string) => {
+    const clean = email.trim().toLowerCase();
+    if (!clean || !clean.includes('@') || !clean.includes('.')) return;
+    try {
+      const res = await api.checkSubscriptionAlert(clean);
+      if (res.has_warning && res.warning) {
+        setSubscriptionNotice(res.warning);
+      } else {
+        // If query param isn't overriding, clear notice
+        if (!searchParams.get('subscription_warning') && !searchParams.get('expired')) {
+          setSubscriptionNotice(null);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [searchParams]);
 
   // If already authenticated, redirect to appropriate destination
   React.useEffect(() => {
@@ -160,6 +211,15 @@ export function LoginPage() {
         email: loginEmail,
         password: loginPassword,
       });
+
+      // Show immediate notification if trial or monthly subscription is about to end (1 day left) or expired
+      if (res.subscription_warning?.has_notification) {
+        setSubscriptionNotice(res.subscription_warning);
+        toast.warning(
+          res.subscription_warning.title,
+          res.subscription_warning.message
+        );
+      }
 
       toast.success('Signed in successfully', `Welcome back, ${res.shop?.owner_name || 'Merchant'}!`);
       if (res.shop?.is_admin) {
@@ -447,6 +507,56 @@ export function LoginPage() {
                 </div>
               )}
 
+              {/* Subscription Expiration Alert Banner on Login Page */}
+              {subscriptionNotice && (
+                <div
+                  role="alert"
+                  className={`mb-5 p-3.5 rounded-xl border text-xs flex items-start gap-3 transition-all animate-in fade-in slide-in-from-top-1 ${
+                    subscriptionNotice.is_expired
+                      ? 'bg-rose-500/10 border-rose-500/30 text-rose-900 dark:text-rose-200'
+                      : 'bg-amber-500/12 border-amber-500/30 text-amber-950 dark:text-amber-100'
+                  }`}
+                >
+                  <div
+                    className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${
+                      subscriptionNotice.is_expired
+                        ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400 animate-pulse'
+                        : 'bg-amber-500/20 text-amber-600 dark:text-amber-400 animate-pulse'
+                    }`}
+                  >
+                    {subscriptionNotice.is_expired ? (
+                      <AlertCircle className="w-4 h-4" />
+                    ) : subscriptionNotice.days_remaining === 1 ? (
+                      <Clock className="w-4 h-4" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className="font-bold text-xs">
+                        {subscriptionNotice.title}
+                      </span>
+                      <span
+                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${
+                          subscriptionNotice.is_expired
+                            ? 'bg-rose-500 text-white'
+                            : 'bg-amber-500/25 text-amber-800 dark:text-amber-200 border border-amber-500/40'
+                        }`}
+                      >
+                        {subscriptionNotice.days_remaining === 1 ? '1 Day Left' : subscriptionNotice.is_expired ? 'Expired' : 'Ending Soon'}
+                      </span>
+                    </div>
+                    <p className="opacity-90 leading-relaxed text-[11px]">
+                      {subscriptionNotice.message}
+                    </p>
+                    <p className="mt-1.5 text-[11px] font-semibold text-primary flex items-center gap-1">
+                      <span>Sign in below to renew your plan for ₹1,299 & prevent store disruption.</span>
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* SIGN IN TAB */}
               {activeTab === 'signin' && (
                 <form onSubmit={handleEmailLogin} className="space-y-4">
@@ -461,6 +571,7 @@ export function LoginPage() {
                         required
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
+                        onBlur={() => checkEmailSubscription(loginEmail)}
                         placeholder="owner@storename.com"
                         className="w-full pl-9 pr-3 py-2.5 text-xs rounded-lg border border-border bg-input-bg text-text-high placeholder:text-text-low focus:outline-none focus:ring-1 focus:ring-primary"
                       />

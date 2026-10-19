@@ -206,6 +206,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    try {
+      Object.keys(sessionStorage).forEach((key) => {
+        if (key.startsWith('storebi_')) {
+          sessionStorage.removeItem(key);
+        }
+      });
+    } catch {
+      // ignore
+    }
     await api.logout();
     setUser(null);
   };

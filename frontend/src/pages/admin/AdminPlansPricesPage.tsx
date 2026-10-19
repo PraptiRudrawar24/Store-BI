@@ -4,7 +4,6 @@ import {
   Percent,
   CheckCircle2,
   Undo2,
-  Layers,
   Plus,
   Copy,
   Check,
@@ -23,7 +22,6 @@ import type {
   BundlePricingItem,
   PromoCodeItem,
 } from '../../api/client';
-import { formatINR } from '../../utils';
 
 export function AdminPlansPricesPage() {
   const toast = useToast();
@@ -33,8 +31,7 @@ export function AdminPlansPricesPage() {
 
   // Live Configurations from DB
   const [trialPeriod, setTrialPeriod] = React.useState('5');
-  const [taxInclusive, setTaxInclusive] = React.useState(true);
-  const [quarterlyBonus, setQuarterlyBonus] = React.useState('15');
+  const [monthlyPrice, setMonthlyPrice] = React.useState('1299');
 
   const [modules, setModules] = React.useState<ModularFeatureItem[]>([
     {
@@ -80,13 +77,11 @@ export function AdminPlansPricesPage() {
   ]);
 
   const [bundle, setBundle] = React.useState<BundlePricingItem>({
-    monthly_price: 599,
-    quarterly_price: 1797,
-    annual_price: 5999,
+    monthly_price: 1299,
+    quarterly_price: 3897,
+    annual_price: 12990,
     active_subscribers: 0,
   });
-
-  const [totalSubscribers, setTotalSubscribers] = React.useState(0);
 
   // Promo Codes from DB (starts empty)
   const [promoCodes, setPromoCodes] = React.useState<PromoCodeItem[]>([]);
@@ -117,8 +112,10 @@ export function AdminPlansPricesPage() {
       }
       if (plansData.bundle) {
         setBundle(plansData.bundle);
+        setMonthlyPrice(String(plansData.bundle.monthly_price ?? 1299));
+      } else {
+        setMonthlyPrice('1299');
       }
-      setTotalSubscribers(plansData.total_subscribers || 0);
       setPromoCodes(promosData || []);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to fetch pricing and coupon settings';
@@ -139,24 +136,21 @@ export function AdminPlansPricesPage() {
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
-  const handleModulePriceChange = (slug: string, field: 'monthly_price' | 'quarterly_price', value: string) => {
-    const num = parseFloat(value) || 0;
-    setModules(prev => prev.map(m => m.slug === slug ? { ...m, [field]: num } : m));
-  };
-
-  const handleModuleToggle = (slug: string) => {
-    setModules(prev => prev.map(m => m.slug === slug ? { ...m, enabled: !m.enabled } : m));
-  };
-
   const handleSaveAndPublish = async () => {
     setSaving(true);
     try {
+      const parsedPrice = parseFloat(monthlyPrice) || 1299;
+      const updatedBundle: BundlePricingItem = {
+        ...bundle,
+        monthly_price: parsedPrice,
+      };
       const payload = {
         default_trial_days: parseInt(trialPeriod, 10) || 5,
         modular_features: modules,
-        bundle,
+        bundle: updatedBundle,
       };
       await api.saveAdminPlans(payload);
+      setBundle(updatedBundle);
       toast.success('Pricing changes saved and synchronized across store portals');
       await fetchPlansAndPromos();
     } catch (err: unknown) {
@@ -243,8 +237,6 @@ export function AdminPlansPricesPage() {
     }
   };
 
-  const totalModularMonthly = modules.reduce((sum, m) => sum + (m.enabled ? m.monthly_price : 0), 0);
-
   return (
     <div className="flex flex-col gap-6">
       {/* Header & Control Actions */}
@@ -258,7 +250,7 @@ export function AdminPlansPricesPage() {
             </span>
           </div>
           <p className="text-xs text-text-medium max-w-3xl">
-            Configure modular tier pricing, discount bundles, and trial duration across web and mobile apps for kirana and retail store partners.
+            Configure merchant trial periods, monthly subscription plan pricing, and promotional discount coupon codes for kirana store partners.
           </p>
         </div>
 
@@ -295,8 +287,8 @@ export function AdminPlansPricesPage() {
         </div>
       </div>
 
-      {/* Top Configuration Ribbon (3 Fast Control Cards) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Top Configuration Ribbon (Fast Control Cards) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Card 1: Default trial period */}
         <Card className="p-4 border border-border bg-surface flex flex-col justify-between gap-3">
           <div className="flex items-start justify-between">
@@ -333,390 +325,64 @@ export function AdminPlansPricesPage() {
           </p>
         </Card>
 
-        {/* Card 2: Currency & Region Tax Inclusion */}
+        {/* Card 2: Monthly plan */}
         <Card className="p-4 border border-border bg-surface flex flex-col justify-between gap-3">
           <div className="flex items-start justify-between">
             <div className="flex flex-col">
               <span className="text-[11px] font-semibold text-text-low">
-                Tax & localization
+                Store subscription
               </span>
               <span className="text-sm font-bold text-text-high mt-0.5">
-                Currency & region
+                Monthly plan
               </span>
             </div>
-            <div className="w-8 h-8 rounded-[8px] bg-canvas border border-border flex items-center justify-center text-primary">
-              <span className="font-bold text-sm">₹</span>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between mt-1">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-text-high">INR (₹)</span>
-              <span className="px-2 py-0.5 rounded bg-canvas border border-border text-[10px] font-semibold text-text-medium">
-                IN-DOMESTIC
-              </span>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer min-w-[48px] min-h-[48px] justify-center">
-              <input
-                type="checkbox"
-                checked={taxInclusive}
-                onChange={(e) => setTaxInclusive(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-9 h-5 bg-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
-            </label>
-          </div>
-          <div className="flex items-center justify-between text-[11px] text-text-medium">
-            <span>India GST 18% inclusive</span>
-            <span className="text-emerald-700 font-semibold">B2B invoice active</span>
-          </div>
-        </Card>
-
-        {/* Card 3: Multi-month bonus */}
-        <Card className="p-4 border border-border bg-surface flex flex-col justify-between gap-3">
-          <div className="flex items-start justify-between">
-            <div className="flex flex-col">
-              <span className="text-[11px] font-semibold text-text-low">
-                Multi-month bonus
-              </span>
-              <span className="text-sm font-bold text-text-high mt-0.5">
-                Quarterly incentive
-              </span>
-            </div>
-            <div className="w-8 h-8 rounded-[8px] bg-canvas border border-border flex items-center justify-center text-primary">
-              <Percent className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-[8px] bg-canvas border border-border flex items-center justify-center text-primary font-bold text-sm">
+              <span>₹</span>
             </div>
           </div>
 
           <div className="flex items-center gap-2 mt-1">
-            <div className="flex items-center bg-canvas border border-border px-3 py-1.5 rounded-[8px] flex-1">
+            <div className="flex items-center bg-canvas border border-border px-3 rounded-[8px] flex-1 min-h-[48px] focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-colors">
+              <span className="text-sm font-bold text-primary font-mono mr-1">₹</span>
               <input
+                id="monthly-plan-price-input"
                 type="number"
                 min="0"
-                max="50"
-                value={quarterlyBonus}
-                onChange={(e) => setQuarterlyBonus(e.target.value)}
-                className="w-8 text-xs font-bold text-primary font-mono bg-transparent outline-none"
+                step="1"
+                value={monthlyPrice}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setMonthlyPrice(val);
+                  const numVal = parseFloat(val);
+                  setBundle((prev) => ({
+                    ...prev,
+                    monthly_price: isNaN(numVal) ? 0 : numVal,
+                  }));
+                }}
+                className="w-full text-xs font-bold text-text-high font-mono bg-transparent outline-none"
+                placeholder="1299"
               />
-              <span className="text-xs font-bold text-primary font-mono">%</span>
-              <span className="ml-2 text-[11px] text-text-medium">auto-applied on 3-month cycle</span>
-            </div>
-          </div>
-          <p className="text-[11px] text-text-low">
-            Improves kirana merchant 90-day retention by ~24%.
-          </p>
-        </Card>
-      </div>
-
-      {/* Section 1: Modular Feature Pricing Table */}
-      <Card className="border border-border bg-surface overflow-hidden">
-        <div className="p-4 border-b border-border flex flex-col md:flex-row md:items-center justify-between gap-2">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-text-high">
-                Modular feature pricing (Individual add-ons)
-              </h2>
-              <span className="px-2 py-0.5 rounded bg-canvas border border-border text-[11px] font-semibold text-text-medium">
-                4 Modules
+              <span className="text-[11px] text-text-medium whitespace-nowrap ml-2">
+                / month
               </span>
             </div>
-            <p className="text-xs text-text-medium mt-0.5">
-              Merchants can opt into single capabilities without full-suite lock-in.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
+            <button
+              type="button"
               onClick={() => {
-                setModules(prev => prev.map(m => ({
-                  ...m,
-                  monthly_price: Math.round(m.monthly_price * 1.1),
-                  quarterly_price: Math.round(m.quarterly_price * 1.1),
-                })));
-                toast.info('Adjusted module rates by +10%');
+                setMonthlyPrice('1299');
+                setBundle((prev) => ({ ...prev, monthly_price: 1299 }));
               }}
-              className="min-h-[48px] text-xs px-3.5"
+              className="px-3 py-1.5 rounded-[8px] bg-canvas border border-border text-[11px] font-semibold text-text-medium hover:text-text-high hover:border-primary transition-colors whitespace-nowrap min-h-[48px]"
+              title="Reset to default Rs 1299"
             >
-              Bulk adjust (+10%)
-            </Button>
+              Default ₹1299
+            </button>
           </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-canvas border-b border-border text-text-medium font-semibold">
-              <tr>
-                <th className="py-2.5 px-4">Module / Feature name</th>
-                <th className="py-2.5 px-3">Feature key</th>
-                <th className="py-2.5 px-3">Monthly price (₹)</th>
-                <th className="py-2.5 px-3">Quarterly price (₹)</th>
-                <th className="py-2.5 px-3">Active subscribers</th>
-                <th className="py-2.5 px-4 text-right">Status toggle</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border text-text-high">
-              {modules.map((mod) => (
-                <tr key={mod.slug} className="hover:bg-canvas/50 transition-colors">
-                  <td className="py-3 px-4">
-                    <div className="flex items-start gap-2.5">
-                      <div className="w-7 h-7 rounded-[6px] bg-canvas border border-border flex items-center justify-center text-primary shrink-0 mt-0.5">
-                        <Layers className="w-3.5 h-3.5" />
-                      </div>
-                      <div className="flex flex-col min-w-0">
-                        <span className="font-semibold text-text-high text-xs">{mod.name}</span>
-                        <span className="text-[11px] text-text-medium truncate max-w-xs">{mod.description}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3 px-3">
-                    <span className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-canvas border border-border text-text-medium">
-                      {mod.slug}
-                    </span>
-                  </td>
-                  <td className="py-3 px-3">
-                    <div className="relative w-28">
-                      <span className="absolute left-2.5 top-1.5 text-text-medium text-xs">₹</span>
-                      <input
-                        type="number"
-                        value={mod.monthly_price}
-                        onChange={(e) => handleModulePriceChange(mod.slug, 'monthly_price', e.target.value)}
-                        className="w-full pl-6 pr-2 py-1 rounded-[6px] bg-canvas border border-border text-xs font-mono font-bold focus:outline-none focus:ring-1 focus:ring-primary"
-                      />
-                    </div>
-                  </td>
-                  <td className="py-3 px-3">
-                    <div className="relative w-28">
-                      <span className="absolute left-2.5 top-1.5 text-text-medium text-xs">₹</span>
-                      <input
-                        type="number"
-                        value={mod.quarterly_price}
-                        onChange={(e) => handleModulePriceChange(mod.slug, 'quarterly_price', e.target.value)}
-                        className="w-full pl-6 pr-2 py-1 rounded-[6px] bg-canvas border border-border text-xs font-mono font-bold focus:outline-none focus:ring-1 focus:ring-primary"
-                      />
-                    </div>
-                    <span className="text-[10px] text-emerald-700 font-semibold block mt-0.5">
-                      ~10% discount
-                    </span>
-                  </td>
-                  <td className="py-3 px-3">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-mono font-semibold text-text-high">
-                        {mod.active_subscribers}
-                      </span>
-                      <span className="text-[11px] text-text-medium">stores</span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <div className="inline-flex items-center gap-2">
-                      <Badge variant={mod.enabled ? 'success' : 'neutral'} className="text-[10px]">
-                        {mod.enabled ? 'Enabled' : 'Disabled'}
-                      </Badge>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={mod.enabled}
-                          onChange={() => handleModuleToggle(mod.slug)}
-                          className="sr-only peer"
-                        />
-                        <div className="w-8 h-4 bg-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-600"></div>
-                      </label>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="bg-canvas border-t border-border px-4 py-2.5 flex flex-col sm:flex-row items-center justify-between text-xs text-text-medium gap-2">
-          <div className="flex items-center gap-3">
-            <span>
-              Combined standalone monthly total:{' '}
-              <strong className="text-text-high font-mono">₹{totalModularMonthly}.00 / mo</strong>
-            </span>
-            <span className="w-1 h-1 rounded-full bg-border" />
-            <span>
-              Total active subscriptions:{' '}
-              <strong className="text-text-high font-mono">{totalSubscribers}</strong>
-            </span>
+          <div className="flex items-center justify-between text-[11px] text-text-low">
+            <span>All-Features Pro plan for kirana store partners.</span>
+            <span className="text-emerald-700 font-semibold">Active in store checkout</span>
           </div>
-          <span className="text-[11px] text-text-low">
-            Prices auto-sync to POS web app and merchant terminals
-          </span>
-        </div>
-      </Card>
-
-      {/* Section 2: Bundled All-Features Pack Grid */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-bold text-text-high">Bundled all-features pack</h2>
-            <p className="text-xs text-text-medium mt-0.5">
-              Flagship merchant plan designed for maximum adoption and retention
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* Main Bundle Card (8 Cols) */}
-          <Card className="lg:col-span-8 p-6 border border-border bg-surface flex flex-col justify-between gap-5">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-[6px] bg-primary text-white text-xs font-bold">
-                  Most popular • Best value
-                </span>
-                <span className="text-xs text-emerald-700 font-semibold flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  Primary recommendation
-                </span>
-              </div>
-              <span className="text-xs text-text-medium">
-                Standalone sum: <del className="font-mono">₹{totalModularMonthly} / mo</del>
-              </span>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-bold text-text-high">All features pack</h3>
-              <p className="text-xs text-text-medium mt-1">
-                Complete Store BI digitisation kit: daily sales ledger, OCR bill entry, profit intelligence, and automated AI stock ordering recommendations.
-              </p>
-            </div>
-
-            {/* Price Tier Inputs (3 Cadences) */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {/* Monthly */}
-              <div className="bg-canvas border border-border p-3.5 rounded-[8px] flex flex-col gap-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-text-high">Monthly billing</span>
-                  <span className="text-[10px] text-emerald-700 font-bold">Save ₹97/mo</span>
-                </div>
-                <div className="relative">
-                  <span className="absolute left-2.5 top-1.5 text-text-medium font-bold text-sm">₹</span>
-                  <input
-                    type="number"
-                    value={bundle.monthly_price}
-                    onChange={(e) => setBundle({ ...bundle, monthly_price: parseFloat(e.target.value) || 0 })}
-                    className="w-full pl-6 pr-2 py-1 rounded-[6px] bg-surface border border-border text-base font-bold font-mono text-text-high focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                </div>
-                <span className="text-[10px] text-text-low">Billed monthly • 14% discount</span>
-              </div>
-
-              {/* Quarterly (Highlighted) */}
-              <div className="bg-primary/5 border border-primary/20 p-3.5 rounded-[8px] flex flex-col gap-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-primary">Quarterly billing</span>
-                  <span className="px-1.5 py-0.2 rounded bg-primary text-white text-[10px] font-bold">
-                    Optimal
-                  </span>
-                </div>
-                <div className="relative">
-                  <span className="absolute left-2.5 top-1.5 text-primary font-bold text-sm">₹</span>
-                  <input
-                    type="number"
-                    value={bundle.quarterly_price}
-                    onChange={(e) => setBundle({ ...bundle, quarterly_price: parseFloat(e.target.value) || 0 })}
-                    className="w-full pl-6 pr-2 py-1 rounded-[6px] bg-surface border border-primary/30 text-base font-bold font-mono text-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                </div>
-                <span className="text-[10px] text-text-medium">₹1,797 every 3 mo (₹599/mo)</span>
-              </div>
-
-              {/* Annual */}
-              <div className="bg-canvas border border-border p-3.5 rounded-[8px] flex flex-col gap-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-text-high">Annual billing</span>
-                  <span className="text-[10px] text-emerald-700 font-bold">2 months free</span>
-                </div>
-                <div className="relative">
-                  <span className="absolute left-2.5 top-1.5 text-text-medium font-bold text-sm">₹</span>
-                  <input
-                    type="number"
-                    value={bundle.annual_price}
-                    onChange={(e) => setBundle({ ...bundle, annual_price: parseFloat(e.target.value) || 0 })}
-                    className="w-full pl-6 pr-2 py-1 rounded-[6px] bg-surface border border-border text-base font-bold font-mono text-text-high focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                </div>
-                <span className="text-[10px] text-text-low">Equiv. ₹500/mo • ₹1,189 save</span>
-              </div>
-            </div>
-
-            {/* Inclusions Checklist */}
-            <div className="pt-2 border-t border-border flex flex-col gap-2">
-              <span className="text-[11px] font-semibold text-text-low">
-                Features included in all-features bundle
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-text-high">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>All 4 modular features unlocked unconstrained</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>Priority phone & Hindi / Marathi WhatsApp support</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>Multi-device sync (Counter desktop + 2 Android phones)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>Automated GST e-Way bill & Excel tally export</span>
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Bundle Health Analytics Card (4 Cols) */}
-          <Card className="lg:col-span-4 p-6 border border-border bg-surface flex flex-col justify-between gap-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[11px] font-semibold text-text-low">
-                  Performance metrics
-                </span>
-                <h3 className="text-sm font-bold text-text-high mt-0.5">Pack adoption health</h3>
-              </div>
-              <Badge variant="neutral" className="text-xs">Live Database</Badge>
-            </div>
-
-            <div className="flex flex-col items-center justify-center py-2">
-              <div className="text-center">
-                <span className="text-2xl font-bold font-mono text-text-high">
-                  {formatINR(totalSubscribers * bundle.monthly_price)}
-                </span>
-                <span className="block text-xs text-text-medium mt-0.5">
-                  Monthly recurring subscription revenue
-                </span>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2 pt-2 border-t border-border text-xs">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-primary" />
-                  <span className="text-text-high">All features pack</span>
-                </div>
-                <span className="font-mono font-semibold text-text-high">
-                  {bundle.active_subscribers} stores
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-600" />
-                  <span className="text-text-high">Total active subscribers</span>
-                </div>
-                <span className="font-mono font-semibold text-text-high">
-                  {totalSubscribers} stores
-                </span>
-              </div>
-            </div>
-
-            <div className="p-3 rounded-[8px] bg-canvas border border-border text-xs text-text-medium leading-relaxed">
-              Realtime subscriber metrics calculated from verified merchant ledger entries in database.
-            </div>
-          </Card>
-        </div>
+        </Card>
       </div>
 
       {/* Section 3: Promotional Coupon Codes */}

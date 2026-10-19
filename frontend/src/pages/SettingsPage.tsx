@@ -8,31 +8,35 @@ import { api } from '../api/client';
 import type { Shop } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../components/ui/utils';
-import { PurchaseSubscriptionModal } from '../components/subscription/PurchaseSubscriptionModal';
-import { Sparkles, Clock, CheckCircle2, ShieldCheck, Zap } from 'lucide-react';
+import { Sparkles, Clock, ShieldCheck, Zap, AlertCircle, XCircle, RefreshCw, QrCode } from 'lucide-react';
+import { useSubscription } from '../context/SubscriptionContext';
 
 export function SettingsPage() {
   const toast = useToast();
   const { user, refreshUser } = useAuth();
+  const { status: subStatus, refreshStatus: refreshSubStatus, openPurchaseModal } = useSubscription();
   const [shop, setShop] = React.useState<Shop | null>(user);
-  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = React.useState(false);
+  const [checkingSub, setCheckingSub] = React.useState(false);
 
-  const isPaid = !!user?.is_paid;
-  const trialDays = user?.trial_days_left ?? 5;
-  const subDaysLeft = user?.subscription_days_left_in_month ?? 18;
-  const totalMonthDays = user?.subscription_total_days_in_month ?? 30;
-  const planName = user?.plan_name || 'All-Features Pro';
+  const state = subStatus?.state || (user?.is_paid ? 'Pro Active' : 'Trial Active');
+  const isPaid = state === 'Pro Active';
+  const isPendingReview = state === 'Payment Pending Review';
+  const isRejected = state === 'Payment Rejected';
+  const isExpired = state === 'Trial Expired' || state === 'Subscription Expired';
+  const trialDays = subStatus?.trial_days_left ?? user?.trial_days_left ?? 5;
+  const subDaysLeft = subStatus?.days_remaining ?? user?.subscription_days_left_in_month ?? 30;
+  const planName = subStatus?.plan_name || user?.plan_name || 'All-Features Pro';
 
-  const trialEndDateStr = user?.trial_end_date
-    ? new Date(user.trial_end_date).toLocaleDateString('en-IN', {
+  const trialEndDateStr = (subStatus?.trial_end_date || user?.trial_end_date)
+    ? new Date(subStatus?.trial_end_date || user?.trial_end_date!).toLocaleDateString('en-IN', {
         day: 'numeric',
         month: 'short',
         year: 'numeric',
       })
     : null;
 
-  const subEndDateStr = user?.subscription_end_date
-    ? new Date(user.subscription_end_date).toLocaleDateString('en-IN', {
+  const subEndDateStr = (subStatus?.subscription_end_date || user?.subscription_end_date)
+    ? new Date(subStatus?.subscription_end_date || user?.subscription_end_date!).toLocaleDateString('en-IN', {
         day: 'numeric',
         month: 'short',
         year: 'numeric',
@@ -125,135 +129,218 @@ export function SettingsPage() {
           subtitle={
             isPaid
               ? "Your active Store BI license and monthly billing cycle status"
+              : isPendingReview
+              ? "Your subscription payment is being verified by admin"
+              : isExpired
+              ? "Your store license has expired. Renew to resume operations"
               : "Current plan tier, trial validity, and license upgrade options"
           }
         />
         <CardContent>
-          {!isPaid ? (
-            <div className="flex flex-col gap-5">
-              <div className="p-4 sm:p-5 rounded-[10px] bg-canvas dark:bg-surface border border-border flex flex-col gap-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="p-1 rounded-[4px] bg-primary/10 text-primary">
+          <div className="flex flex-col gap-5">
+            <div className="p-4 sm:p-5 rounded-[10px] bg-canvas dark:bg-surface border border-border flex flex-col gap-4">
+              {/* Header status bar */}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`p-1 rounded-[4px] ${
+                      isPendingReview
+                        ? 'bg-amber-500/10 text-amber-600'
+                        : isRejected
+                        ? 'bg-rose-500/10 text-rose-600'
+                        : isPaid
+                        ? 'bg-emerald-500/10 text-emerald-600'
+                        : isExpired
+                        ? 'bg-rose-500/10 text-rose-600'
+                        : 'bg-primary/10 text-primary'
+                    }`}
+                  >
+                    {isPendingReview ? (
+                      <Clock className="w-4 h-4 animate-pulse" />
+                    ) : isRejected ? (
+                      <XCircle className="w-4 h-4" />
+                    ) : isPaid ? (
+                      <ShieldCheck className="w-4 h-4" />
+                    ) : isExpired ? (
+                      <AlertCircle className="w-4 h-4" />
+                    ) : (
                       <Clock className="w-4 h-4" />
-                    </span>
-                    <span className="text-xs font-bold text-text-medium uppercase tracking-wider">
-                      Account Status
-                    </span>
-                  </div>
-                  <Badge variant={trialDays <= 1 ? 'warning' : 'info'} dot>
-                    Free Trial (Full Access)
-                  </Badge>
+                    )}
+                  </span>
+                  <span className="text-xs font-bold text-text-medium uppercase tracking-wider">
+                    {state}
+                  </span>
                 </div>
 
+                <Badge
+                  variant={
+                    isPendingReview
+                      ? 'warning'
+                      : isRejected || isExpired
+                      ? 'destructive'
+                      : isPaid
+                      ? 'success'
+                      : trialDays <= 1
+                      ? 'warning'
+                      : 'info'
+                  }
+                  dot
+                >
+                  {state}
+                </Badge>
+              </div>
+
+              {/* State-specific Body */}
+              {isPendingReview ? (
+                <div className="space-y-2">
+                  <h3 className="text-xl sm:text-2xl font-extrabold text-amber-600 dark:text-amber-400">
+                    Payment Under Review by Store BI Admin
+                  </h3>
+                  <p className="text-xs sm:text-sm text-text-medium leading-relaxed">
+                    We received your payment claim (Ref: <span className="font-mono font-bold text-text-high">{subStatus?.latest_request?.request_ref}</span>). Our admin team verifies all QR payments directly against merchant bank account records. Access will be activated as soon as it is verified.
+                  </p>
+                  {subStatus?.latest_request?.utr_number && (
+                    <div className="text-xs text-text-medium">
+                      Submitted UTR: <span className="font-mono font-semibold text-text-high">{subStatus.latest_request.utr_number}</span>
+                    </div>
+                  )}
+                </div>
+              ) : isRejected ? (
+                <div className="space-y-2">
+                  <h3 className="text-xl sm:text-2xl font-extrabold text-rose-600 dark:text-rose-400">
+                    Payment Request Declined
+                  </h3>
+                  <p className="text-xs sm:text-sm text-text-medium leading-relaxed">
+                    Your previous payment submission was not approved: <strong>"{subStatus?.latest_request?.rejection_reason || 'Transaction could not be verified'}"</strong>. Your store data remains completely safe. Please re-submit your payment with the correct reference.
+                  </p>
+                </div>
+              ) : isExpired ? (
+                <div className="space-y-2">
+                  <h3 className="text-xl sm:text-2xl font-extrabold text-rose-600 dark:text-rose-400">
+                    {state === 'Trial Expired' ? '5-Day Free Trial Ended' : 'Subscription Expired'}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-text-medium leading-relaxed">
+                    Your store license has expired. Renew your All-Features Pro plan for ₹1,299 (30 days) to regain instant access to billing, inventory, and AI forecasting.
+                  </p>
+                </div>
+              ) : isPaid ? (
+                <div className="space-y-1">
+                  <h3 className="text-xl sm:text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                    {subDaysLeft} days left out of 30 days
+                  </h3>
+                  <p className="text-xs sm:text-sm text-text-medium leading-relaxed">
+                    {subEndDateStr
+                      ? `Your store is actively covered on the ${planName} tier until ${subEndDateStr}. Enjoy continuous retail automation.`
+                      : `Your store is actively covered on the ${planName} tier.`}
+                  </p>
+                </div>
+              ) : (
                 <div className="space-y-1">
                   <h3 className="text-xl sm:text-2xl font-extrabold text-text-high">
                     {trialDays} {trialDays === 1 ? 'day' : 'days'} left in your free trial
                   </h3>
                   <p className="text-xs sm:text-sm text-text-medium leading-relaxed">
                     {trialEndDateStr
-                      ? `Your trial gives you unlimited access to billing, inventory management, OCR distributor bill scanning, and AI analytics until ${trialEndDateStr}. Upgrade now to ensure uninterrupted access.`
-                      : 'Your trial gives you unlimited access to billing, inventory management, OCR distributor bill scanning, and AI analytics. Upgrade now to ensure uninterrupted access.'}
+                      ? `Your trial gives you unlimited access to billing, inventory management, OCR bill scanning, and AI analytics until ${trialEndDateStr}. Upgrade now to ensure uninterrupted access.`
+                      : 'Your trial gives you unlimited access to billing, inventory management, OCR bill scanning, and AI analytics.'}
                   </p>
                 </div>
+              )}
 
-                {/* Progress bar */}
+              {/* Progress bar for active states */}
+              {(isPaid || (!isExpired && !isPendingReview && !isRejected)) && (
                 <div className="space-y-1.5 pt-1">
                   <div className="flex justify-between text-xs text-text-medium font-medium">
-                    <span>Trial progress</span>
-                    <span className="text-text-high font-semibold">{trialDays} of 5 days remaining</span>
+                    <span>{isPaid ? 'Monthly billing cycle' : 'Trial progress'}</span>
+                    <span className="text-text-high font-semibold">
+                      {isPaid
+                        ? `${subDaysLeft} / 30 days remaining`
+                        : `${trialDays} of 5 days remaining`}
+                    </span>
                   </div>
                   <div className="w-full h-2 rounded-full bg-border overflow-hidden">
                     <div
                       className={cn(
                         "h-full rounded-full transition-all duration-500",
-                        trialDays <= 1 ? "bg-warning" : "bg-primary"
+                        isPaid ? "bg-emerald-500" : trialDays <= 1 ? "bg-warning" : "bg-primary"
                       )}
-                      style={{ width: `${Math.max(10, Math.min(100, (trialDays / 5) * 100))}%` }}
+                      style={{
+                        width: `${Math.max(
+                          10,
+                          Math.min(100, isPaid ? (subDaysLeft / 30) * 100 : (trialDays / 5) * 100)
+                        )}%`,
+                      }}
                     />
                   </div>
                 </div>
+              )}
 
-                {/* Option for purchasing subscription */}
-                <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-border">
-                  <div className="flex items-center gap-2 text-xs text-text-medium">
-                    <Sparkles className="w-4 h-4 text-primary shrink-0" />
-                    <span>Includes unlimited OCR imports, AI stock forecasts & POS billing</span>
-                  </div>
-                  <Button
+              {/* Action Buttons */}
+              <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-border">
+                <div className="flex items-center gap-2 text-xs text-text-medium">
+                  <Sparkles className="w-4 h-4 text-primary shrink-0" />
+                  <span>₹1,299 / 30 days — Unlimited OCR, POS billing, AI forecasts</span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {isPendingReview && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setCheckingSub(true);
+                        try {
+                          await refreshSubStatus();
+                          toast.info('Subscription status refreshed');
+                        } finally {
+                          setCheckingSub(false);
+                        }
+                      }}
+                      disabled={checkingSub}
+                      className="px-3 py-2 rounded-lg border border-border bg-canvas hover:bg-surface text-text-high text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${checkingSub ? 'animate-spin' : ''}`} />
+                      <span>Check Status</span>
+                    </button>
+                  )}
+
+                  {/* Direct Online Pay via Payment Scanner QR */}
+                  <button
                     type="button"
-                    variant="primary"
-                    onClick={() => setIsPurchaseModalOpen(true)}
-                    className="flex items-center justify-center gap-2 font-bold shadow-raised"
+                    onClick={() => openPurchaseModal('qr_pay')}
+                    className="px-4 py-2 rounded-lg text-xs font-extrabold flex items-center justify-center gap-1.5 bg-secondary hover:bg-secondary-hover text-white shadow-sm transition-colors cursor-pointer"
                   >
-                    <Zap className="w-4 h-4" />
-                    <span>Purchase subscription</span>
-                  </Button>
+                    <QrCode className="w-4 h-4" />
+                    <span>Pay ₹1,299 via QR Scanner</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => openPurchaseModal('select')}
+                    className="px-4 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 border border-border bg-canvas hover:bg-surface text-text-high transition-colors cursor-pointer"
+                  >
+                    <Zap className="w-4 h-4 text-primary" />
+                    <span>
+                      {isPendingReview
+                        ? 'View Payment Submission'
+                        : isRejected
+                        ? 'Re-submit Payment (₹1,299)'
+                        : isPaid
+                        ? 'Renew / Extend (₹1,299)'
+                        : 'All Payment Options'}
+                    </span>
+                  </button>
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="flex flex-col gap-5">
-              <div className="p-4 sm:p-5 rounded-[10px] bg-canvas dark:bg-surface border border-border flex flex-col gap-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="p-1 rounded-[4px] bg-secondary/10 text-secondary">
-                      <ShieldCheck className="w-4 h-4" />
-                    </span>
-                    <span className="text-xs font-bold text-text-medium uppercase tracking-wider">
-                      License Tier: {planName}
-                    </span>
-                  </div>
-                  <Badge variant="success" dot>
-                    Active Subscription
-                  </Badge>
-                </div>
 
-                {/* How many days left out of month */}
-                <div className="space-y-1">
-                  <h3 className="text-xl sm:text-2xl font-extrabold text-secondary tabular-nums">
-                    {subDaysLeft} days left out of {totalMonthDays} days this month
-                  </h3>
-                  <p className="text-xs sm:text-sm text-text-medium leading-relaxed">
-                    {subEndDateStr
-                      ? `Your store is actively covered on the ${planName} tier. Current monthly cycle renews on ${subEndDateStr}.`
-                      : `Your store is actively covered on the ${planName} tier. Enjoy continuous retail automation and intelligence.`}
-                  </p>
-                </div>
-
-                {/* Progress bar */}
-                <div className="space-y-1.5 pt-1">
-                  <div className="flex justify-between text-xs text-text-medium font-medium">
-                    <span>Current month cycle</span>
-                    <span className="text-text-high font-semibold">{subDaysLeft} / {totalMonthDays} days remaining</span>
-                  </div>
-                  <div className="w-full h-2 rounded-full bg-border overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-secondary transition-all duration-500"
-                      style={{ width: `${Math.max(10, Math.min(100, (subDaysLeft / totalMonthDays) * 100))}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Manage / Upgrade action */}
-                <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-border">
-                  <div className="flex items-center gap-2 text-xs text-text-medium">
-                    <CheckCircle2 className="w-4 h-4 text-secondary shrink-0" />
-                    <span>All store analytics, OCR & POS features unlocked</span>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setIsPurchaseModalOpen(true)}
-                    className="flex items-center justify-center gap-2 font-semibold"
-                  >
-                    <Sparkles className="w-4 h-4 text-primary" />
-                    <span>Change plan / Renew</span>
-                  </Button>
-                </div>
-              </div>
+            {/* Permanent Data Preservation Guarantee Banner */}
+            <div className="p-3.5 bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 rounded-lg flex items-start gap-2.5 text-xs text-emerald-900 dark:text-emerald-300">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <span>
+                <strong>Data Preservation Guarantee:</strong> Expiration or pending approval never deletes, wipes, or resets your store records. All your products, sales history, expenses, invoices, and analytics remain permanently saved.
+              </span>
             </div>
-          )}
+          </div>
         </CardContent>
       </Card>
 
@@ -332,11 +419,6 @@ export function SettingsPage() {
           </form>
         </CardContent>
       </Card>
-
-      <PurchaseSubscriptionModal
-        isOpen={isPurchaseModalOpen}
-        onClose={() => setIsPurchaseModalOpen(false)}
-      />
     </div>
   );
 }

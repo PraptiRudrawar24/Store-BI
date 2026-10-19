@@ -437,19 +437,17 @@ export function DataUploadPage() {
                   <button
                     key={tab.id}
                     onClick={() => handleSubViewChange(tab.id as SubView)}
-                    className={`flex items-center gap-2 h-10 px-3.5 rounded-[8px] text-xs font-semibold transition-colors shrink-0 ${
-                      isActive
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-canvas text-text-medium hover:text-text-high border border-border'
-                    }`}
+                    className={`flex items-center gap-2 h-10 px-3.5 rounded-[8px] text-xs font-semibold transition-colors shrink-0 ${isActive
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-canvas text-text-medium hover:text-text-high border border-border'
+                      }`}
                   >
                     <span>{tab.label}</span>
                     <span
-                      className={`px-1.5 py-0.2 rounded-[4px] text-[10px] font-bold tabular-nums ${
-                        isActive
-                          ? 'bg-white/20 text-white'
-                          : 'bg-surface text-text-medium border border-border'
-                      }`}
+                      className={`px-1.5 py-0.2 rounded-[4px] text-[10px] font-bold tabular-nums ${isActive
+                        ? 'bg-white/20 text-white'
+                        : 'bg-surface text-text-medium border border-border'
+                        }`}
                     >
                       {tab.count}
                     </span>
@@ -489,6 +487,7 @@ export function DataUploadPage() {
                 <div className="relative w-full sm:max-w-xs">
                   {subView === 'products' ? (
                     <ProductSearchBar
+                      variant="inline"
                       placeholder="Search products in inventory..."
                       onSelectProduct={(p) => {
                         api.getProductLocation(p.id, pageSize, sortBy, sortOrder).then((loc) => {
@@ -873,9 +872,9 @@ export function DataUploadPage() {
                               <TableCell className="text-xs text-text-medium tabular-nums">
                                 {sale.date_time
                                   ? new Date(sale.date_time).toLocaleString('en-IN', {
-                                      dateStyle: 'medium',
-                                      timeStyle: 'short',
-                                    })
+                                    dateStyle: 'medium',
+                                    timeStyle: 'short',
+                                  })
                                   : '–'}
                               </TableCell>
                               <TableCell isNumeric className="font-semibold">

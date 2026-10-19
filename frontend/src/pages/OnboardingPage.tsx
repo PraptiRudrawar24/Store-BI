@@ -14,6 +14,7 @@ import {
   Sun,
   Moon,
   LayoutDashboard,
+  LogOut,
 } from 'lucide-react';
 
 /**
@@ -37,8 +38,18 @@ import {
 export function OnboardingPage() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { user, saveStep } = useAuth();
+  const { user, saveStep, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+
+  const handleBackToLogin = async () => {
+    try {
+      await logout();
+      toast.info('Signed out', 'You can now sign in using email or Google.');
+      navigate('/login', { replace: true });
+    } catch {
+      navigate('/login', { replace: true });
+    }
+  };
 
   // Wizard Step State (1: Owner, 2: Store, 3: Scale, 4: Challenges)
   const [step, setStep] = React.useState<number>(1);
@@ -270,6 +281,15 @@ export function OnboardingPage() {
                 <span>Dashboard</span>
               </button>
             )}
+            <button
+              type="button"
+              onClick={handleBackToLogin}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] border border-border bg-surface text-xs font-semibold text-text-medium hover:text-destructive hover:border-destructive/40 hover:bg-destructive/5 transition-colors cursor-pointer"
+              title="Return to login page to sign in with email or Google"
+            >
+              <LogOut className="w-3.5 h-3.5 text-destructive" />
+              <span>Back to Login</span>
+            </button>
             <span className="text-xs font-semibold text-text-medium">
               Step {step} of 4
             </span>
@@ -334,12 +354,20 @@ export function OnboardingPage() {
                         )}
                         <div className="flex flex-col">
                           <span className="text-xs font-bold text-text-high flex items-center gap-1.5">
-                            Connected via Google
+                            Connected via {user.google_id ? 'Google' : 'Email'}
                             <Badge variant="success" className="text-[9px] py-0 px-1">Verified</Badge>
                           </span>
                           <span className="text-[11px] text-text-medium font-mono">{user.email}</span>
                         </div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={handleBackToLogin}
+                        className="text-xs font-semibold text-primary hover:text-primary-hover hover:underline transition-colors cursor-pointer shrink-0"
+                        title="Sign in using another email or Google account"
+                      >
+                        Switch Account
+                      </button>
                     </div>
                   )}
 
@@ -626,7 +654,16 @@ export function OnboardingPage() {
                     <span>Back</span>
                   </Button>
                 ) : (
-                  <div />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleBackToLogin}
+                    disabled={submitting}
+                    title="Return to login page to sign in with email or Google"
+                  >
+                    <ArrowLeft className="w-4 h-4" strokeWidth={2} />
+                    <span>Back to Login</span>
+                  </Button>
                 )}
 
                 <Button type="submit" variant="primary" disabled={submitting}>
@@ -643,6 +680,21 @@ export function OnboardingPage() {
             </form>
           </CardContent>
         </Card>
+
+        {/* Footer helper for switching accounts */}
+        <div className="flex flex-col sm:flex-row items-center justify-between text-xs text-text-medium px-2 py-1">
+          <span>
+            Signed in as <strong className="text-text-high">{user?.email || (user?.phone ? `+91 ${user.phone}` : 'Merchant User')}</strong>
+          </span>
+          <button
+            type="button"
+            onClick={handleBackToLogin}
+            className="text-primary hover:text-primary-hover hover:underline font-semibold flex items-center gap-1.5 mt-2 sm:mt-0 cursor-pointer"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Having an issue? Back to Login (Email or Google)</span>
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -27,6 +27,7 @@ import {
 import { useToast } from '../components/ui/Toast';
 import { useAlerts } from '../context/AlertsContext';
 import { useAuth } from '../context/AuthContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import { Badge } from '../components/ui/Badge';
 import { SalesTrendCard } from '../components/dashboard/SalesTrendCard';
 import { CategorySalesCard } from '../components/dashboard/CategorySalesCard';
@@ -140,6 +141,7 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const { user } = useAuth();
+  const { openPurchaseModal } = useSubscription();
   
   // Calculate remaining days on merchant's active 5-day trial period
   const trialDays = user?.trial_days_left ?? 5;
@@ -272,9 +274,11 @@ export function DashboardPage() {
               <Badge
                 variant={trialDays <= 1 ? 'warning' : 'success'}
                 dot
-                className="text-xs font-semibold"
+                onClick={() => openPurchaseModal('qr_pay')}
+                className="text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity"
+                title="Click to view QR payment scanner (₹1,299)"
               >
-                5-Day Trial Active ({trialDays} {trialDays === 1 ? 'day' : 'days'} left)
+                5-Day Trial Active ({trialDays} {trialDays === 1 ? 'day' : 'days'} left) • Upgrade
               </Badge>
               {user?.owner_name && (
                 <span className="text-xs text-text-medium font-medium">

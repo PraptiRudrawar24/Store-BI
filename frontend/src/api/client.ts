@@ -20,7 +20,7 @@
  * ==============================================================================
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 /**
  * Retrieves the stored JWT token from localStorage.
@@ -80,6 +80,7 @@ if (typeof window !== 'undefined' && window.fetch) {
 export interface Shop {
   id: number;
   name?: string | null;
+  store_name?: string | null;
   owner_name?: string | null;
   phone: string;
   email?: string | null;
@@ -113,6 +114,18 @@ export interface Shop {
   last_active_at?: string | null;
   status?: string | null;
   created_at?: string | null;
+  expiry_warning?: SubscriptionExpiryWarning | null;
+}
+
+export interface SubscriptionExpiryWarning {
+  has_notification: boolean;
+  type: 'trial' | 'subscription';
+  days_remaining: number;
+  is_expired: boolean;
+  title: string;
+  message: string;
+  plan_name: string;
+  action_label: string;
 }
 
 export interface AuthResponse {
@@ -124,6 +137,7 @@ export interface AuthResponse {
   onboarding_step?: number;
   message?: string;
   shop?: Shop;
+  subscription_warning?: SubscriptionExpiryWarning | null;
 }
 
 export interface PurchaseSubscriptionPayload {
@@ -250,6 +264,124 @@ export interface SubscriptionPaymentStatusResponse {
   error_reason?: string;
 }
 
+export type SubscriptionState =
+  | 'Trial Active'
+  | 'Trial Expired'
+  | 'Payment Pending Review'
+  | 'Pro Active'
+  | 'Subscription Expired'
+  | 'Payment Rejected';
+
+export interface SubscriptionAccessRequestInfo {
+  id: number;
+  request_ref: string;
+  plan_name: string;
+  amount: number;
+  currency?: string;
+  payment_method?: string;
+  utr_number?: string | null;
+  customer_notes?: string | null;
+  status: 'pending_review' | 'approved' | 'rejected';
+  submitted_at: string;
+  reviewed_at?: string | null;
+  reviewed_by_admin?: string | null;
+  rejection_reason?: string | null;
+  admin_notes?: string | null;
+  payment_reference?: string | null;
+}
+
+export interface CustomerSubscriptionStatus {
+  state: SubscriptionState;
+  plan_name: string;
+  is_paid: boolean;
+  is_admin: boolean;
+  trial_start_date?: string | null;
+  trial_end_date?: string | null;
+  trial_days_left: number;
+  subscription_start_date?: string | null;
+  subscription_end_date?: string | null;
+  subscription_days_left: number;
+  days_remaining: number;
+  message: string;
+  can_access_features: boolean;
+  latest_request?: SubscriptionAccessRequestInfo | null;
+  expiry_warning?: SubscriptionExpiryWarning | null;
+  subscription_history?: Array<{
+    id: number;
+    event_type: string;
+    plan_name: string;
+    amount?: number | null;
+    start_date?: string | null;
+    end_date?: string | null;
+    actor?: string | null;
+    reference_id?: string | null;
+    notes?: string | null;
+    created_at?: string | null;
+  }>;
+}
+
+export interface AdminSubscriptionRequestItem extends SubscriptionAccessRequestInfo {
+  shop_id: number;
+  customer_name?: string | null;
+  customer_email?: string | null;
+  customer_phone?: string | null;
+  store_name?: string | null;
+  current_subscription_status?: string | null;
+  trial_days_left?: number;
+  subscription_days_left?: number;
+}
+
+export interface AdminSubscriptionRequestsResponse {
+  items: AdminSubscriptionRequestItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  counts: {
+    pending: number;
+    approved: number;
+    rejected: number;
+    all: number;
+  };
+}
+
+export interface AdminSubscriptionRequestDetailResponse {
+  request: SubscriptionAccessRequestInfo & { shop_id: number };
+  shop: Shop;
+  history: Array<{
+    id: number;
+    event_type: string;
+    plan_name: string;
+    amount?: number | null;
+    start_date?: string | null;
+    end_date?: string | null;
+    actor?: string | null;
+    reference_id?: string | null;
+    notes?: string | null;
+    created_at?: string | null;
+  }>;
+  past_transactions: Array<{
+    id: number;
+    order_id: string;
+    payment_id?: string | null;
+    amount: number;
+    status: string;
+    utr_number?: string | null;
+    payment_method: string;
+    paid_at?: string | null;
+    created_at?: string | null;
+  }>;
+}
+
+export interface InAppNotification {
+  id: number;
+  title: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  is_read: boolean;
+  link?: string | null;
+  created_at: string;
+}
 
 export interface Product {
   id: number;
@@ -1094,6 +1226,16 @@ export const api = {
     return data;
   },
 
+  checkSubscriptionAlert: async (email: string): Promise<{ has_warning: boolean; warning: SubscriptionExpiryWarning | null }> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/subscription-alert?email=${encodeURIComponent(email.trim())}`);
+      if (!res.ok) return { has_warning: false, warning: null };
+      return await res.json();
+    } catch {
+      return { has_warning: false, warning: null };
+    }
+  },
+
   verifyEmail: async (token: string): Promise<AuthResponse> => {
     const res = await fetch(`${API_BASE_URL}/auth/verify-email`, {
       method: 'POST',
@@ -1344,12 +1486,137 @@ export const api = {
     return await res.json();
   },
 
-  getSubscriptionStatus: async (): Promise<Shop> => {
+  getSubscriptionStatus: async (): Promise<CustomerSubscriptionStatus> => {
     const res = await fetch(`${API_BASE_URL}/api/subscription/status`, {
       credentials: 'include',
     });
     if (!res.ok) throw new Error('Failed to fetch subscription status');
     return await res.json();
+  },
+
+  submitSubscriptionAccessRequest: async (payload: {
+    plan_name?: string;
+    amount?: number;
+    utr_number?: string;
+    customer_notes?: string;
+  }): Promise<{ success: boolean; message: string; request: SubscriptionAccessRequestInfo }> => {
+    const res = await fetch(`${API_BASE_URL}/api/subscription/request-access`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to submit payment request' }));
+      throw new Error(err.detail || 'Failed to submit payment request');
+    }
+    return await res.json();
+  },
+
+  getMySubscriptionRequests: async (): Promise<{ requests: SubscriptionAccessRequestInfo[] }> => {
+    const res = await fetch(`${API_BASE_URL}/api/subscription/my-requests`, {
+      credentials: 'include',
+    });
+    if (!res.ok) throw new Error('Failed to fetch subscription requests');
+    return await res.json();
+  },
+
+  getAdminSubscriptionRequests: async (params?: {
+    status?: string;
+    search?: string;
+    plan?: string;
+    start_date?: string;
+    end_date?: string;
+    page?: number;
+    page_size?: number;
+  }): Promise<AdminSubscriptionRequestsResponse> => {
+    const q = new URLSearchParams();
+    if (params?.status) q.append('status', params.status);
+    if (params?.search) q.append('search', params.search);
+    if (params?.plan) q.append('plan', params.plan);
+    if (params?.start_date) q.append('start_date', params.start_date);
+    if (params?.end_date) q.append('end_date', params.end_date);
+    if (params?.page) q.append('page', String(params.page));
+    if (params?.page_size) q.append('page_size', String(params.page_size));
+    const qs = q.toString() ? `?${q.toString()}` : '';
+
+    const res = await fetch(`${API_BASE_URL}/api/admin/subscription-requests${qs}`, {
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch subscription requests' }));
+      throw new Error(err.detail || 'Failed to fetch subscription requests');
+    }
+    return await res.json();
+  },
+
+  getAdminSubscriptionRequestDetail: async (requestId: number): Promise<AdminSubscriptionRequestDetailResponse> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/subscription-requests/${requestId}`, {
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch request detail' }));
+      throw new Error(err.detail || 'Failed to fetch request detail');
+    }
+    return await res.json();
+  },
+
+  adminApproveSubscriptionRequest: async (
+    requestId: number,
+    payload: { payment_reference?: string; admin_notes?: string; confirm_verified: boolean }
+  ): Promise<{ success: boolean; message: string; request: any; shop: Shop }> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/subscription-requests/${requestId}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to approve subscription request' }));
+      throw new Error(err.detail || 'Failed to approve subscription request');
+    }
+    return await res.json();
+  },
+
+  adminRejectSubscriptionRequest: async (
+    requestId: number,
+    payload: { rejection_reason: string; admin_notes?: string }
+  ): Promise<{ success: boolean; message: string; request: any }> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/subscription-requests/${requestId}/reject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to reject subscription request' }));
+      throw new Error(err.detail || 'Failed to reject subscription request');
+    }
+    return await res.json();
+  },
+
+  getInAppNotifications: async (limit: number = 20): Promise<{ unread_count: number; notifications: InAppNotification[] }> => {
+    const res = await fetch(`${API_BASE_URL}/api/notifications?limit=${limit}`, {
+      credentials: 'include',
+    });
+    if (!res.ok) return { unread_count: 0, notifications: [] };
+    return await res.json();
+  },
+
+  markNotificationRead: async (notificationId: number): Promise<{ success: boolean }> => {
+    const res = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    return await res.json().catch(() => ({ success: true }));
+  },
+
+  markAllNotificationsRead: async (): Promise<{ success: boolean }> => {
+    const res = await fetch(`${API_BASE_URL}/api/notifications/read-all`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    return await res.json().catch(() => ({ success: true }));
   },
 
   // --- Summary ---
@@ -2143,7 +2410,11 @@ export const api = {
       const err = await res.json().catch(() => ({ detail: 'Failed to authenticate admin session' }));
       throw new Error(err.detail || 'Failed to authenticate admin session');
     }
-    return await res.json();
+    const data = await res.json();
+    if (data.token) {
+      setAuthToken(data.token);
+    }
+    return data;
   },
 
   getAdminBusinessDetail: async (businessId: number): Promise<BusinessDetailResponse> => {
@@ -2704,6 +2975,242 @@ export const api = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Failed to fetch gateway status' }));
       throw new Error(err.detail || 'Failed to fetch gateway status');
+    }
+    return await res.json();
+  },
+
+  // --- Operations & Platform Analytics ---
+  getOperationsOverview: async (params?: { preset?: string; start_date?: string; end_date?: string }): Promise<OperationsOverviewResponse> => {
+    const q = new URLSearchParams();
+    if (params?.preset) q.append('preset', params.preset);
+    if (params?.start_date) q.append('start_date', params.start_date);
+    if (params?.end_date) q.append('end_date', params.end_date);
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    const res = await fetch(`${API_BASE_URL}/api/admin/reports/overview${qs}`, { credentials: 'include' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch operations overview' }));
+      throw new Error(err.detail || 'Failed to fetch operations overview');
+    }
+    return await res.json();
+  },
+
+  getGeographicAnalytics: async (params?: { preset?: string; start_date?: string; end_date?: string; category?: string }): Promise<GeographicAnalyticsResponse> => {
+    const q = new URLSearchParams();
+    if (params?.preset) q.append('preset', params.preset);
+    if (params?.start_date) q.append('start_date', params.start_date);
+    if (params?.end_date) q.append('end_date', params.end_date);
+    if (params?.category && params.category !== 'all' && !params.category.startsWith('All')) q.append('category', params.category);
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    const res = await fetch(`${API_BASE_URL}/api/admin/reports/geographic${qs}`, { credentials: 'include' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch geographic analytics' }));
+      throw new Error(err.detail || 'Failed to fetch geographic analytics');
+    }
+    return await res.json();
+  },
+
+  getCohortRetention: async (params?: { group_by?: string }): Promise<CohortRetentionResponse> => {
+    const q = new URLSearchParams();
+    if (params?.group_by) q.append('group_by', params.group_by);
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    const res = await fetch(`${API_BASE_URL}/api/admin/reports/cohorts${qs}`, { credentials: 'include' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch cohort retention' }));
+      throw new Error(err.detail || 'Failed to fetch cohort retention');
+    }
+    return await res.json();
+  },
+
+  getSalesGmvAnalytics: async (params?: { preset?: string; start_date?: string; end_date?: string; state?: string; category?: string }): Promise<SalesGmvResponse> => {
+    const q = new URLSearchParams();
+    if (params?.preset) q.append('preset', params.preset);
+    if (params?.start_date) q.append('start_date', params.start_date);
+    if (params?.end_date) q.append('end_date', params.end_date);
+    if (params?.state && params.state !== 'all' && !params.state.startsWith('All')) q.append('state', params.state);
+    if (params?.category && params.category !== 'all' && !params.category.startsWith('All')) q.append('category', params.category);
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    const res = await fetch(`${API_BASE_URL}/api/admin/reports/sales-gmv${qs}`, { credentials: 'include' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch sales GMV analytics' }));
+      throw new Error(err.detail || 'Failed to fetch sales GMV analytics');
+    }
+    return await res.json();
+  },
+
+  getCategoryBenchmarks: async (params?: { preset?: string; start_date?: string; end_date?: string }): Promise<CategoryBenchmarkingResponse> => {
+    const q = new URLSearchParams();
+    if (params?.preset) q.append('preset', params.preset);
+    if (params?.start_date) q.append('start_date', params.start_date);
+    if (params?.end_date) q.append('end_date', params.end_date);
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    const res = await fetch(`${API_BASE_URL}/api/admin/reports/benchmarks${qs}`, { credentials: 'include' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch category benchmarks' }));
+      throw new Error(err.detail || 'Failed to fetch category benchmarks');
+    }
+    return await res.json();
+  },
+
+  getReportBuilderData: async (params: {
+    report_type: string;
+    preset?: string;
+    start_date?: string;
+    end_date?: string;
+    category?: string;
+    state?: string;
+    city?: string;
+    status?: string;
+    page?: number;
+    page_size?: number;
+  }): Promise<ReportBuilderResponse> => {
+    const q = new URLSearchParams();
+    q.append('report_type', params.report_type);
+    if (params.preset) q.append('preset', params.preset);
+    if (params.start_date) q.append('start_date', params.start_date);
+    if (params.end_date) q.append('end_date', params.end_date);
+    if (params.category && params.category !== 'all' && !params.category.startsWith('All')) q.append('category', params.category);
+    if (params.state && params.state !== 'all' && !params.state.startsWith('All')) q.append('state', params.state);
+    if (params.city && params.city !== 'all' && !params.city.startsWith('All')) q.append('city', params.city);
+    if (params.status && params.status !== 'all' && !params.status.startsWith('All')) q.append('status', params.status);
+    if (params.page) q.append('page', String(params.page));
+    if (params.page_size) q.append('page_size', String(params.page_size));
+    const qs = `?${q.toString()}`;
+    const res = await fetch(`${API_BASE_URL}/api/admin/reports/builder${qs}`, { credentials: 'include' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to build report data' }));
+      throw new Error(err.detail || 'Failed to build report data');
+    }
+    return await res.json();
+  },
+
+  getReportExportCsvUrl: (params: {
+    report_type: string;
+    preset?: string;
+    start_date?: string;
+    end_date?: string;
+    category?: string;
+    state?: string;
+    city?: string;
+    status?: string;
+  }): string => {
+    const q = new URLSearchParams();
+    q.append('report_type', params.report_type);
+    if (params.preset) q.append('preset', params.preset);
+    if (params.start_date) q.append('start_date', params.start_date);
+    if (params.end_date) q.append('end_date', params.end_date);
+    if (params.category && params.category !== 'all' && !params.category.startsWith('All')) q.append('category', params.category);
+    if (params.state && params.state !== 'all' && !params.state.startsWith('All')) q.append('state', params.state);
+    if (params.city && params.city !== 'all' && !params.city.startsWith('All')) q.append('city', params.city);
+    if (params.status && params.status !== 'all' && !params.status.startsWith('All')) q.append('status', params.status);
+    return `${API_BASE_URL}/api/admin/reports/export-csv?${q.toString()}`;
+  },
+
+  getReportExportPdfHtmlUrl: (params: {
+    report_type: string;
+    preset?: string;
+    start_date?: string;
+    end_date?: string;
+    category?: string;
+    state?: string;
+    city?: string;
+    status?: string;
+  }): string => {
+    const q = new URLSearchParams();
+    q.append('report_type', params.report_type);
+    if (params.preset) q.append('preset', params.preset);
+    if (params.start_date) q.append('start_date', params.start_date);
+    if (params.end_date) q.append('end_date', params.end_date);
+    if (params.category && params.category !== 'all' && !params.category.startsWith('All')) q.append('category', params.category);
+    if (params.state && params.state !== 'all' && !params.state.startsWith('All')) q.append('state', params.state);
+    if (params.city && params.city !== 'all' && !params.city.startsWith('All')) q.append('city', params.city);
+    if (params.status && params.status !== 'all' && !params.status.startsWith('All')) q.append('status', params.status);
+    return `${API_BASE_URL}/api/admin/reports/export-pdf-html?${q.toString()}`;
+  },
+
+  getOperationalAlerts: async (): Promise<OperationalAlertsResponse> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/reports/alerts`, { credentials: 'include' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch operational alerts' }));
+      throw new Error(err.detail || 'Failed to fetch operational alerts');
+    }
+    return await res.json();
+  },
+
+  getScheduledReports: async (): Promise<ScheduledReportItem[]> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/reports/schedules`, { credentials: 'include' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch scheduled reports' }));
+      throw new Error(err.detail || 'Failed to fetch scheduled reports');
+    }
+    return await res.json();
+  },
+
+  createScheduledReport: async (payload: ScheduledReportCreateRequest): Promise<ScheduledReportItem> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/reports/schedules`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to create scheduled report' }));
+      throw new Error(err.detail || 'Failed to create scheduled report');
+    }
+    return await res.json();
+  },
+
+  updateScheduledReport: async (scheduleId: number, payload: ScheduledReportUpdateRequest): Promise<ScheduledReportItem> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/reports/schedules/${scheduleId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to update scheduled report' }));
+      throw new Error(err.detail || 'Failed to update scheduled report');
+    }
+    return await res.json();
+  },
+
+  deleteScheduledReport: async (scheduleId: number): Promise<{ status: string; schedule_id: number }> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/reports/schedules/${scheduleId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to delete scheduled report' }));
+      throw new Error(err.detail || 'Failed to delete scheduled report');
+    }
+    return await res.json();
+  },
+
+  runScheduledReportNow: async (scheduleId: number): Promise<ReportExecutionLogItem> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/reports/schedules/${scheduleId}/run-now`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to execute scheduled report' }));
+      throw new Error(err.detail || 'Failed to execute scheduled report');
+    }
+    return await res.json();
+  },
+
+  getScheduledReportLogs: async (limit: number = 50): Promise<ReportExecutionLogItem[]> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/reports/schedules/logs?limit=${limit}`, { credentials: 'include' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch schedule execution logs' }));
+      throw new Error(err.detail || 'Failed to fetch schedule execution logs');
+    }
+    return await res.json();
+  },
+
+  getSchedulerStatus: async (): Promise<{ is_email_live: boolean; provider: string; description: string }> => {
+    const res = await fetch(`${API_BASE_URL}/api/admin/reports/scheduler-status`, { credentials: 'include' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch scheduler status' }));
+      throw new Error(err.detail || 'Failed to fetch scheduler status');
     }
     return await res.json();
   },
@@ -3316,3 +3823,264 @@ export interface GatewayConfigStatusResponse {
   supplier_state: string;
   webhook_endpoint_url: string;
 }
+
+// ==============================================================================
+// OPERATIONS & PLATFORM ANALYTICS INTERFACES
+// ==============================================================================
+
+export interface MetricDefinition {
+  label: string;
+  definition: string;
+  calculation: string;
+  distinction_note?: string | null;
+}
+
+export interface DateRangeInfo {
+  preset: string;
+  start_date: string;
+  end_date: string;
+  days: number;
+}
+
+export interface PlatformKPISummary {
+  total_registered_businesses: number;
+  active_businesses: number;
+  new_registrations: number;
+  inactive_businesses: number;
+  active_subscriptions: number;
+  trial_businesses: number;
+  platform_sales_volume: number;
+  total_recorded_orders: number;
+  average_order_value: number;
+  storebi_saas_revenue: number;
+}
+
+export interface PlatformGrowthPoint {
+  date: string;
+  label: string;
+  new_registrations: number;
+  active_businesses: number;
+  orders_count: number;
+  sales_volume: number;
+  saas_revenue: number;
+}
+
+export interface CategoryDistributionItem {
+  category: string;
+  count: number;
+  percentage: number;
+  active_count: number;
+  total_sales: number;
+}
+
+export interface BusinessStatusDistributionItem {
+  status: string;
+  count: number;
+  percentage: number;
+}
+
+export interface OperationsOverviewResponse {
+  date_range: DateRangeInfo;
+  kpis: PlatformKPISummary;
+  growth_trend: PlatformGrowthPoint[];
+  category_distribution: CategoryDistributionItem[];
+  status_distribution: BusinessStatusDistributionItem[];
+  metric_definitions: MetricDefinition[];
+}
+
+export interface GeographicStateItem {
+  state: string;
+  business_count: number;
+  active_count: number;
+  orders_count: number;
+  total_sales: number;
+  adoption_level: string;
+  top_categories: string[];
+}
+
+export interface GeographicCityItem {
+  city: string;
+  state: string;
+  business_count: number;
+  active_count: number;
+  orders_count: number;
+  total_sales: number;
+  dominant_category: string;
+}
+
+export interface GeographicAnalyticsResponse {
+  states: GeographicStateItem[];
+  cities: GeographicCityItem[];
+  category_by_region: Record<string, any>[];
+  top_adoption_regions: string[];
+  low_adoption_regions: string[];
+  unspecified_location_count: number;
+}
+
+export interface CohortItem {
+  cohort_label: string;
+  cohort_size: number;
+  day_1_active: number;
+  day_1_pct: number;
+  day_7_active: number;
+  day_7_pct: number;
+  day_30_active: number;
+  day_30_pct: number;
+  day_90_active: number;
+  day_90_pct: number;
+  current_active: number;
+  current_active_pct: number;
+}
+
+export interface InactiveBusinessItem {
+  shop_id: number;
+  name: string;
+  owner_name: string;
+  phone: string;
+  city: string;
+  state: string;
+  category: string;
+  registered_at: string;
+  last_active_at?: string | null;
+  days_inactive: number;
+  has_any_activity: boolean;
+  inactivity_status: string;
+}
+
+export interface CohortRetentionResponse {
+  cohorts: CohortItem[];
+  inactive_businesses: InactiveBusinessItem[];
+  activity_definition: string;
+  total_tracked: number;
+  overall_retention_30d: number;
+}
+
+export interface SalesGmvResponse {
+  total_sales_gmv: number;
+  completed_orders: number;
+  average_order_value: number;
+  storebi_saas_revenue: number;
+  sales_trend: PlatformGrowthPoint[];
+  payment_modes: { mode: string; orders_count: number; amount: number; share_pct: number }[];
+  product_categories: { category: string; units_sold: number; revenue: number; orders_count: number }[];
+  top_stores: {
+    shop_id: number;
+    name: string;
+    city: string;
+    state: string;
+    category: string;
+    orders_count: number;
+    sales_volume: number;
+    aov: number;
+  }[];
+  regional_sales: { region: string; sales_volume: number; share_pct: number }[];
+  gmv_vs_revenue_note: string;
+}
+
+export interface CategoryBenchmarkItem {
+  category: string;
+  sample_size: number;
+  sample_size_status: string;
+  avg_sales: number;
+  median_sales: number;
+  avg_orders: number;
+  avg_order_value: number;
+  total_inventory_value: number;
+  avg_products_count: number;
+  low_stock_frequency_pct: number;
+  inventory_turnover_proxy: number;
+  active_retention_pct: number;
+}
+
+export interface CategoryBenchmarkingResponse {
+  categories: CategoryBenchmarkItem[];
+  privacy_statement: string;
+}
+
+export interface ReportColumn {
+  key: string;
+  label: string;
+  align?: 'left' | 'right' | 'center';
+}
+
+export interface ReportBuilderResponse {
+  report_type: string;
+  title: string;
+  total_rows: number;
+  columns: ReportColumn[];
+  rows: Record<string, any>[];
+  summary: Record<string, any>;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export interface ScheduledReportCreateRequest {
+  name: string;
+  report_type: string;
+  frequency?: string;
+  filters?: Record<string, any>;
+  recipients: string;
+  format?: string;
+}
+
+export interface ScheduledReportUpdateRequest {
+  name?: string;
+  frequency?: string;
+  recipients?: string;
+  format?: string;
+  status?: string;
+  filters?: Record<string, any>;
+}
+
+export interface ScheduledReportItem {
+  id: number;
+  name: string;
+  report_type: string;
+  frequency: string;
+  filters_json: string;
+  recipients: string;
+  format: string;
+  status: string;
+  last_run_at?: string | null;
+  next_run_at?: string | null;
+  last_status: string;
+  last_error?: string | null;
+  created_at: string;
+}
+
+export interface ReportExecutionLogItem {
+  id: number;
+  schedule_id?: number | null;
+  report_name: string;
+  report_type: string;
+  frequency: string;
+  recipients: string;
+  format: string;
+  status: string;
+  error_message?: string | null;
+  duration_ms: number;
+  delivered_via: string;
+  executed_at: string;
+}
+
+export interface OperationalAlertItem {
+  id: string;
+  alert_type: string;
+  severity: 'critical' | 'warning' | 'info';
+  title: string;
+  description: string;
+  metric_value: string;
+  threshold: string;
+  affected_count: number;
+  recommended_action: string;
+  created_at: string;
+}
+
+export interface OperationalAlertsResponse {
+  critical_count: number;
+  warning_count: number;
+  info_count: number;
+  alerts: OperationalAlertItem[];
+}
+
