@@ -348,3 +348,98 @@ class WebhookEvent(Base):
     error_message = Column(String, nullable=True)
     received_at = Column(DateTime, default=datetime.utcnow)
 
+class ScheduledReport(Base):
+    __tablename__ = "scheduled_reports"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False, index=True)
+    report_type = Column(String, nullable=False, default="platform_summary")
+    frequency = Column(String, nullable=False, default="weekly")  # "daily", "weekly", "monthly"
+    filters_json = Column(String, default="{}")
+    recipients = Column(String, nullable=False)  # Comma-separated emails
+    format = Column(String, default="csv")  # "csv", "pdf", "both"
+    status = Column(String, default="active", index=True)  # "active", "paused"
+    last_run_at = Column(DateTime, nullable=True)
+    next_run_at = Column(DateTime, nullable=True)
+    last_status = Column(String, default="idle")  # "idle", "success", "failed"
+    last_error = Column(String, nullable=True)
+    retry_count = Column(Integer, default=0)
+    created_by = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+    execution_logs = relationship("ReportExecutionLog", back_populates="scheduled_report", cascade="all, delete-orphan")
+
+class ReportExecutionLog(Base):
+    __tablename__ = "report_execution_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    schedule_id = Column(Integer, ForeignKey("scheduled_reports.id", ondelete="CASCADE"), nullable=True, index=True)
+    report_name = Column(String, nullable=False)
+    report_type = Column(String, nullable=False)
+    frequency = Column(String, nullable=False)
+    recipients = Column(String, nullable=False)
+    format = Column(String, default="csv")
+    status = Column(String, default="success", index=True)  # "success", "failed"
+    error_message = Column(String, nullable=True)
+    duration_ms = Column(Integer, default=0)
+    delivered_via = Column(String, default="dev_console")  # "resend", "smtp", "dev_console"
+    executed_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    scheduled_report = relationship("ScheduledReport", back_populates="execution_logs")
+
+
+class SubscriptionAccessRequest(Base):
+    __tablename__ = "subscription_access_requests"
+    id = Column(Integer, primary_key=True, index=True)
+    request_ref = Column(String, unique=True, index=True, nullable=False)
+    shop_id = Column(Integer, ForeignKey("shops.id"), nullable=False, index=True)
+    plan_name = Column(String, default="All-Features Pro")
+    amount = Column(Float, default=1299.0)
+    currency = Column(String, default="INR")
+    payment_method = Column(String, default="upi_qr")
+    utr_number = Column(String, nullable=True, index=True)
+    customer_notes = Column(String, nullable=True)
+    status = Column(String, default="pending_review", index=True)  # "pending_review", "approved", "rejected"
+    submitted_at = Column(DateTime, default=datetime.utcnow, index=True)
+    reviewed_at = Column(DateTime, nullable=True)
+    reviewed_by_admin = Column(String, nullable=True)
+    rejection_reason = Column(String, nullable=True)
+    admin_notes = Column(String, nullable=True)
+    payment_reference = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+    shop = relationship("Shop", backref="subscription_access_requests")
+
+
+class SubscriptionHistory(Base):
+    __tablename__ = "subscription_history"
+    id = Column(Integer, primary_key=True, index=True)
+    shop_id = Column(Integer, ForeignKey("shops.id"), nullable=False, index=True)
+    event_type = Column(String, nullable=False, index=True)  # "trial_started", "request_submitted", "payment_approved", "payment_rejected", "subscription_renewed", "subscription_expired"
+    plan_name = Column(String, default="All-Features Pro")
+    amount = Column(Float, nullable=True)
+    start_date = Column(DateTime, nullable=True)
+    end_date = Column(DateTime, nullable=True)
+    actor = Column(String, nullable=True)  # admin email, customer, or "system"
+    reference_id = Column(String, nullable=True)
+    notes = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    shop = relationship("Shop", backref="subscription_history_entries")
+
+
+class InAppNotification(Base):
+    __tablename__ = "in_app_notifications"
+    id = Column(Integer, primary_key=True, index=True)
+    shop_id = Column(Integer, ForeignKey("shops.id"), nullable=False, index=True)
+    title = Column(String, nullable=False)
+    message = Column(String, nullable=False)
+    type = Column(String, default="info")  # "info", "success", "warning", "error"
+    is_read = Column(Boolean, default=False, index=True)
+    link = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    shop = relationship("Shop", backref="in_app_notifications")
+
+
+

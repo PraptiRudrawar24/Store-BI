@@ -79,6 +79,10 @@ def check_shop_feature_access(shop: models.Shop, feature_slug: str) -> bool:
         return False
 
     if getattr(shop, "is_paid", False):
+        now = datetime.utcnow()
+        end_date = getattr(shop, "subscription_end_date", None)
+        if end_date and now > end_date:
+            return False
         sub_features = getattr(shop, "subscribed_features", None)
         if not sub_features or sub_features == "all":
             return True

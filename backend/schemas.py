@@ -204,6 +204,7 @@ class ShopResponse(ShopBase):
     trial_days_left: Optional[int] = None
     subscription_days_left_in_month: Optional[int] = None
     subscription_total_days_in_month: Optional[int] = None
+    expiry_warning: Optional[Dict[str, Any]] = None
     model_config = ConfigDict(from_attributes=True)
 
 class PurchaseSubscriptionRequest(BaseModel):
@@ -1628,6 +1629,336 @@ class GatewayConfigStatusResponse(BaseModel):
     supplier_gstin: str
     supplier_state: str
     webhook_endpoint_url: str
+
+
+# ==============================================================================
+# OPERATIONS & PLATFORM ANALYTICS SCHEMAS
+# ==============================================================================
+
+class MetricDefinition(BaseModel):
+    label: str
+    definition: str
+    calculation: str
+    distinction_note: Optional[str] = None
+
+
+class DateRangeInfo(BaseModel):
+    preset: str
+    start_date: str
+    end_date: str
+    days: int
+
+
+class PlatformKPISummary(BaseModel):
+    total_registered_businesses: int = 0
+    active_businesses: int = 0
+    new_registrations: int = 0
+    inactive_businesses: int = 0
+    active_subscriptions: int = 0
+    trial_businesses: int = 0
+    platform_sales_volume: float = 0.0
+    total_recorded_orders: int = 0
+    average_order_value: float = 0.0
+    storebi_saas_revenue: float = 0.0
+
+
+class PlatformGrowthPoint(BaseModel):
+    date: str
+    label: str
+    new_registrations: int = 0
+    active_businesses: int = 0
+    orders_count: int = 0
+    sales_volume: float = 0.0
+    saas_revenue: float = 0.0
+
+
+class CategoryDistributionItem(BaseModel):
+    category: str
+    count: int = 0
+    percentage: float = 0.0
+    active_count: int = 0
+    total_sales: float = 0.0
+
+
+class BusinessStatusDistributionItem(BaseModel):
+    status: str
+    count: int = 0
+    percentage: float = 0.0
+
+
+class OperationsOverviewResponse(BaseModel):
+    date_range: DateRangeInfo
+    kpis: PlatformKPISummary
+    growth_trend: List[PlatformGrowthPoint] = []
+    category_distribution: List[CategoryDistributionItem] = []
+    status_distribution: List[BusinessStatusDistributionItem] = []
+    metric_definitions: List[MetricDefinition] = []
+
+
+class GeographicStateItem(BaseModel):
+    state: str
+    business_count: int = 0
+    active_count: int = 0
+    orders_count: int = 0
+    total_sales: float = 0.0
+    adoption_level: str = "nascent"
+    top_categories: List[str] = []
+
+
+class GeographicCityItem(BaseModel):
+    city: str
+    state: str
+    business_count: int = 0
+    active_count: int = 0
+    orders_count: int = 0
+    total_sales: float = 0.0
+    dominant_category: str = "General"
+
+
+class GeographicAnalyticsResponse(BaseModel):
+    states: List[GeographicStateItem] = []
+    cities: List[GeographicCityItem] = []
+    category_by_region: List[Dict[str, Any]] = []
+    top_adoption_regions: List[str] = []
+    low_adoption_regions: List[str] = []
+    unspecified_location_count: int = 0
+
+
+class CohortItem(BaseModel):
+    cohort_label: str
+    cohort_size: int = 0
+    day_1_active: int = 0
+    day_1_pct: float = 0.0
+    day_7_active: int = 0
+    day_7_pct: float = 0.0
+    day_30_active: int = 0
+    day_30_pct: float = 0.0
+    day_90_active: int = 0
+    day_90_pct: float = 0.0
+    current_active: int = 0
+    current_active_pct: float = 0.0
+
+
+class InactiveBusinessItem(BaseModel):
+    shop_id: int
+    name: str
+    owner_name: str
+    phone: str
+    city: str
+    state: str
+    category: str
+    registered_at: str
+    last_active_at: Optional[str] = None
+    days_inactive: int = 0
+    has_any_activity: bool = False
+    inactivity_status: str = "confirmed_inactive"
+
+
+class CohortRetentionResponse(BaseModel):
+    cohorts: List[CohortItem] = []
+    inactive_businesses: List[InactiveBusinessItem] = []
+    activity_definition: str
+    total_tracked: int = 0
+    overall_retention_30d: float = 0.0
+
+
+class SalesGmvResponse(BaseModel):
+    total_sales_gmv: float = 0.0
+    completed_orders: int = 0
+    average_order_value: float = 0.0
+    storebi_saas_revenue: float = 0.0
+    sales_trend: List[PlatformGrowthPoint] = []
+    payment_modes: List[Dict[str, Any]] = []
+    product_categories: List[Dict[str, Any]] = []
+    top_stores: List[Dict[str, Any]] = []
+    regional_sales: List[Dict[str, Any]] = []
+    gmv_vs_revenue_note: str
+
+
+class CategoryBenchmarkItem(BaseModel):
+    category: str
+    sample_size: int = 0
+    sample_size_status: str = "sufficient"
+    avg_sales: float = 0.0
+    median_sales: float = 0.0
+    avg_orders: float = 0.0
+    avg_order_value: float = 0.0
+    total_inventory_value: float = 0.0
+    avg_products_count: float = 0.0
+    low_stock_frequency_pct: float = 0.0
+    inventory_turnover_proxy: float = 0.0
+    active_retention_pct: float = 0.0
+
+
+class CategoryBenchmarkingResponse(BaseModel):
+    categories: List[CategoryBenchmarkItem] = []
+    privacy_statement: str
+
+
+class ReportColumn(BaseModel):
+    key: str
+    label: str
+    align: Optional[str] = "left"
+
+
+class ReportBuilderResponse(BaseModel):
+    report_type: str
+    title: str
+    total_rows: int = 0
+    columns: List[ReportColumn] = []
+    rows: List[Dict[str, Any]] = []
+    summary: Dict[str, Any] = {}
+    page: int = 1
+    page_size: int = 25
+    total_pages: int = 1
+
+
+class ScheduledReportCreateRequest(BaseModel):
+    name: str
+    report_type: str
+    frequency: str = "weekly"
+    filters: Dict[str, Any] = {}
+    recipients: str
+    format: str = "csv"
+
+
+class ScheduledReportUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    frequency: Optional[str] = None
+    recipients: Optional[str] = None
+    format: Optional[str] = None
+    status: Optional[str] = None
+    filters: Optional[Dict[str, Any]] = None
+
+
+class ScheduledReportItem(BaseModel):
+    id: int
+    name: str
+    report_type: str
+    frequency: str
+    filters_json: str
+    recipients: str
+    format: str
+    status: str
+    last_run_at: Optional[str] = None
+    next_run_at: Optional[str] = None
+    last_status: str
+    last_error: Optional[str] = None
+    created_at: str
+
+
+class ReportExecutionLogItem(BaseModel):
+    id: int
+    schedule_id: Optional[int] = None
+    report_name: str
+    report_type: str
+    frequency: str
+    recipients: str
+    format: str
+    status: str
+    error_message: Optional[str] = None
+    duration_ms: int = 0
+    delivered_via: str = "dev_console"
+    executed_at: str
+
+
+class OperationalAlertItem(BaseModel):
+    id: str
+    alert_type: str
+    severity: str
+    title: str
+    description: str
+    metric_value: str
+    threshold: str
+    affected_count: int = 0
+    recommended_action: str
+    created_at: str
+
+
+class OperationalAlertsResponse(BaseModel):
+    critical_count: int = 0
+    warning_count: int = 0
+    info_count: int = 0
+    alerts: List[OperationalAlertItem] = []
+
+
+# ==============================================================
+# Subscription Requests & Lifecycle Schemas
+# ==============================================================
+
+class SubscriptionRequestCreate(BaseModel):
+    plan_name: str = "All-Features Pro"
+    amount: float = 1299.0
+    utr_number: Optional[str] = None
+    customer_notes: Optional[str] = None
+
+
+class SubscriptionRequestItem(BaseModel):
+    id: int
+    request_ref: str
+    shop_id: int
+    customer_name: Optional[str] = None
+    customer_email: Optional[str] = None
+    customer_phone: Optional[str] = None
+    store_name: Optional[str] = None
+    plan_name: str = "All-Features Pro"
+    amount: float = 1299.0
+    currency: str = "INR"
+    payment_method: str = "upi_qr"
+    utr_number: Optional[str] = None
+    customer_notes: Optional[str] = None
+    status: str = "pending_review"  # "pending_review", "approved", "rejected"
+    submitted_at: str
+    reviewed_at: Optional[str] = None
+    reviewed_by_admin: Optional[str] = None
+    rejection_reason: Optional[str] = None
+    admin_notes: Optional[str] = None
+    payment_reference: Optional[str] = None
+    current_subscription_status: Optional[str] = None
+    trial_days_left: Optional[int] = 0
+    subscription_days_left: Optional[int] = 0
+
+
+class AdminApproveSubscriptionRequest(BaseModel):
+    payment_reference: Optional[str] = None
+    admin_notes: Optional[str] = None
+    confirm_verified: bool = True
+
+
+class AdminRejectSubscriptionRequest(BaseModel):
+    rejection_reason: str
+    admin_notes: Optional[str] = None
+
+
+class CustomerSubscriptionStatusResponse(BaseModel):
+    state: str  # "Trial Active" | "Trial Expired" | "Payment Pending Review" | "Pro Active" | "Subscription Expired" | "Payment Rejected"
+    plan_name: str
+    is_paid: bool
+    is_admin: bool
+    trial_start_date: Optional[str] = None
+    trial_end_date: Optional[str] = None
+    trial_days_left: int = 0
+    subscription_start_date: Optional[str] = None
+    subscription_end_date: Optional[str] = None
+    subscription_days_left: int = 0
+    days_remaining: int = 0
+    message: str
+    can_access_features: bool = False
+    latest_request: Optional[dict] = None
+    subscription_history: Optional[List[dict]] = []
+    expiry_warning: Optional[Dict[str, Any]] = None
+
+
+class InAppNotificationItem(BaseModel):
+    id: int
+    title: str
+    message: str
+    type: str = "info"
+    is_read: bool = False
+    link: Optional[str] = None
+    created_at: str
+
+
 
 
 

@@ -140,11 +140,55 @@ def migrate_db():
                     FOREIGN KEY(shop_id) REFERENCES shops(id)
                 )
             """))
-            # Ensure utr_number column exists if payment_transactions table already existed
+            # Ensure all columns exist if payment_transactions table already existed
             res_pt = conn.execute(text("PRAGMA table_info(payment_transactions)")).fetchall()
             pt_cols = [r[1] for r in res_pt]
-            if "utr_number" not in pt_cols:
-                conn.execute(text("ALTER TABLE payment_transactions ADD COLUMN utr_number VARCHAR"))
+            if pt_cols:
+                if "order_id" not in pt_cols:
+                    conn.execute(text("ALTER TABLE payment_transactions ADD COLUMN order_id VARCHAR"))
+                if "payment_id" not in pt_cols:
+                    conn.execute(text("ALTER TABLE payment_transactions ADD COLUMN payment_id VARCHAR"))
+                if "signature" not in pt_cols:
+                    conn.execute(text("ALTER TABLE payment_transactions ADD COLUMN signature VARCHAR"))
+                if "amount" not in pt_cols:
+                    conn.execute(text("ALTER TABLE payment_transactions ADD COLUMN amount FLOAT"))
+                if "amount_paise" not in pt_cols:
+                    conn.execute(text("ALTER TABLE payment_transactions ADD COLUMN amount_paise INTEGER DEFAULT 0"))
+                if "gateway_payment_id" not in pt_cols:
+                    conn.execute(text("ALTER TABLE payment_transactions ADD COLUMN gateway_payment_id VARCHAR"))
+                if "gateway_order_id" not in pt_cols:
+                    conn.execute(text("ALTER TABLE payment_transactions ADD COLUMN gateway_order_id VARCHAR"))
+                if "gateway_fee_paise" not in pt_cols:
+                    conn.execute(text("ALTER TABLE payment_transactions ADD COLUMN gateway_fee_paise INTEGER DEFAULT 0"))
+                if "gateway_tax_paise" not in pt_cols:
+                    conn.execute(text("ALTER TABLE payment_transactions ADD COLUMN gateway_tax_paise INTEGER DEFAULT 0"))
+                if "net_settlement_paise" not in pt_cols:
+                    conn.execute(text("ALTER TABLE payment_transactions ADD COLUMN net_settlement_paise INTEGER DEFAULT 0"))
+                if "settlement_status" not in pt_cols:
+                    conn.execute(text("ALTER TABLE payment_transactions ADD COLUMN settlement_status VARCHAR DEFAULT 'pending'"))
+                if "settlement_id" not in pt_cols:
+                    conn.execute(text("ALTER TABLE payment_transactions ADD COLUMN settlement_id VARCHAR"))
+                if "refunded_amount_paise" not in pt_cols:
+                    conn.execute(text("ALTER TABLE payment_transactions ADD COLUMN refunded_amount_paise INTEGER DEFAULT 0"))
+                if "failure_code" not in pt_cols:
+                    conn.execute(text("ALTER TABLE payment_transactions ADD COLUMN failure_code VARCHAR"))
+                if "failure_reason" not in pt_cols:
+                    conn.execute(text("ALTER TABLE payment_transactions ADD COLUMN failure_reason VARCHAR"))
+                if "customer_email" not in pt_cols:
+                    conn.execute(text("ALTER TABLE payment_transactions ADD COLUMN customer_email VARCHAR"))
+                if "customer_phone" not in pt_cols:
+                    conn.execute(text("ALTER TABLE payment_transactions ADD COLUMN customer_phone VARCHAR"))
+                if "metadata_json" not in pt_cols:
+                    conn.execute(text("ALTER TABLE payment_transactions ADD COLUMN metadata_json VARCHAR"))
+                if "is_test_mode" not in pt_cols:
+                    conn.execute(text("ALTER TABLE payment_transactions ADD COLUMN is_test_mode BOOLEAN DEFAULT 0"))
+                if "utr_number" not in pt_cols:
+                    conn.execute(text("ALTER TABLE payment_transactions ADD COLUMN utr_number VARCHAR"))
+                if "error_reason" not in pt_cols:
+                    conn.execute(text("ALTER TABLE payment_transactions ADD COLUMN error_reason VARCHAR"))
+                if "paid_at" not in pt_cols:
+                    conn.execute(text("ALTER TABLE payment_transactions ADD COLUMN paid_at DATETIME"))
+                conn.execute(text("UPDATE payment_transactions SET amount = amount_paise / 100.0 WHERE amount IS NULL AND amount_paise IS NOT NULL"))
 
             # Ensure support_tickets, ticket_messages, and customer_feedback tables exist
             conn.execute(text("""
@@ -197,6 +241,61 @@ def migrate_db():
                     converted_ticket_id INTEGER,
                     created_at DATETIME,
                     updated_at DATETIME,
+                    FOREIGN KEY(shop_id) REFERENCES shops(id)
+                )
+            """))
+
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS subscription_access_requests (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    request_ref VARCHAR NOT NULL UNIQUE,
+                    shop_id INTEGER NOT NULL,
+                    plan_name VARCHAR DEFAULT 'All-Features Pro',
+                    amount FLOAT DEFAULT 1299.0,
+                    currency VARCHAR DEFAULT 'INR',
+                    payment_method VARCHAR DEFAULT 'upi_qr',
+                    utr_number VARCHAR,
+                    customer_notes TEXT,
+                    status VARCHAR DEFAULT 'pending_review',
+                    submitted_at DATETIME,
+                    reviewed_at DATETIME,
+                    reviewed_by_admin VARCHAR,
+                    rejection_reason TEXT,
+                    admin_notes TEXT,
+                    payment_reference VARCHAR,
+                    created_at DATETIME,
+                    updated_at DATETIME,
+                    FOREIGN KEY(shop_id) REFERENCES shops(id)
+                )
+            """))
+
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS subscription_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    shop_id INTEGER NOT NULL,
+                    event_type VARCHAR NOT NULL,
+                    plan_name VARCHAR DEFAULT 'All-Features Pro',
+                    amount FLOAT,
+                    start_date DATETIME,
+                    end_date DATETIME,
+                    actor VARCHAR,
+                    reference_id VARCHAR,
+                    notes TEXT,
+                    created_at DATETIME,
+                    FOREIGN KEY(shop_id) REFERENCES shops(id)
+                )
+            """))
+
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS in_app_notifications (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    shop_id INTEGER NOT NULL,
+                    title VARCHAR NOT NULL,
+                    message TEXT NOT NULL,
+                    type VARCHAR DEFAULT 'info',
+                    is_read BOOLEAN DEFAULT 0,
+                    link VARCHAR,
+                    created_at DATETIME,
                     FOREIGN KEY(shop_id) REFERENCES shops(id)
                 )
             """))

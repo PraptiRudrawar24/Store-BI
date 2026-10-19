@@ -13,7 +13,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, Response, File, Upl
 from sqlalchemy import func, or_, desc
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import ValidationError
 
 # Auto-load .env file if present
@@ -30,6 +30,7 @@ import vision_provider
 import security
 import email_service
 import payment_service
+import reports_service
 from database import engine, get_db, migrate_db, SessionLocal
 from auth import (
     create_access_token,
@@ -42,6 +43,117 @@ from auth import (
     COOKIE_NAME,
 )
 
+def compute_subscription_expiry_warning(shop: Optional[models.Shop]) -> Optional[dict]:
+    """
+    Computes whether a shop's trial or monthly subscription is about to end (<= 1 day remaining)
+    or has ended (expired / 0 days remaining).
+    Returns a structured warning dictionary or None.
+    """
+    if not shop or getattr(shop, "is_admin", False):
+        return None
+
+    now = datetime.utcnow()
+    is_paid = getattr(shop, "is_paid", False) and getattr(shop, "status", "") != "expired"
+
+    sub_days_left, _ = calculate_subscription_days_left(shop)
+    trial_days_left = calculate_trial_days_left(shop.trial_end_date)
+
+    is_warning = False
+    warning_type = "trial"
+    days_remaining = 0
+    is_expired = False
+    title = ""
+    message = ""
+    action_label = "Renew Now (₹1,299)"
+
+    if is_paid:
+        # Check active paid subscription
+        if sub_days_left <= 1:
+            is_warning = True
+            warning_type = "subscription"
+            days_remaining = max(0, sub_days_left)
+            if days_remaining == 1:
+                title = "Monthly Subscription Ending in 1 Day"
+                message = "Your All-Features Pro monthly subscription expires tomorrow. Renew today for ₹1,299 to ensure uninterrupted access to billing, inventory, and reports."
+                action_label = "Renew Subscription (₹1,299)"
+            else:
+                title = "Monthly Subscription Expired"
+                message = "Your All-Features Pro subscription has ended. Renew for ₹1,299 to restore access to paid features. Your data is safely preserved."
+                is_expired = True
+                action_label = "Renew Subscription (₹1,299)"
+    else:
+        # Trial or expired
+        if getattr(shop, "status", "trial") == "expired" or trial_days_left <= 0:
+            is_warning = True
+            is_expired = True
+            days_remaining = 0
+            if getattr(shop, "subscription_start_date", None):
+                warning_type = "subscription"
+                title = "Monthly Subscription Expired"
+                message = "Your Store BI subscription has expired. Renew for ₹1,299 to restore full access to POS and analytics."
+                action_label = "Renew Subscription (₹1,299)"
+            else:
+                warning_type = "trial"
+                title = "Free Trial Expired"
+                message = "Your 5-day free trial has ended. Subscribe to All-Features Pro for ₹1,299 to continue using Store BI."
+                action_label = "Subscribe for ₹1,299"
+        elif trial_days_left <= 1:
+            is_warning = True
+            warning_type = "trial"
+            days_remaining = 1
+            title = "Free Trial Ending in 1 Day"
+            message = "Your 5-day free trial has 1 day remaining. Subscribe to All-Features Pro for ₹1,299 to continue using Store BI without interruption."
+            action_label = "Upgrade to Pro (₹1,299)"
+
+    if not is_warning:
+        return None
+
+    return {
+        "has_notification": True,
+        "type": warning_type,
+        "days_remaining": days_remaining,
+        "is_expired": is_expired,
+        "title": title,
+        "message": message,
+        "plan_name": getattr(shop, "plan_name", None) or ("All-Features Pro" if is_paid else "Free Trial"),
+        "action_label": action_label,
+    }
+
+def check_and_create_subscription_expiry_notification(shop: Optional[models.Shop], db: Session) -> Optional[dict]:
+    """
+    Computes the expiry warning and ensures an InAppNotification entry exists in the database
+    so the notification appears in the user's notification center.
+    """
+    warning = compute_subscription_expiry_warning(shop)
+    if not warning or not shop:
+        return None
+
+    try:
+        now = datetime.utcnow()
+        cutoff = now - timedelta(hours=20)
+        existing_notif = db.query(models.InAppNotification).filter(
+            models.InAppNotification.shop_id == shop.id,
+            models.InAppNotification.title == warning["title"],
+            models.InAppNotification.created_at >= cutoff,
+        ).first()
+
+        if not existing_notif:
+            notif = models.InAppNotification(
+                shop_id=shop.id,
+                title=warning["title"],
+                message=warning["message"],
+                type="warning" if not warning["is_expired"] else "error",
+                is_read=False,
+                link="/dashboard",
+                created_at=now,
+            )
+            db.add(notif)
+            db.commit()
+    except Exception:
+        db.rollback()
+
+    return warning
+
 def serialize_shop(shop: models.Shop) -> dict:
     sub_left, sub_total = calculate_subscription_days_left(shop)
     trial_left = calculate_trial_days_left(shop.trial_end_date)
@@ -49,6 +161,7 @@ def serialize_shop(shop: models.Shop) -> dict:
     d["trial_days_left"] = 0 if getattr(shop, "is_paid", False) else trial_left
     d["subscription_days_left_in_month"] = sub_left if getattr(shop, "is_paid", False) else None
     d["subscription_total_days_in_month"] = sub_total if getattr(shop, "is_paid", False) else None
+    d["expiry_warning"] = compute_subscription_expiry_warning(shop)
     return d
 
 # Create database tables and apply column migrations
@@ -182,6 +295,7 @@ def verify_otp(
     )
 
     shop_dict = serialize_shop(shop)
+    warning_info = check_and_create_subscription_expiry_notification(shop, db)
 
     return {
         "success": True,
@@ -190,6 +304,7 @@ def verify_otp(
         "onboarding_completed": shop.onboarding_completed,
         "onboarding_step": shop.onboarding_step,
         "shop": shop_dict,
+        "subscription_warning": warning_info,
     }
 
 
@@ -385,9 +500,8 @@ def login(
     )
     security.set_auth_cookie(response, access_token)
 
-    trial_days = calculate_trial_days_left(shop.trial_end_date)
-    shop_dict = schemas.ShopResponse.model_validate(shop).model_dump()
-    shop_dict["trial_days_left"] = trial_days
+    shop_dict = serialize_shop(shop)
+    warning_info = check_and_create_subscription_expiry_notification(shop, db)
 
     return {
         "success": True,
@@ -396,6 +510,29 @@ def login(
         "onboarding_completed": shop.onboarding_completed,
         "onboarding_step": shop.onboarding_step,
         "shop": shop_dict,
+        "subscription_warning": warning_info,
+    }
+
+
+@app.get("/auth/subscription-alert")
+def check_subscription_alert(
+    email: str = Query(..., description="Customer email address to verify subscription expiration status"),
+    db: Session = Depends(get_db),
+):
+    """
+    Public lookup for login screen to check if an account's trial or monthly subscription
+    is expiring within 1 day or has expired.
+    Returns warning details without exposing credentials or sensitive shop metrics.
+    """
+    clean_email = email.strip().lower()
+    shop = db.query(models.Shop).filter(func.lower(models.Shop.email) == clean_email).first()
+    if not shop:
+        return {"has_warning": False, "warning": None}
+
+    warning = compute_subscription_expiry_warning(shop)
+    return {
+        "has_warning": warning is not None,
+        "warning": warning,
     }
 
 
@@ -1026,9 +1163,8 @@ async def auth_google(
     )
     security.set_auth_cookie(response, access_token)
 
-    trial_days = calculate_trial_days_left(shop.trial_end_date)
-    shop_dict = schemas.ShopResponse.model_validate(shop).model_dump()
-    shop_dict["trial_days_left"] = trial_days
+    shop_dict = serialize_shop(shop)
+    warning_info = check_and_create_subscription_expiry_notification(shop, db)
 
     return {
         "success": True,
@@ -1037,6 +1173,7 @@ async def auth_google(
         "onboarding_completed": shop.onboarding_completed,
         "onboarding_step": shop.onboarding_step,
         "shop": shop_dict,
+        "subscription_warning": warning_info,
     }
 
 
@@ -6686,9 +6823,18 @@ def get_subscription_plans(db: Session = Depends(get_db)):
     Returns the single active merchant subscription plan: All-Features Pro at ₹1,299 / month.
     Includes all 6 premium retail automation and intelligence capabilities.
     """
+    plan_price = 1299.0
+    cfg = db.query(models.PlanConfig).filter(models.PlanConfig.key == "pricing_config").first()
+    if cfg and cfg.value:
+        try:
+            cfg_data = json.loads(cfg.value)
+            plan_price = float(cfg_data.get("bundle", {}).get("monthly_price", 1299.0))
+        except Exception:
+            plan_price = 1299.0
+
     return {
         "plan_name": "All-Features Pro",
-        "price": 1299.0,
+        "price": plan_price,
         "billing_cycle": "monthly",
         "period_label": "/month",
         "currency": "INR",
@@ -6732,14 +6878,6 @@ def get_subscription_plans(db: Session = Depends(get_db)):
             },
         ],
     }
-
-
-@app.get("/api/subscription/status", response_model=schemas.ShopResponse)
-def get_subscription_status(current_shop: models.Shop = Depends(get_current_shop)):
-    """
-    Returns real-time subscription & trial status for authenticated shop.
-    """
-    return serialize_shop(current_shop)
 
 
 @app.get("/api/subscription/qr-image")
@@ -6821,8 +6959,14 @@ def create_subscription_order(
     Creates an order in Razorpay if configured, or falls back to test mode order.
     Persists the transaction in the database.
     """
-    import uuid
     base_price = 1299.0
+    cfg = db.query(models.PlanConfig).filter(models.PlanConfig.key == "pricing_config").first()
+    if cfg and cfg.value:
+        try:
+            cfg_data = json.loads(cfg.value)
+            base_price = float(cfg_data.get("bundle", {}).get("monthly_price", 1299.0))
+        except Exception:
+            base_price = 1299.0
     final_price = base_price
 
     # Promo code validation if provided
@@ -7243,6 +7387,789 @@ def cancel_subscription_order(
     return {"success": True, "message": "Payment cancelled. No charges were made."}
 
 
+def compute_shop_subscription_state(shop: models.Shop, db: Session) -> dict:
+    now = datetime.utcnow()
+    is_admin = getattr(shop, "is_admin", False)
+    if is_admin:
+        return {
+            "state": "Pro Active",
+            "plan_name": getattr(shop, "plan_name", "Enterprise Admin") or "Enterprise Admin",
+            "is_paid": True,
+            "is_admin": True,
+            "trial_start_date": shop.trial_start_date.isoformat() if shop.trial_start_date else None,
+            "trial_end_date": shop.trial_end_date.isoformat() if shop.trial_end_date else None,
+            "trial_days_left": 0,
+            "subscription_start_date": shop.subscription_start_date.isoformat() if shop.subscription_start_date else None,
+            "subscription_end_date": shop.subscription_end_date.isoformat() if shop.subscription_end_date else None,
+            "subscription_days_left": 365,
+            "days_remaining": 365,
+            "message": "Store BI Enterprise Admin access is active.",
+            "can_access_features": True,
+            "latest_request": None,
+        }
+
+    # Fetch latest subscription access request
+    latest_req = db.query(models.SubscriptionAccessRequest).filter(
+        models.SubscriptionAccessRequest.shop_id == shop.id
+    ).order_by(models.SubscriptionAccessRequest.id.desc()).first()
+
+    latest_req_dict = None
+    if latest_req:
+        latest_req_dict = {
+            "id": latest_req.id,
+            "request_ref": latest_req.request_ref,
+            "plan_name": latest_req.plan_name,
+            "amount": latest_req.amount,
+            "status": latest_req.status,
+            "submitted_at": latest_req.submitted_at.isoformat() if latest_req.submitted_at else None,
+            "reviewed_at": latest_req.reviewed_at.isoformat() if latest_req.reviewed_at else None,
+            "rejection_reason": latest_req.rejection_reason,
+            "payment_reference": latest_req.payment_reference,
+            "utr_number": latest_req.utr_number,
+        }
+
+    # Check paid subscription validity
+    sub_end = getattr(shop, "subscription_end_date", None)
+    is_sub_active = False
+    sub_days_left = 0
+    if getattr(shop, "is_paid", False) and sub_end:
+        if now <= sub_end:
+            is_sub_active = True
+            diff = sub_end - now
+            sub_days_left = diff.days + (1 if diff.seconds > 0 else 0)
+        else:
+            if shop.status != "expired":
+                shop.status = "expired"
+                shop.is_paid = False
+                db.commit()
+
+    # Check trial validity
+    trial_days_left = calculate_trial_days_left(shop.trial_end_date)
+    is_trial_active = False
+    if not shop.is_paid and trial_days_left > 0 and getattr(shop, "status", "trial") not in ("expired", "suspended"):
+        is_trial_active = True
+
+    # Has paid subscription ever existed?
+    has_had_paid_sub = getattr(shop, "subscription_start_date", None) is not None or (getattr(shop, "plan_name", "") == "All-Features Pro" and not is_trial_active)
+
+    # Determine state from the 6 official subscription states:
+    if is_sub_active:
+        state = "Pro Active"
+        message = f"Your All-Features Pro subscription is active. You have {sub_days_left} {'day' if sub_days_left == 1 else 'days'} remaining."
+        can_access = True
+        days_remaining = sub_days_left
+    elif latest_req and latest_req.status == "pending_review":
+        state = "Payment Pending Review"
+        message = "Your payment request is awaiting admin verification. Your access will be updated after approval."
+        can_access = is_trial_active
+        days_remaining = trial_days_left if is_trial_active else 0
+    elif latest_req and latest_req.status == "rejected" and not is_trial_active:
+        state = "Payment Rejected"
+        reason_txt = f": {latest_req.rejection_reason}" if latest_req.rejection_reason else ""
+        message = f"Your payment request could not be approved{reason_txt}. Please review the reason and contact support or submit a new request."
+        can_access = False
+        days_remaining = 0
+    elif is_trial_active:
+        state = "Trial Active"
+        message = f"Your free trial is active. You have {trial_days_left} {'day' if trial_days_left == 1 else 'days'} remaining."
+        can_access = True
+        days_remaining = trial_days_left
+    elif has_had_paid_sub:
+        state = "Subscription Expired"
+        message = "Your 30-day subscription has ended. Renew for ₹1,299 to continue using Store BI's paid features. Your saved business data is safe."
+        can_access = False
+        days_remaining = 0
+    else:
+        state = "Trial Expired"
+        message = "Your 5-day free trial has ended. Subscribe to All-Features Pro for ₹1,299 to continue using paid features."
+        can_access = False
+        days_remaining = 0
+
+    return {
+        "state": state,
+        "plan_name": shop.plan_name or "Free Trial",
+        "is_paid": bool(shop.is_paid and is_sub_active),
+        "is_admin": False,
+        "trial_start_date": shop.trial_start_date.isoformat() if shop.trial_start_date else None,
+        "trial_end_date": shop.trial_end_date.isoformat() if shop.trial_end_date else None,
+        "trial_days_left": trial_days_left,
+        "subscription_start_date": shop.subscription_start_date.isoformat() if shop.subscription_start_date else None,
+        "subscription_end_date": shop.subscription_end_date.isoformat() if shop.subscription_end_date else None,
+        "subscription_days_left": sub_days_left,
+        "days_remaining": days_remaining,
+        "message": message,
+        "can_access_features": can_access,
+        "latest_request": latest_req_dict,
+        "expiry_warning": compute_subscription_expiry_warning(shop),
+    }
+
+
+@app.post("/api/subscription/request-access")
+def submit_subscription_access_request(
+    payload: schemas.SubscriptionRequestCreate,
+    current_shop: models.Shop = Depends(get_current_shop),
+    db: Session = Depends(get_db),
+):
+    """
+    Customer submits 'I Have Paid' access claim.
+    - Creates a payment access request in status 'pending_review'.
+    - Associates request with authenticated user and store.
+    - Generates unique reference ID (REQ-YYYYMMDD-XXXX).
+    - Prevents duplicate pending requests for the same shop.
+    - Does NOT grant instant access until approved by an admin.
+    """
+    existing_pending = db.query(models.SubscriptionAccessRequest).filter(
+        models.SubscriptionAccessRequest.shop_id == current_shop.id,
+        models.SubscriptionAccessRequest.status == "pending_review",
+    ).first()
+
+    if existing_pending:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"You already have a payment request ({existing_pending.request_ref}) pending admin review. Our team will verify and activate your access shortly.",
+        )
+
+    now = datetime.utcnow()
+    clean_ref = f"REQ-{now.strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
+    amount = float(payload.amount or 1299.0)
+
+    req = models.SubscriptionAccessRequest(
+        request_ref=clean_ref,
+        shop_id=current_shop.id,
+        plan_name=payload.plan_name or "All-Features Pro",
+        amount=amount,
+        currency="INR",
+        payment_method="upi_qr",
+        utr_number=payload.utr_number.strip().upper() if payload.utr_number else None,
+        customer_notes=payload.customer_notes.strip() if payload.customer_notes else None,
+        status="pending_review",
+        submitted_at=now,
+    )
+    db.add(req)
+
+    history = models.SubscriptionHistory(
+        shop_id=current_shop.id,
+        event_type="request_submitted",
+        plan_name=req.plan_name,
+        amount=req.amount,
+        actor=current_shop.owner_name or current_shop.email or f"Shop {current_shop.id}",
+        reference_id=clean_ref,
+        notes=f"Payment request submitted for {req.plan_name} (₹{req.amount:.2f}). UTR: {req.utr_number or 'N/A'}",
+        created_at=now,
+    )
+    db.add(history)
+
+    notif = models.InAppNotification(
+        shop_id=current_shop.id,
+        title="Payment Request Submitted",
+        message=f"Your payment request ({clean_ref}) for All-Features Pro has been submitted. Your subscription will be activated after admin verification.",
+        type="info",
+        created_at=now,
+    )
+    db.add(notif)
+    db.commit()
+    db.refresh(req)
+
+    return {
+        "success": True,
+        "message": "Your payment request has been submitted. Your subscription will be activated after admin verification.",
+        "request": {
+            "id": req.id,
+            "request_ref": req.request_ref,
+            "plan_name": req.plan_name,
+            "amount": req.amount,
+            "status": req.status,
+            "submitted_at": req.submitted_at.isoformat(),
+            "utr_number": req.utr_number,
+        },
+    }
+
+
+@app.get("/api/subscription/status", response_model=schemas.CustomerSubscriptionStatusResponse)
+def get_customer_subscription_status(
+    current_shop: models.Shop = Depends(get_current_shop),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns current customer subscription status across the 6 lifecycle states:
+    - Trial Active
+    - Trial Expired
+    - Payment Pending Review
+    - Pro Active
+    - Subscription Expired
+    - Payment Rejected
+    """
+    status_info = compute_shop_subscription_state(current_shop, db)
+
+    history_entries = db.query(models.SubscriptionHistory).filter(
+        models.SubscriptionHistory.shop_id == current_shop.id
+    ).order_by(models.SubscriptionHistory.id.desc()).limit(10).all()
+
+    history_list = []
+    for h in history_entries:
+        history_list.append({
+            "id": h.id,
+            "event_type": h.event_type,
+            "plan_name": h.plan_name,
+            "amount": h.amount,
+            "start_date": h.start_date.isoformat() if h.start_date else None,
+            "end_date": h.end_date.isoformat() if h.end_date else None,
+            "actor": h.actor,
+            "reference_id": h.reference_id,
+            "notes": h.notes,
+            "created_at": h.created_at.isoformat() if h.created_at else None,
+        })
+
+    status_info["subscription_history"] = history_list
+    return status_info
+
+
+@app.get("/api/subscription/my-requests")
+def get_my_subscription_requests(
+    current_shop: models.Shop = Depends(get_current_shop),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns all subscription access requests submitted by authenticated customer.
+    """
+    requests = db.query(models.SubscriptionAccessRequest).filter(
+        models.SubscriptionAccessRequest.shop_id == current_shop.id
+    ).order_by(models.SubscriptionAccessRequest.id.desc()).all()
+
+    results = []
+    for r in requests:
+        results.append({
+            "id": r.id,
+            "request_ref": r.request_ref,
+            "plan_name": r.plan_name,
+            "amount": r.amount,
+            "currency": r.currency,
+            "status": r.status,
+            "submitted_at": r.submitted_at.isoformat() if r.submitted_at else None,
+            "reviewed_at": r.reviewed_at.isoformat() if r.reviewed_at else None,
+            "reviewed_by_admin": r.reviewed_by_admin,
+            "rejection_reason": r.rejection_reason,
+            "payment_reference": r.payment_reference,
+            "utr_number": r.utr_number,
+        })
+    return {"requests": results}
+
+
+# ==============================================================
+# Admin Subscription Requests Management Endpoints
+# ==============================================================
+
+@app.get("/api/admin/subscription-requests")
+def admin_get_subscription_requests(
+    status: Optional[str] = Query(None, description="Filter by status: pending_review, approved, rejected, all"),
+    search: Optional[str] = Query(None, description="Search by customer name, store name, email, phone, request ref, utr"),
+    plan: Optional[str] = Query(None, description="Filter by plan name"),
+    start_date: Optional[str] = Query(None, description="Filter by start date (YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="Filter by end date (YYYY-MM-DD)"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    current_admin: models.Shop = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Searchable, filterable table of customer subscription access requests.
+    Accessible only to authorized admins.
+    """
+    query = db.query(models.SubscriptionAccessRequest).join(models.Shop)
+
+    if status and status.lower() != "all":
+        query = query.filter(models.SubscriptionAccessRequest.status == status.lower())
+
+    if plan and plan.lower() != "all":
+        query = query.filter(models.SubscriptionAccessRequest.plan_name.ilike(f"%{plan}%"))
+
+    if search:
+        s = f"%{search.strip()}%"
+        query = query.filter(
+            or_(
+                models.SubscriptionAccessRequest.request_ref.ilike(s),
+                models.SubscriptionAccessRequest.utr_number.ilike(s),
+                models.Shop.name.ilike(s),
+                models.Shop.owner_name.ilike(s),
+                models.Shop.email.ilike(s),
+                models.Shop.phone.ilike(s),
+            )
+        )
+
+    if start_date:
+        try:
+            sd = datetime.strptime(start_date, "%Y-%m-%d")
+            query = query.filter(models.SubscriptionAccessRequest.submitted_at >= sd)
+        except Exception:
+            pass
+
+    if end_date:
+        try:
+            ed = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
+            query = query.filter(models.SubscriptionAccessRequest.submitted_at < ed)
+        except Exception:
+            pass
+
+    total_count = query.count()
+    items = query.order_by(models.SubscriptionAccessRequest.submitted_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+    pending_count = db.query(models.SubscriptionAccessRequest).filter(models.SubscriptionAccessRequest.status == "pending_review").count()
+    approved_count = db.query(models.SubscriptionAccessRequest).filter(models.SubscriptionAccessRequest.status == "approved").count()
+    rejected_count = db.query(models.SubscriptionAccessRequest).filter(models.SubscriptionAccessRequest.status == "rejected").count()
+
+    results = []
+    for r in items:
+        shop = r.shop
+        trial_days = calculate_trial_days_left(shop.trial_end_date) if shop else 0
+        sub_days = 0
+        if shop and shop.is_paid and shop.subscription_end_date:
+            now = datetime.utcnow()
+            if shop.subscription_end_date > now:
+                sub_days = (shop.subscription_end_date - now).days + 1
+
+        results.append({
+            "id": r.id,
+            "request_ref": r.request_ref,
+            "shop_id": r.shop_id,
+            "customer_name": shop.owner_name if shop else None,
+            "customer_email": shop.email if shop else None,
+            "customer_phone": shop.phone if shop else None,
+            "store_name": shop.name if shop else None,
+            "plan_name": r.plan_name,
+            "amount": r.amount,
+            "currency": r.currency,
+            "payment_method": r.payment_method,
+            "utr_number": r.utr_number,
+            "customer_notes": r.customer_notes,
+            "status": r.status,
+            "submitted_at": r.submitted_at.isoformat() if r.submitted_at else None,
+            "reviewed_at": r.reviewed_at.isoformat() if r.reviewed_at else None,
+            "reviewed_by_admin": r.reviewed_by_admin,
+            "rejection_reason": r.rejection_reason,
+            "admin_notes": r.admin_notes,
+            "payment_reference": r.payment_reference,
+            "current_subscription_status": shop.status if shop else "unknown",
+            "trial_days_left": trial_days,
+            "subscription_days_left": sub_days,
+        })
+
+    return {
+        "items": results,
+        "total": total_count,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": max(1, (total_count + page_size - 1) // page_size),
+        "counts": {
+            "pending": pending_count,
+            "approved": approved_count,
+            "rejected": rejected_count,
+            "all": total_count,
+        },
+    }
+
+
+@app.get("/api/admin/subscription-requests/{request_id}")
+def admin_get_subscription_request_detail(
+    request_id: int,
+    current_admin: models.Shop = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns full review details for a subscription request:
+    - Customer and store details
+    - Requested plan and amount
+    - Request timestamp
+    - Previous subscription history
+    - Previous approved payments and transaction references
+    """
+    req = db.query(models.SubscriptionAccessRequest).filter(
+        models.SubscriptionAccessRequest.id == request_id
+    ).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Subscription request not found.")
+
+    shop = req.shop
+    now = datetime.utcnow()
+    trial_days = calculate_trial_days_left(shop.trial_end_date) if shop else 0
+    sub_days = 0
+    if shop and shop.is_paid and shop.subscription_end_date and shop.subscription_end_date > now:
+        sub_days = (shop.subscription_end_date - now).days + 1
+
+    history_entries = db.query(models.SubscriptionHistory).filter(
+        models.SubscriptionHistory.shop_id == req.shop_id
+    ).order_by(models.SubscriptionHistory.id.desc()).all()
+
+    history_list = []
+    for h in history_entries:
+        history_list.append({
+            "id": h.id,
+            "event_type": h.event_type,
+            "plan_name": h.plan_name,
+            "amount": h.amount,
+            "start_date": h.start_date.isoformat() if h.start_date else None,
+            "end_date": h.end_date.isoformat() if h.end_date else None,
+            "actor": h.actor,
+            "reference_id": h.reference_id,
+            "notes": h.notes,
+            "created_at": h.created_at.isoformat() if h.created_at else None,
+        })
+
+    past_transactions = db.query(models.PaymentTransaction).filter(
+        models.PaymentTransaction.shop_id == req.shop_id
+    ).order_by(models.PaymentTransaction.id.desc()).limit(10).all()
+
+    tx_list = []
+    for tx in past_transactions:
+        tx_list.append({
+            "id": tx.id,
+            "order_id": tx.order_id,
+            "payment_id": tx.payment_id,
+            "amount": tx.amount,
+            "status": tx.status,
+            "utr_number": tx.utr_number,
+            "payment_method": tx.payment_method,
+            "paid_at": tx.paid_at.isoformat() if tx.paid_at else None,
+            "created_at": tx.created_at.isoformat() if tx.created_at else None,
+        })
+
+    return {
+        "request": {
+            "id": req.id,
+            "request_ref": req.request_ref,
+            "shop_id": req.shop_id,
+            "plan_name": req.plan_name,
+            "amount": req.amount,
+            "currency": req.currency,
+            "payment_method": req.payment_method,
+            "utr_number": req.utr_number,
+            "customer_notes": req.customer_notes,
+            "status": req.status,
+            "submitted_at": req.submitted_at.isoformat() if req.submitted_at else None,
+            "reviewed_at": req.reviewed_at.isoformat() if req.reviewed_at else None,
+            "reviewed_by_admin": req.reviewed_by_admin,
+            "rejection_reason": req.rejection_reason,
+            "admin_notes": req.admin_notes,
+            "payment_reference": req.payment_reference,
+        },
+        "shop": {
+            "id": shop.id if shop else None,
+            "name": shop.name if shop else None,
+            "owner_name": shop.owner_name if shop else None,
+            "email": shop.email if shop else None,
+            "phone": shop.phone if shop else None,
+            "city": shop.city if shop else None,
+            "state": shop.state if shop else None,
+            "category": shop.category if shop else None,
+            "created_at": shop.created_at.isoformat() if shop and shop.created_at else None,
+            "status": shop.status if shop else None,
+            "is_paid": shop.is_paid if shop else False,
+            "plan_name": shop.plan_name if shop else None,
+            "trial_start_date": shop.trial_start_date.isoformat() if shop and shop.trial_start_date else None,
+            "trial_end_date": shop.trial_end_date.isoformat() if shop and shop.trial_end_date else None,
+            "trial_days_left": trial_days,
+            "subscription_start_date": shop.subscription_start_date.isoformat() if shop and shop.subscription_start_date else None,
+            "subscription_end_date": shop.subscription_end_date.isoformat() if shop and shop.subscription_end_date else None,
+            "subscription_days_left": sub_days,
+        },
+        "history": history_list,
+        "past_transactions": tx_list,
+    }
+
+
+@app.post("/api/admin/subscription-requests/{request_id}/approve")
+def admin_approve_subscription_request(
+    request_id: int,
+    payload: schemas.AdminApproveSubscriptionRequest,
+    current_admin: models.Shop = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Authorized Admin Approves Customer Payment Request:
+    - Confirms payment has been verified against actual bank/merchant records.
+    - Activates All-Features Pro for 30 days.
+    - Renewal policy: extends from current expiry if already active, or starts at approval time if expired.
+    - Preserves ALL customer business data intact.
+    - Atomic database update preventing double-approval or race conditions.
+    - Sends in-app notification to customer.
+    """
+    if not payload.confirm_verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Admin confirmation required: You must confirm the payment was verified against the merchant's actual transaction records.",
+        )
+
+    req = db.query(models.SubscriptionAccessRequest).filter(
+        models.SubscriptionAccessRequest.id == request_id
+    ).first()
+
+    if not req:
+        raise HTTPException(status_code=404, detail="Subscription request not found.")
+
+    if req.status != "pending_review":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"This request has already been processed (Current status: {req.status}). Duplicate approvals are prohibited.",
+        )
+
+    shop = db.query(models.Shop).filter(models.Shop.id == req.shop_id).first()
+    if not shop:
+        raise HTTPException(status_code=404, detail="Associated store account not found.")
+
+    now = datetime.utcnow()
+    admin_ident = current_admin.email or f"admin_{current_admin.phone}"
+    payment_ref = payload.payment_reference or req.utr_number or f"VERIFIED-{req.request_ref}"
+
+    # Consistent Renewal Policy: Extend from current expiration timestamp if currently active; otherwise start fresh 30 days now.
+    current_sub_end = shop.subscription_end_date
+    if shop.is_paid and current_sub_end and current_sub_end > now:
+        new_end = current_sub_end + timedelta(days=30)
+    else:
+        shop.subscription_start_date = now
+        new_end = now + timedelta(days=30)
+
+    # 1. Update request status
+    req.status = "approved"
+    req.reviewed_at = now
+    req.reviewed_by_admin = admin_ident
+    req.payment_reference = payment_ref
+    req.admin_notes = payload.admin_notes
+
+    # 2. Update shop entitlement (PRESERVING ALL BUSINESS DATA!)
+    shop.is_paid = True
+    shop.status = "active"
+    shop.plan_name = "All-Features Pro"
+    shop.subscription_amount = req.amount
+    shop.subscription_end_date = new_end
+    shop.subscribed_features = "all"
+
+    # 3. Create Subscription History record
+    history = models.SubscriptionHistory(
+        shop_id=shop.id,
+        event_type="payment_approved",
+        plan_name="All-Features Pro",
+        amount=req.amount,
+        start_date=shop.subscription_start_date,
+        end_date=new_end,
+        actor=admin_ident,
+        reference_id=req.request_ref,
+        notes=f"Admin approved ₹{req.amount:,.2f} payment. Ref: {payment_ref}. Active until {new_end.strftime('%d %b %Y')}.",
+        created_at=now,
+    )
+    db.add(history)
+
+    # 4. Audit Log
+    audit = models.AuditLog(
+        shop_id=shop.id,
+        admin_email=admin_ident,
+        action="approve_subscription_payment",
+        details=f"Approved request {req.request_ref} for {shop.name}. Activated All-Features Pro until {new_end.strftime('%Y-%m-%d %H:%M:%S')}. Payment ref: {payment_ref}.",
+        created_at=now,
+    )
+    db.add(audit)
+
+    # 5. Customer In-App Notification
+    notif = models.InAppNotification(
+        shop_id=shop.id,
+        title="Subscription Approved!",
+        message=f"Your All-Features Pro subscription has been verified and approved by the admin team. It is active until {new_end.strftime('%d %b %Y')}.",
+        type="success",
+        link="/settings",
+        created_at=now,
+    )
+    db.add(notif)
+
+    db.commit()
+    db.refresh(req)
+    db.refresh(shop)
+
+    return {
+        "success": True,
+        "message": f"Payment request approved successfully. All-Features Pro is now active for {shop.name} until {new_end.strftime('%d %b %Y')}.",
+        "request": {
+            "id": req.id,
+            "request_ref": req.request_ref,
+            "status": req.status,
+            "reviewed_at": req.reviewed_at.isoformat(),
+            "reviewed_by_admin": req.reviewed_by_admin,
+            "payment_reference": req.payment_reference,
+        },
+        "shop": serialize_shop(shop),
+    }
+
+
+@app.post("/api/admin/subscription-requests/{request_id}/reject")
+def admin_reject_subscription_request(
+    request_id: int,
+    payload: schemas.AdminRejectSubscriptionRequest,
+    current_admin: models.Shop = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Authorized Admin Rejects Customer Payment Request:
+    - Requires a rejection reason.
+    - Keeps paid access disabled if user has no other active entitlement.
+    - Saves reason and decision timestamp.
+    - Preserves all customer business data completely intact.
+    - Notifies customer with reason and allows re-submission.
+    """
+    reason = payload.rejection_reason.strip()
+    if not reason:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A rejection reason is required to reject a subscription access request.",
+        )
+
+    req = db.query(models.SubscriptionAccessRequest).filter(
+        models.SubscriptionAccessRequest.id == request_id
+    ).first()
+
+    if not req:
+        raise HTTPException(status_code=404, detail="Subscription request not found.")
+
+    if req.status != "pending_review":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"This request has already been processed (Current status: {req.status}).",
+        )
+
+    shop = db.query(models.Shop).filter(models.Shop.id == req.shop_id).first()
+    if not shop:
+        raise HTTPException(status_code=404, detail="Associated store account not found.")
+
+    now = datetime.utcnow()
+    admin_ident = current_admin.email or f"admin_{current_admin.phone}"
+
+    # 1. Update request status
+    req.status = "rejected"
+    req.reviewed_at = now
+    req.reviewed_by_admin = admin_ident
+    req.rejection_reason = reason
+    req.admin_notes = payload.admin_notes
+
+    # 2. Record Subscription History
+    history = models.SubscriptionHistory(
+        shop_id=shop.id,
+        event_type="payment_rejected",
+        plan_name=req.plan_name,
+        amount=req.amount,
+        actor=admin_ident,
+        reference_id=req.request_ref,
+        notes=f"Payment request rejected by {admin_ident}. Reason: {reason}",
+        created_at=now,
+    )
+    db.add(history)
+
+    # 3. Audit Log
+    audit = models.AuditLog(
+        shop_id=shop.id,
+        admin_email=admin_ident,
+        action="reject_subscription_payment",
+        details=f"Rejected payment request {req.request_ref} for {shop.name}. Reason: {reason}",
+        created_at=now,
+    )
+    db.add(audit)
+
+    # 4. In-App Notification for customer
+    notif = models.InAppNotification(
+        shop_id=shop.id,
+        title="Payment Request Not Approved",
+        message=f"Your payment request ({req.request_ref}) could not be approved. Reason: {reason}. Please check your transaction details or contact support.",
+        type="error",
+        link="/settings",
+        created_at=now,
+    )
+    db.add(notif)
+
+    db.commit()
+    db.refresh(req)
+
+    return {
+        "success": True,
+        "message": "Payment request rejected. Rejection reason recorded and customer notified.",
+        "request": {
+            "id": req.id,
+            "request_ref": req.request_ref,
+            "status": req.status,
+            "reviewed_at": req.reviewed_at.isoformat(),
+            "reviewed_by_admin": req.reviewed_by_admin,
+            "rejection_reason": req.rejection_reason,
+        },
+    }
+
+
+# ==============================================================
+# In-App Notifications Endpoints
+# ==============================================================
+
+@app.get("/api/notifications")
+def get_user_notifications(
+    limit: int = Query(20, ge=1, le=50),
+    current_shop: models.Shop = Depends(get_current_shop),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns in-app notifications for authenticated user, with unread count.
+    Automatically generates warning notifications if trial or subscription is about to end (1 day left) or expired.
+    """
+    check_and_create_subscription_expiry_notification(current_shop, db)
+
+    items = db.query(models.InAppNotification).filter(
+        models.InAppNotification.shop_id == current_shop.id
+    ).order_by(models.InAppNotification.created_at.desc()).limit(limit).all()
+
+    unread_count = db.query(models.InAppNotification).filter(
+        models.InAppNotification.shop_id == current_shop.id,
+        models.InAppNotification.is_read == False,
+    ).count()
+
+    results = []
+    for it in items:
+        results.append({
+            "id": it.id,
+            "title": it.title,
+            "message": it.message,
+            "type": it.type,
+            "is_read": it.is_read,
+            "link": it.link,
+            "created_at": it.created_at.isoformat() if it.created_at else None,
+        })
+
+    return {
+        "unread_count": unread_count,
+        "notifications": results,
+    }
+
+
+@app.post("/api/notifications/{notification_id}/read")
+def mark_notification_read(
+    notification_id: int,
+    current_shop: models.Shop = Depends(get_current_shop),
+    db: Session = Depends(get_db),
+):
+    notif = db.query(models.InAppNotification).filter(
+        models.InAppNotification.id == notification_id,
+        models.InAppNotification.shop_id == current_shop.id,
+    ).first()
+    if notif:
+        notif.is_read = True
+        db.commit()
+    return {"success": True}
+
+
+@app.post("/api/notifications/read-all")
+def mark_all_notifications_read(
+    current_shop: models.Shop = Depends(get_current_shop),
+    db: Session = Depends(get_db),
+):
+    db.query(models.InAppNotification).filter(
+        models.InAppNotification.shop_id == current_shop.id,
+        models.InAppNotification.is_read == False,
+    ).update({"is_read": True})
+    db.commit()
+    return {"success": True}
+
+
+
 @app.post("/api/subscription/webhook")
 async def subscription_razorpay_webhook(
     request: Request,
@@ -7493,9 +8420,9 @@ DEFAULT_PLANS_CONFIG = {
         },
     ],
     "bundle": {
-        "monthly_price": 599.0,
-        "quarterly_price": 1797.0,
-        "annual_price": 5999.0,
+        "monthly_price": 1299.0,
+        "quarterly_price": 3897.0,
+        "annual_price": 12990.0,
         "active_subscribers": 0,
     },
 }
@@ -9365,6 +10292,294 @@ async def handle_razorpay_webhook(
 
     db.commit()
     return {"status": "ok", "event_id": event_id, "event": event_type}
+
+
+# ==============================================================================
+# OPERATIONS & PLATFORM ANALYTICS ENDPOINTS
+# ==============================================================================
+
+@app.get("/api/admin/reports/overview", response_model=schemas.OperationsOverviewResponse)
+def get_admin_reports_overview(
+    preset: str = Query("30d", description="today | 7d | 30d | 90d | custom"),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    admin: models.Shop = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    return reports_service.get_operations_overview(db, preset, start_date, end_date)
+
+
+@app.get("/api/admin/reports/geographic", response_model=schemas.GeographicAnalyticsResponse)
+def get_admin_reports_geographic(
+    preset: str = Query("30d"),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    admin: models.Shop = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    return reports_service.get_geographic_analytics(db, preset, start_date, end_date, category)
+
+
+@app.get("/api/admin/reports/cohorts", response_model=schemas.CohortRetentionResponse)
+def get_admin_reports_cohorts(
+    group_by: str = Query("month", description="month | week"),
+    admin: models.Shop = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    return reports_service.get_cohort_retention(db, group_by)
+
+
+@app.get("/api/admin/reports/sales-gmv", response_model=schemas.SalesGmvResponse)
+def get_admin_reports_sales_gmv(
+    preset: str = Query("30d"),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    state: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    admin: models.Shop = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    return reports_service.get_sales_and_gmv_analytics(db, preset, start_date, end_date, state, category)
+
+
+@app.get("/api/admin/reports/benchmarks", response_model=schemas.CategoryBenchmarkingResponse)
+def get_admin_reports_benchmarks(
+    preset: str = Query("30d"),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    admin: models.Shop = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    return reports_service.get_category_benchmarks(db, preset, start_date, end_date)
+
+
+@app.get("/api/admin/reports/builder", response_model=schemas.ReportBuilderResponse)
+def get_admin_reports_builder(
+    report_type: str = Query("platform_summary"),
+    preset: str = Query("30d"),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    state: Optional[str] = Query(None),
+    city: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=5, le=100),
+    admin: models.Shop = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    return reports_service.build_report_data(
+        db, report_type, preset, start_date, end_date, category, state, city, status, page, page_size
+    )
+
+
+@app.get("/api/admin/reports/export-csv")
+def export_admin_report_csv(
+    report_type: str = Query("sales_gmv"),
+    preset: str = Query("30d"),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    state: Optional[str] = Query(None),
+    city: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    admin: models.Shop = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    csv_content = reports_service.export_report_csv_string(
+        db, report_type, preset, start_date, end_date, category, state, city, status
+    )
+    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M")
+    filename = f"storebi_{report_type}_{timestamp}.csv"
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.get("/api/admin/reports/export-pdf-html", response_class=HTMLResponse)
+def export_admin_report_pdf_html(
+    report_type: str = Query("platform_summary"),
+    preset: str = Query("30d"),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    state: Optional[str] = Query(None),
+    city: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    admin: models.Shop = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    html = reports_service.generate_report_pdf_html(
+        db, report_type, preset, start_date, end_date, category, state, city, status
+    )
+    return HTMLResponse(content=html)
+
+
+@app.get("/api/admin/reports/alerts", response_model=schemas.OperationalAlertsResponse)
+def get_admin_reports_alerts(
+    admin: models.Shop = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    return reports_service.evaluate_operational_alerts(db)
+
+
+@app.get("/api/admin/reports/schedules", response_model=List[schemas.ScheduledReportItem])
+def list_admin_report_schedules(
+    admin: models.Shop = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    schedules = db.query(models.ScheduledReport).order_by(models.ScheduledReport.created_at.desc()).all()
+    items = []
+    for s in schedules:
+        items.append(schemas.ScheduledReportItem(
+            id=s.id,
+            name=s.name,
+            report_type=s.report_type,
+            frequency=s.frequency,
+            filters_json=s.filters_json or "{}",
+            recipients=s.recipients,
+            format=s.format,
+            status=s.status,
+            last_run_at=s.last_run_at.strftime("%d %b %Y, %H:%M UTC") if s.last_run_at else None,
+            next_run_at=s.next_run_at.strftime("%d %b %Y, %H:%M UTC") if s.next_run_at else None,
+            last_status=s.last_status or "idle",
+            last_error=s.last_error,
+            created_at=s.created_at.strftime("%d %b %Y"),
+        ))
+    return items
+
+
+@app.post("/api/admin/reports/schedules", response_model=schemas.ScheduledReportItem)
+def create_admin_report_schedule(
+    req: schemas.ScheduledReportCreateRequest,
+    admin: models.Shop = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    s = reports_service.create_scheduled_report(db, req, admin.email or "admin@storebi.com")
+    return schemas.ScheduledReportItem(
+        id=s.id,
+        name=s.name,
+        report_type=s.report_type,
+        frequency=s.frequency,
+        filters_json=s.filters_json or "{}",
+        recipients=s.recipients,
+        format=s.format,
+        status=s.status,
+        last_run_at=s.last_run_at.strftime("%d %b %Y, %H:%M UTC") if s.last_run_at else None,
+        next_run_at=s.next_run_at.strftime("%d %b %Y, %H:%M UTC") if s.next_run_at else None,
+        last_status=s.last_status or "idle",
+        last_error=s.last_error,
+        created_at=s.created_at.strftime("%d %b %Y"),
+    )
+
+
+@app.patch("/api/admin/reports/schedules/{schedule_id}", response_model=schemas.ScheduledReportItem)
+def update_admin_report_schedule(
+    schedule_id: int,
+    req: schemas.ScheduledReportUpdateRequest,
+    admin: models.Shop = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    try:
+        s = reports_service.update_scheduled_report(db, schedule_id, req)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return schemas.ScheduledReportItem(
+        id=s.id,
+        name=s.name,
+        report_type=s.report_type,
+        frequency=s.frequency,
+        filters_json=s.filters_json or "{}",
+        recipients=s.recipients,
+        format=s.format,
+        status=s.status,
+        last_run_at=s.last_run_at.strftime("%d %b %Y, %H:%M UTC") if s.last_run_at else None,
+        next_run_at=s.next_run_at.strftime("%d %b %Y, %H:%M UTC") if s.next_run_at else None,
+        last_status=s.last_status or "idle",
+        last_error=s.last_error,
+        created_at=s.created_at.strftime("%d %b %Y"),
+    )
+
+
+@app.delete("/api/admin/reports/schedules/{schedule_id}")
+def delete_admin_report_schedule(
+    schedule_id: int,
+    admin: models.Shop = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    success = reports_service.delete_scheduled_report(db, schedule_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Scheduled report not found")
+    return {"status": "deleted", "schedule_id": schedule_id}
+
+
+@app.post("/api/admin/reports/schedules/{schedule_id}/run-now", response_model=schemas.ReportExecutionLogItem)
+def run_admin_schedule_now(
+    schedule_id: int,
+    admin: models.Shop = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    try:
+        return reports_service.execute_schedule_now(db, schedule_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.get("/api/admin/reports/schedules/logs", response_model=List[schemas.ReportExecutionLogItem])
+def list_admin_schedule_logs(
+    limit: int = Query(50, ge=1, le=200),
+    admin: models.Shop = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    logs = db.query(models.ReportExecutionLog).order_by(models.ReportExecutionLog.executed_at.desc()).limit(limit).all()
+    items = []
+    for l in logs:
+        items.append(schemas.ReportExecutionLogItem(
+            id=l.id,
+            schedule_id=l.schedule_id,
+            report_name=l.report_name,
+            report_type=l.report_type,
+            frequency=l.frequency,
+            recipients=l.recipients,
+            format=l.format,
+            status=l.status,
+            error_message=l.error_message,
+            duration_ms=l.duration_ms,
+            delivered_via=l.delivered_via,
+            executed_at=l.executed_at.strftime("%d %b %Y, %H:%M:%S UTC"),
+        ))
+    return items
+
+
+@app.get("/api/admin/reports/scheduler-status")
+def get_admin_scheduler_status(
+    admin: models.Shop = Depends(get_current_admin),
+):
+    resend_key = os.environ.get("RESEND_API_KEY", "").strip()
+    smtp_host = os.environ.get("SMTP_HOST", "").strip()
+
+    if resend_key:
+        return {
+            "is_email_live": True,
+            "provider": "Resend API",
+            "description": "Connected to Resend transactional email API for automated report delivery.",
+        }
+    elif smtp_host:
+        return {
+            "is_email_live": True,
+            "provider": f"SMTP ({smtp_host})",
+            "description": f"Connected to SMTP gateway ({smtp_host}) for automated report delivery.",
+        }
+    else:
+        return {
+            "is_email_live": False,
+            "provider": "Development Audit Console",
+            "description": "Email delivery service running in local development mode. Generated reports are audited and logged in ReportExecutionLog.",
+        }
+
 
 
 
