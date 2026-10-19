@@ -6,13 +6,12 @@ import {
   LayoutDashboard,
   ReceiptText,
   Package,
-  ChartColumnIncreasing,
+  BarChart3,
   Sparkles,
   Headset,
   ShieldCheck,
   X,
 } from 'lucide-react';
-import { Dock, DockIcon, DockItem, DockLabel } from '@/components/core/dock';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { useSubscription } from '../../context/SubscriptionContext';
@@ -21,8 +20,6 @@ import { cn } from '../ui/utils';
 export interface SidebarProps {
   onCloseMobile?: () => void;
   isMobile?: boolean;
-  isExpanded?: boolean;
-  onToggleExpand?: () => void;
 }
 
 export function Sidebar({
@@ -55,208 +52,154 @@ export function Sidebar({
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/pos', label: 'POS Billing', icon: ReceiptText },
-    { to: '/upload', label: 'Inventory', fullTitle: 'Inventory Management', icon: Package },
-    { to: '/analytics', label: 'Analytics', fullTitle: 'Analytics & Reports', icon: ChartColumnIncreasing },
-    { to: '/insights', label: 'AI Insights', fullTitle: 'AI Retail Insights', icon: Sparkles },
+    { to: '/upload', label: 'Inventory Management', icon: Package },
+    { to: '/analytics', label: 'Analytics', icon: BarChart3 },
+    { to: '/insights', label: 'AI Insight', icon: Sparkles },
     {
       to: '/support',
-      label: 'Support',
-      fullTitle: 'Support & Feedback',
+      label: 'Support & Feedback',
       icon: Headset,
       badge: unreadSupportCount > 0 ? unreadSupportCount : undefined,
     },
     ...(user?.is_admin
-      ? [{ to: '/admin', label: 'Admin', fullTitle: 'Admin Portal', icon: ShieldCheck }]
+      ? [{ to: '/admin', label: 'Admin Portal', icon: ShieldCheck }]
       : []),
   ];
 
   const trialDays = user?.trial_days_left ?? 5;
   const isPaid = !!user?.is_paid;
   const subDaysLeft = user?.subscription_days_left_in_month ?? 18;
-  const totalMonthDays = user?.subscription_total_days_in_month ?? 30;
 
-  // ============================================================================
-  // MOBILE SLIDING DRAWER LAYOUT
-  // ============================================================================
-  if (isMobile) {
-    return (
-      <aside className="w-full h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between overflow-y-auto">
-        <div className="flex flex-col flex-1 min-h-0">
-          {/* Mobile Header with Close Button */}
-          <div className="h-16 px-4 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 shrink-0">
-            <div className="flex items-center gap-3">
-              <img
-                src="/logo/store-bi-logo.jpeg"
-                alt="Logo"
-                className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0"
-              />
-            </div>
-            {onCloseMobile && (
-              <button
-                type="button"
-                onClick={onCloseMobile}
-                className="w-9 h-9 rounded-full flex items-center justify-center text-[#475569] hover:text-[#1E293B] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                aria-label="Close navigation"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            )}
-          </div>
-
-          {/* Navigation Links - Section Names Just Below Icons */}
-          <nav className="p-3 flex-1 overflow-y-auto" role="navigation" aria-label="Mobile navigation">
-            <div className="grid grid-cols-3 gap-2">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    onClick={onCloseMobile}
-                    title={item.fullTitle || item.label}
-                    className={({ isActive }) =>
-                      cn(
-                        'flex flex-col items-center justify-center p-2 rounded-xl text-center transition-colors',
-                        isActive
-                          ? 'bg-[#00665F]/10 text-[#00665F] font-bold'
-                          : 'text-[#475569] hover:bg-slate-100 hover:text-[#00665F]'
-                      )
-                    }
-                  >
-                    {({ isActive }) => (
-                      <>
-                        <div
-                          className={cn(
-                            'w-11 h-11 rounded-full flex items-center justify-center mb-1 relative',
-                            isActive
-                              ? 'bg-[#00665F] text-white shadow-xs'
-                              : 'bg-slate-100 dark:bg-slate-800 text-[#475569] dark:text-slate-300'
-                          )}
-                        >
-                          <Icon className="w-5 h-5 shrink-0" strokeWidth={2} />
-                          {item.badge !== undefined && (
-                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-white animate-pulse" />
-                          )}
-                        </div>
-                        <span className="text-[11px] font-semibold leading-tight text-center truncate max-w-full">
-                          {item.label}
-                        </span>
-                      </>
-                    )}
-                  </NavLink>
-                );
-              })}
-            </div>
-          </nav>
-        </div>
-
-        {/* Mobile Footer */}
-        <div className="p-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
-          <span className="text-xs font-semibold text-[#1E293B] dark:text-slate-100">
-            {isPaid ? user?.plan_name || 'Pro Plan' : `Trial (${trialDays}d left)`}
-          </span>
-          <button
-            type="button"
-            onClick={() => openPurchaseModal('qr_pay')}
-            className="text-xs font-bold text-[#00665F] hover:underline cursor-pointer"
-          >
-            Upgrade
-          </button>
-        </div>
-      </aside>
-    );
-  }
-
-  // ============================================================================
-  // DESKTOP VERTICAL FLOATING APPLE-STYLE DOCK (NAMES JUST BELOW ICONS)
-  // ============================================================================
   return (
     <aside
-      className={cn(
-        'h-full max-h-[calc(100vh-1.75rem)] flex flex-col justify-between select-none transition-all duration-300 ease-in-out',
-        'rounded-[24px] border border-slate-200/90 dark:border-slate-800',
-        'bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl',
-        'shadow-[0_12px_40px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.04)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.4)]',
-        'overflow-visible z-40',
-        'w-[82px] py-3.5 px-1.5 items-center'
-      )}
+      className="w-full h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between overflow-y-auto select-none"
       role="navigation"
-      aria-label="Floating dock navigation"
+      aria-label="Main sidebar navigation"
     >
-      {/* Top Section: Logo (No text in slide bar section) */}
-      <div className="flex flex-col shrink-0 w-full overflow-visible items-center">
-        <NavLink
-          to="/dashboard"
-          title="Dashboard"
-          className="flex items-center justify-center w-11 h-11 rounded-full hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#00665F]"
-        >
-          <img
-            src="/logo/store-bi-logo.jpeg"
-            alt="Logo"
-            className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-700 shadow-xs shrink-0"
-          />
-        </NavLink>
+      <div className="flex flex-col flex-1 min-h-0">
+        {/* Top Header: Brand Presentation with Logo and Store Name */}
+        <div className="h-16 px-4 flex items-center justify-between border-b border-slate-200/90 dark:border-slate-800 shrink-0">
+          <NavLink
+            to="/dashboard"
+            onClick={onCloseMobile}
+            className="flex items-center gap-3 min-w-0 group"
+            title="Store BI Dashboard"
+          >
+            <img
+              src="/logo/store-bi-logo.jpeg"
+              alt="Store BI Logo"
+              className="w-9 h-9 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shadow-xs shrink-0 group-hover:opacity-90 transition-opacity"
+            />
+            <div className="flex flex-col min-w-0">
+              <span className="font-bold text-[15px] text-slate-900 dark:text-white leading-tight tracking-tight">
+                Store BI
+              </span>
+              <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-tight truncate max-w-[140px]">
+                {user?.name || 'Retail store'}
+              </span>
+            </div>
+          </NavLink>
 
-        {/* Minimalist Apple-style divider */}
-        <div className="h-[1px] w-10 bg-slate-200/70 dark:bg-slate-800 my-2" />
-      </div>
+          {isMobile && onCloseMobile && (
+            <button
+              type="button"
+              onClick={onCloseMobile}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              aria-label="Close navigation"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
 
-      {/* Center Section: Vertical Dock Navigation Icons with Section Names Just Below */}
-      <div className="flex-1 flex flex-col justify-center min-h-0 py-1 w-full overflow-visible">
-        <Dock
-          orientation="vertical"
-          className="w-full items-center overflow-visible gap-2"
-        >
+        {/* Navigation Items */}
+        <nav className="p-3.5 space-y-1.5 flex-1 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
-              <DockItem
+              <NavLink
                 key={item.to}
                 to={item.to}
-                aria-label={item.fullTitle || item.label}
+                onClick={onCloseMobile}
+                className={({ isActive }) =>
+                  cn(
+                    'group relative flex items-center gap-3.5 pl-4 pr-3.5 py-3 rounded-xl transition-all duration-150 text-[14.5px] cursor-pointer',
+                    isActive
+                      ? 'bg-[#005248] text-white shadow-xs'
+                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100/90 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white font-medium'
+                  )
+                }
               >
-                <DockIcon>
-                  <div className="relative flex items-center justify-center">
-                    <Icon className="w-5 h-5 shrink-0" strokeWidth={2} />
-                    {item.badge !== undefined && (
-                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-white dark:border-slate-900 animate-pulse" />
+                {({ isActive }) => (
+                  <>
+                    {/* Active Accent Pill on the left inside button */}
+                    {isActive && (
+                      <span
+                        className="absolute left-2.5 top-1/2 -translate-y-1/2 w-1 h-[22px] rounded-full bg-[#2DD4BF] shadow-xs"
+                        aria-hidden="true"
+                      />
                     )}
-                  </div>
-                </DockIcon>
-                <DockLabel>{item.label}</DockLabel>
-              </DockItem>
+                    <Icon
+                      className={cn(
+                        'w-5 h-5 shrink-0 transition-colors',
+                        isActive
+                          ? 'text-white'
+                          : 'text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white'
+                      )}
+                      strokeWidth={isActive ? 2.1 : 1.9}
+                    />
+                    <span className={cn('tracking-tight truncate', isActive ? 'font-bold' : 'font-medium')}>
+                      {item.label}
+                    </span>
+                    {item.badge !== undefined && (
+                      <span className="ml-auto px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-red-500 text-white leading-none">
+                        {item.badge}
+                      </span>
+                    )}
+                  </>
+                )}
+              </NavLink>
             );
           })}
-        </Dock>
+        </nav>
       </div>
 
-      {/* Bottom Section: Subscription Upgrade */}
-      <div className="flex flex-col shrink-0 mt-auto w-full overflow-visible items-center">
-        {/* Minimalist Apple-style divider */}
-        <div className="h-[1px] w-10 bg-slate-200/70 dark:bg-slate-800 my-2" />
+      {/* Bottom Section: Account Status Card */}
+      <div className="p-3.5 border-t border-slate-200/90 dark:border-slate-800 shrink-0">
+        <div className="p-3.5 rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-[#F8FAFC] dark:bg-slate-800/40 flex flex-col gap-3 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+          {/* Status Header */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex flex-col min-w-0">
+              <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-tight">
+                Account status
+              </span>
+              <span className="text-sm font-bold text-slate-900 dark:text-white leading-tight mt-0.5 truncate">
+                {!isPaid ? 'Full-access trial' : (user?.plan_name || 'Active Pro')}
+              </span>
+            </div>
 
-        <Dock
-          orientation="vertical"
-          className="w-full items-center overflow-visible"
-        >
-          {/* Subscription / Trial Status Trigger */}
-          <DockItem
+            {/* Trial / Active pill badge */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-semibold shrink-0">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+              <span>
+                {!isPaid
+                  ? `Trial: ${trialDays} ${trialDays === 1 ? 'day' : 'days'} left`
+                  : `${subDaysLeft} ${subDaysLeft === 1 ? 'day' : 'days'} left`}
+              </span>
+            </div>
+          </div>
+
+          {/* Action Button: Purchase / Upgrade */}
+          <button
+            type="button"
             onClick={() => openPurchaseModal('qr_pay')}
-            aria-label={!isPaid ? `Trial: ${trialDays} days left` : `${user?.plan_name || 'Pro'} active: ${subDaysLeft}/${totalMonthDays}d left`}
+            className="w-full py-2.5 px-3 rounded-xl bg-[#005248] hover:bg-[#00423a] active:bg-[#003630] text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer active:scale-[0.98]"
+            title={!isPaid ? 'Purchase subscription' : 'Manage subscription'}
           >
-            <DockIcon>
-              <div className="relative flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-[#00665F] dark:text-teal-400 shrink-0" strokeWidth={2} />
-                {!isPaid && (
-                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-500" />
-                )}
-              </div>
-            </DockIcon>
-            <DockLabel>
-              {!isPaid ? `Trial (${trialDays}d)` : (user?.plan_name || 'Pro')}
-            </DockLabel>
-          </DockItem>
-        </Dock>
+            <Sparkles className="w-4 h-4 text-emerald-300 shrink-0" strokeWidth={2} />
+            <span>{!isPaid ? 'Purchase subscription' : 'Manage / Upgrade plan'}</span>
+          </button>
+        </div>
       </div>
     </aside>
   );

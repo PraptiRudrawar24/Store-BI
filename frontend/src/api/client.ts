@@ -20,7 +20,15 @@
  * ==============================================================================
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+const getApiBaseUrl = (): string => {
+  if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL;
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    return 'http://localhost:8000';
+  }
+  return 'http://127.0.0.1:8000';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 /**
  * Retrieves the stored JWT token from localStorage.
@@ -1307,7 +1315,7 @@ export const api = {
   },
 
   // --- Real Google OAuth 2.0 PKCE Flow ---
-  getGoogleAuthUrl: async (): Promise<{ url: string }> => {
+  getGoogleAuthUrl: async (): Promise<{ url: string; state?: string; code_verifier?: string }> => {
     const res = await fetch(`${API_BASE_URL}/auth/google/url`, {
       credentials: 'include',
     });
@@ -1315,16 +1323,46 @@ export const api = {
       const err = await res.json().catch(() => ({ detail: 'Google OAuth not configured' }));
       throw new Error(err.detail || 'Failed to initialize Google authentication');
     }
-    return await res.json();
+    const data = await res.json();
+    if (data.state) {
+      try {
+        sessionStorage.setItem('store_bi_oauth_state', data.state);
+      } catch {
+        // ignore
+      }
+    }
+    if (data.code_verifier) {
+      try {
+        sessionStorage.setItem('store_bi_oauth_verifier', data.code_verifier);
+      } catch {
+        // ignore
+      }
+    }
+    return data;
   },
 
-  googleCallback: async (payload: { code: string; state: string }): Promise<AuthResponse> => {
+  googleCallback: async (payload: { code: string; state: string; code_verifier?: string }): Promise<AuthResponse> => {
+    let verifier = payload.code_verifier;
+    if (!verifier) {
+      try {
+        verifier = sessionStorage.getItem('store_bi_oauth_verifier') || undefined;
+      } catch {
+        // ignore
+      }
+    }
+    const bodyPayload = verifier ? { ...payload, code_verifier: verifier } : payload;
     const res = await fetch(`${API_BASE_URL}/auth/google/callback`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(bodyPayload),
       credentials: 'include',
     });
+    try {
+      sessionStorage.removeItem('store_bi_oauth_state');
+      sessionStorage.removeItem('store_bi_oauth_verifier');
+    } catch {
+      // ignore
+    }
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Google authorization failed' }));
       const msg = typeof err.detail === 'string' ? err.detail : (err.detail?.[0]?.msg || 'Google authorization failed');

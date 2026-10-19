@@ -142,6 +142,7 @@ class GoogleAuthUrlResponse(BaseModel):
 class GoogleCallbackRequest(BaseModel):
     code: str
     state: str
+    code_verifier: Optional[str] = None
 
 class GoogleTokenRequest(BaseModel):
     credential: str

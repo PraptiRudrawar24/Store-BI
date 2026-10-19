@@ -731,11 +731,40 @@ def reset_password(
 # REAL GOOGLE OAUTH 2.0 (PKCE & STATE FLOW)
 # ==========================================
 
+# Server-side state store for resilient OAuth state & PKCE validation across origins / SameSite boundaries
+_oauth_state_store: Dict[str, Dict[str, Any]] = {}
+
+def store_oauth_state(state: str, code_verifier: str):
+    import time
+    now = time.time()
+    # Clean up states older than 15 minutes (900 seconds)
+    expired = [k for k, v in _oauth_state_store.items() if now - v.get("created_at", 0) > 900]
+    for k in expired:
+        _oauth_state_store.pop(k, None)
+    _oauth_state_store[state] = {
+        "code_verifier": code_verifier,
+        "created_at": now,
+    }
+
+def validate_and_consume_oauth_state(state: str) -> Optional[str]:
+    """
+    Validates state and returns the associated code_verifier if found.
+    Removes the state to prevent replay attacks.
+    """
+    import time
+    entry = _oauth_state_store.pop(state, None)
+    if not entry:
+        return None
+    if time.time() - entry.get("created_at", 0) > 900:
+        return None
+    return entry.get("code_verifier")
+
+
 @app.get("/auth/google/url")
 def get_google_auth_url(response: Response):
     """
     Constructs Google OAuth 2.0 authorization URL with state and PKCE (RFC 7636).
-    Stores state and code_verifier in secure short-lived httpOnly cookies.
+    Stores state and code_verifier in secure short-lived httpOnly cookies and server cache.
     """
     client_id = os.environ.get("GOOGLE_CLIENT_ID", "").strip()
     redirect_uri = os.environ.get("GOOGLE_REDIRECT_URI", "").strip()
@@ -751,6 +780,7 @@ def get_google_auth_url(response: Response):
 
     state = security.generate_secure_token(24)
     code_verifier, code_challenge = security.generate_pkce_pair()
+    store_oauth_state(state, code_verifier)
 
     cookie_cfg = security.get_cookie_security_config()
     response.set_cookie(
@@ -785,7 +815,11 @@ def get_google_auth_url(response: Response):
         "prompt": "select_account",
     }
     auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{urllib.parse.urlencode(params)}"
-    return {"url": auth_url}
+    return {
+        "url": auth_url,
+        "state": state,
+        "code_verifier": code_verifier,
+    }
 
 
 @app.post("/auth/google/callback")
@@ -800,13 +834,26 @@ async def google_oauth_callback(
     verifies Google ID token, and provisions/authenticates the merchant.
     """
     saved_state = request.cookies.get(security.OAUTH_STATE_COOKIE)
-    if not saved_state or saved_state != payload.state:
+    cached_verifier = validate_and_consume_oauth_state(payload.state)
+
+    state_valid = False
+    if saved_state and saved_state == payload.state:
+        state_valid = True
+    elif cached_verifier is not None:
+        state_valid = True
+
+    if not state_valid:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="OAuth state validation failed. Possible cross-site request forgery.",
         )
 
-    code_verifier = request.cookies.get(security.OAUTH_VERIFIER_COOKIE) or ""
+    code_verifier = (
+        payload.code_verifier
+        or cached_verifier
+        or request.cookies.get(security.OAUTH_VERIFIER_COOKIE)
+        or ""
+    )
 
     client_id = os.environ.get("GOOGLE_CLIENT_ID", "").strip()
     client_secret = os.environ.get("GOOGLE_CLIENT_SECRET", "").strip()

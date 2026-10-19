@@ -40,7 +40,13 @@ export function GoogleCallbackPage() {
       }
 
       try {
-        const response = await api.googleCallback({ code, state });
+        let storedVerifier: string | undefined = undefined;
+        try {
+          storedVerifier = sessionStorage.getItem('store_bi_oauth_verifier') || undefined;
+        } catch {
+          // ignore
+        }
+        const response = await api.googleCallback({ code, state, code_verifier: storedVerifier });
         if (isMounted) {
           setStatus('success');
           await refreshUser();
