@@ -1048,6 +1048,8 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                   <TableBody>
                     {items.map((item, idx) => {
                       const isLowConfidence = item.confidence < 0.7;
+                      const isLowQtyConfidence = (item.field_confidence?.qty ?? 1.0) < 0.7;
+                      const isLowCostConfidence = (item.field_confidence?.cost_price ?? 1.0) < 0.7;
                       const isMissingPrice =
                         item.cost_price === null || item.cost_price === undefined || item.cost_price <= 0;
                       const isMissingSellPrice =
@@ -1055,11 +1057,12 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                       const isTaxReview =
                         item.tax_rate === null || item.tax_percent === 'Needs Review';
                       const hasAmberFlag =
-                        item.needs_review || isLowConfidence || isMissingPrice || isMissingSellPrice || isTaxReview;
+                        item.needs_review || isLowConfidence || isLowQtyConfidence || isLowCostConfidence || isMissingPrice || isMissingSellPrice || isTaxReview;
 
                       return (
                         <TableRow
                           key={item.id}
+                          title={item.raw_text ? `Original OCR: ${item.raw_text}` : undefined}
                           className={hasAmberFlag ? 'bg-amber-500/[0.04] border-l-4 border-l-amber-500' : undefined}
                         >
                           {/* Row Index */}
@@ -1100,13 +1103,21 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                                   const val = parseFloat(e.target.value);
                                   handleUpdateItemField(item.id, 'qty', isNaN(val) ? 1 : val);
                                 }}
-                                className="h-11 min-h-[44px] text-xs tabular-nums text-center font-bold px-2"
+                                className={`h-11 min-h-[44px] text-xs tabular-nums text-center font-bold px-2 ${
+                                  (!item.qty || item.qty <= 0 || isLowQtyConfidence)
+                                    ? 'border-amber-500 bg-amber-500/[0.04] focus-visible:border-amber-500'
+                                    : ''
+                                }`}
                               />
-                              {(!item.qty || item.qty <= 0) && (
+                              {(!item.qty || item.qty <= 0) ? (
                                 <span className="text-[10px] text-amber-700 font-semibold text-center">
                                   Enter qty
                                 </span>
-                              )}
+                              ) : isLowQtyConfidence ? (
+                                <span className="text-[10px] text-amber-700 font-semibold text-center">
+                                  Verify qty ({Math.round((item.field_confidence?.qty ?? 0.5) * 100)}%)
+                                </span>
+                              ) : null}
                             </div>
                           </TableCell>
 
@@ -1123,14 +1134,20 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                                   handleUpdateItemField(item.id, 'cost_price', val);
                                 }}
                                 className={`h-11 min-h-[44px] text-xs tabular-nums pl-6 pr-2 font-medium ${
-                                  isMissingPrice ? 'border-amber-500 focus-visible:border-amber-500' : ''
+                                  (isMissingPrice || isLowCostConfidence)
+                                    ? 'border-amber-500 bg-amber-500/[0.04] focus-visible:border-amber-500'
+                                    : ''
                                 }`}
                               />
-                              {isMissingPrice && (
+                              {isMissingPrice ? (
                                 <span className="text-[10px] text-amber-700 font-semibold">
                                   Missing unit price
                                 </span>
-                              )}
+                              ) : isLowCostConfidence ? (
+                                <span className="text-[10px] text-amber-700 font-semibold">
+                                  Verify rate ({Math.round((item.field_confidence?.cost_price ?? 0.5) * 100)}%)
+                                </span>
+                              ) : null}
                             </div>
                           </TableCell>
 

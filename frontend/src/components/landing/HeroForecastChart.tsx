@@ -46,8 +46,8 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
 export function HeroForecastChart() {
   const { isDark } = useTheme();
 
-  const weekdayColor = isDark ? '#1c2b42' : '#cbd5e1';
-  const weekendColor = isDark ? '#80d5cb' : '#005c55';
+  const weekdayColor = isDark ? '#1e293b' : '#cbd5e1';
+  const weekendColor = isDark ? '#3b82f6' : '#2563eb';
   const runRateColor = isDark ? '#334155' : '#94a3b8';
 
   return (

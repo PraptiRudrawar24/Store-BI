@@ -323,7 +323,7 @@ export function PurchaseSubscriptionModal({ isOpen, onClose, initialStep = 'sele
             billing_period: 'monthly',
           },
           theme: {
-            color: '#005c55', // Store BI brand dark green
+            color: '#2563eb', // Store BI brand Royal Blue
           },
           modal: {
             ondismiss: async () => {

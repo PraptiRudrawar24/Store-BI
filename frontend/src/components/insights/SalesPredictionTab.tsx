@@ -381,73 +381,87 @@ export function SalesPredictionTab() {
             </div>
           </div>
 
-          {/* Headline Card */}
-          <Card showTrail trailColor="indigo" trailSize={95} className="p-5 sm:p-6 bg-surface border border-border shadow-sm">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          {/* Model Summary / Projected Revenue Dual Bento Cards (Stitch style) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            {/* Card Left: Projected Revenue (7 cols) */}
+            <div className="lg:col-span-7 bg-white dark:bg-slate-800 rounded-xl border border-[#E2E8F0] dark:border-slate-700 p-5 shadow-sm flex flex-col justify-between border-t-4 border-t-[#136DEC]">
               <div>
-                <span className="text-xs font-semibold text-primary">
-                  Projected revenue
-                </span>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-text-high mt-1 tabular-nums">
-                  {data.headline || `Expected sales next ${data.forecast_days} days: ${formatINR(data.expected_sales_total)}`}
-                </h1>
-                <p className="text-xs text-text-medium mt-1.5 flex items-center gap-1.5">
-                  <span>Confidence interval:</span>
-                  <span className="font-semibold text-text-high tabular-nums">
+                <p className="text-[11px] font-semibold text-[#64748B] dark:text-slate-400 uppercase tracking-wider mb-1">
+                  PROJECTED REVENUE
+                </p>
+                <h3 className="text-xl sm:text-2xl font-bold text-[#0F172A] dark:text-white">
+                  Expected sales next {data.forecast_days} days:{' '}
+                  <span className="text-[#136DEC] tracking-tight">
+                    {formatINR(data.expected_sales_total)}
+                  </span>
+                </h3>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-[13px] text-[#64748B] dark:text-slate-400 mt-3">
+                <span>
+                  Confidence interval:{' '}
+                  <span className="text-[#0F172A] dark:text-white font-semibold">
                     {formatINR(data.expected_lower_total)} – {formatINR(data.expected_upper_total)}
                   </span>
-                  <span className="text-text-low">•</span>
-                  <span>Daily run rate:</span>
-                  <span className="font-semibold text-text-high tabular-nums">
+                </span>
+                <span>•</span>
+                <span>
+                  Daily run rate:{' '}
+                  <span className="text-[#0F172A] dark:text-white font-semibold">
                     {formatINR(Math.round(data.expected_sales_total / data.forecast_days))} / day
                   </span>
-                </p>
+                </span>
               </div>
+            </div>
 
-              {/* Model Accuracy Badge & Meta */}
-              <div className="flex flex-col md:items-end gap-1.5 shrink-0 bg-surface/80 backdrop-blur-xs p-3 rounded-lg border border-blue-100">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-text-high">
-                  <Sparkles className="w-4 h-4 text-primary" />
-                  <span>{data.model_name}</span>
+            {/* Card Right: Model Metadata (5 cols) */}
+            <div className="lg:col-span-5 bg-white dark:bg-slate-800 rounded-xl border border-[#E2E8F0] dark:border-slate-700 p-5 shadow-sm flex flex-col justify-between border-t-4 border-t-[#8B5CF6]">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-[#F5F3FF] dark:bg-purple-950/40 text-[#7C3AED] dark:text-purple-400 mt-0.5 border border-[#DDD6FE] dark:border-purple-800">
+                  <Sparkles className="w-5 h-5" />
                 </div>
-                {data.model_accuracy_note && (
-                  <p className="text-[11px] text-text-medium">
-                    {data.model_accuracy_note}
+                <div>
+                  <h4 className="text-[15px] font-bold text-[#0F172A] dark:text-white">
+                    {data.model_name || 'Holt-Winters (Weekly Seasonality)'}
+                  </h4>
+                  <p className="text-xs text-[#64748B] dark:text-slate-400 mt-1 leading-relaxed">
+                    {data.model_accuracy_note || 'Additive time-series forecast with weekly seasonal smoothing and historical backtest fit.'}
                   </p>
-                )}
-                <span className="text-[10px] text-text-low">
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-[#64748B] dark:text-slate-400 pt-2 border-t border-[#F1F5F9] dark:border-slate-700 mt-2">
+                <span>Model Version: HW-Additive-v2.4</span>
+                <span className="font-semibold text-[#0F172A] dark:text-white">
                   Trained on {data.days_of_history} days of transactions
                 </span>
               </div>
             </div>
-          </Card>
+          </div>
 
-          {/* Interactive Forecast Chart */}
-          <Card showTrail trailColor="indigo" trailSize={105} className="p-5 overflow-hidden shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border">
+          {/* Interactive Forecast Chart Card */}
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-[#E2E8F0] dark:border-slate-700 p-5 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#E2E8F0] dark:border-slate-700">
               <div>
-                <h3 className="text-sm font-semibold text-text-high">
-                  Sales trajectory: last 30 days actuals + next {data.forecast_days} days forecast
+                <h3 className="text-sm font-bold text-[#0F172A] dark:text-white">
+                  Sales Trajectory: Historical Receipts vs AI Forecast
                 </h3>
-                <p className="text-xs text-text-medium">
-                  Solid line denotes recorded receipts; dashed line is the seasonal expectation with shaded confidence band.
+                <p className="text-xs text-[#64748B] dark:text-slate-400 mt-0.5">
+                  Visualizing 30-day recorded transaction trail connected seamlessly to predictive bounds.
                 </p>
               </div>
 
               {/* Chart Legend */}
               <div className="flex flex-wrap items-center gap-4 text-xs">
                 <div className="flex items-center gap-1.5">
-                  <span className="w-3.5 h-0.5 bg-primary rounded-full inline-block" />
-                  <span className="text-text-medium">Actuals</span>
+                  <span className="w-3.5 h-1 bg-[#136DEC] rounded-full inline-block" />
+                  <span className="text-[#334155] dark:text-slate-300 font-medium">Actuals</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="w-3.5 h-0.5 border-t-2 border-dashed border-primary inline-block" />
-                  <span className="text-text-medium">Forecast</span>
+                  <span className="w-3.5 h-0 border-t-2 border-dashed border-[#136DEC] inline-block" />
+                  <span className="text-[#334155] dark:text-slate-300 font-medium">Forecast</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {/* Flat tint legend marker per DESIGN requirements */}
                   <span className="w-3.5 h-2.5 bg-[#93C5FD]/40 border border-[#93C5FD] rounded-xs inline-block" />
-                  <span className="text-text-medium">Confidence band</span>
+                  <span className="text-[#64748B] dark:text-slate-400">Confidence Band</span>
                 </div>
               </div>
             </div>
@@ -723,7 +737,7 @@ export function SalesPredictionTab() {
                 </div>
               )}
             </div>
-          </Card>
+          </div>
 
           {/* Quick Metrics Breakdown Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

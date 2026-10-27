@@ -3,7 +3,7 @@ interface HotkeyBarProps {
 }
 
 export function HotkeyBar({
-  hardwareStatus = 'Citizen CTS-310II (Thermal)',
+  hardwareStatus = 'Thermal Printer Ready',
 }: HotkeyBarProps) {
   return (
     <div className="h-10 px-4 bg-surface dark:bg-surface-low border-t border-border flex items-center justify-between text-xs text-text-medium select-none overflow-x-auto">

@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   ReceiptText,
@@ -10,6 +10,9 @@ import {
   Sparkles,
   Headset,
   ShieldCheck,
+  FileUp,
+  ArrowLeftRight,
+  TrendingUp,
   X,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -27,6 +30,7 @@ export function Sidebar({
   isMobile = false,
 }: SidebarProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { openPurchaseModal } = useSubscription();
   const [unreadSupportCount, setUnreadSupportCount] = React.useState(0);
 
@@ -50,14 +54,15 @@ export function Sidebar({
   }, []);
 
   const navItems = [
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/dashboard', label: 'Overview', icon: LayoutDashboard },
     { to: '/pos', label: 'POS Billing', icon: ReceiptText },
-    { to: '/upload', label: 'Inventory Management', icon: Package },
+    { to: '/sales', label: 'Sales', icon: TrendingUp },
+    { to: '/upload', label: 'Inventory', icon: Package },
     { to: '/analytics', label: 'Analytics', icon: BarChart3 },
-    { to: '/insights', label: 'AI Insight', icon: Sparkles },
+    { to: '/insights', label: 'Predictions', icon: Sparkles },
     {
       to: '/support',
-      label: 'Support & Feedback',
+      label: 'Help & Support',
       icon: Headset,
       badge: unreadSupportCount > 0 ? unreadSupportCount : undefined,
     },
@@ -70,32 +75,42 @@ export function Sidebar({
   const isPaid = !!user?.is_paid;
   const subDaysLeft = user?.subscription_days_left_in_month ?? 18;
 
+  // Extract initials for the profile avatar
+  const initials = React.useMemo(() => {
+    const name = user?.owner_name || user?.name || 'Store Director';
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .filter(Boolean)
+      .slice(0, 2)
+      .join('')
+      .toUpperCase() || 'SD';
+  }, [user]);
+
   return (
     <aside
-      className="w-full h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between overflow-y-auto select-none"
+      className="w-full h-full bg-white dark:bg-slate-900 border-r border-[#E2E8F0] dark:border-slate-800 flex flex-col justify-between overflow-y-auto select-none p-3.5"
       role="navigation"
       aria-label="Main sidebar navigation"
     >
-      <div className="flex flex-col flex-1 min-h-0">
-        {/* Top Header: Brand Presentation with Logo and Store Name */}
-        <div className="h-16 px-4 flex items-center justify-between border-b border-slate-200/90 dark:border-slate-800 shrink-0">
+      <div className="flex flex-col flex-1 min-h-0 gap-3">
+        {/* Top Brand Presentation with Logo and Division */}
+        <div className="flex items-center justify-between px-1 py-1">
           <NavLink
             to="/dashboard"
             onClick={onCloseMobile}
             className="flex items-center gap-3 min-w-0 group"
-            title="Store BI Dashboard"
+            title="Store BI"
           >
-            <img
-              src="/logo/store-bi-logo.jpeg"
-              alt="Store BI Logo"
-              className="w-9 h-9 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shadow-xs shrink-0 group-hover:opacity-90 transition-opacity"
-            />
+            <div className="w-10 h-10 rounded-2xl bg-[#136DEC] flex items-center justify-center text-white font-extrabold text-base shadow-sm shrink-0">
+              S
+            </div>
             <div className="flex flex-col min-w-0">
-              <span className="font-bold text-[15px] text-slate-900 dark:text-white leading-tight tracking-tight">
+              <span className="font-bold text-sm text-[#0F172A] dark:text-white leading-tight tracking-tight">
                 Store BI
               </span>
-              <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-tight truncate max-w-[140px]">
-                {user?.name || 'Retail store'}
+              <span className="text-[11px] font-medium text-[#64748B] dark:text-slate-400 leading-tight truncate">
+                {user?.store_name || user?.name || 'Retail Intelligence'}
               </span>
             </div>
           </NavLink>
@@ -112,8 +127,31 @@ export function Sidebar({
           )}
         </div>
 
+        {/* Stitch Slogan Pill */}
+        <div className="px-0.5">
+          <div className="text-[11px] font-medium text-[#475569] dark:text-slate-300 leading-relaxed bg-[#F8FAFC] dark:bg-slate-800/60 px-3 py-2 rounded-xl border border-[#E2E8F0] dark:border-slate-700/60">
+            Understanding your business. Predict what comes next.
+          </div>
+        </div>
+
+        {/* Prominent "+ Upload Invoice" CTA Button */}
+        <div className="px-0.5 pt-0.5">
+          <button
+            type="button"
+            onClick={() => {
+              navigate('/upload');
+              onCloseMobile?.();
+            }}
+            className="w-full flex items-center justify-center gap-2 text-white h-10 px-4 rounded-xl font-semibold text-xs bg-[#136DEC] hover:bg-[#0E5ACC] transition-all shadow-sm active:scale-[0.99] cursor-pointer"
+            title="Upload invoice or receipt"
+          >
+            <FileUp className="w-4 h-4 text-white" strokeWidth={2.2} />
+            <span>+ Upload Invoice</span>
+          </button>
+        </div>
+
         {/* Navigation Items */}
-        <nav className="p-3.5 space-y-1.5 flex-1 overflow-y-auto">
+        <nav className="flex flex-col gap-1.5 mt-1 overflow-y-auto pr-0.5 flex-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -123,36 +161,30 @@ export function Sidebar({
                 onClick={onCloseMobile}
                 className={({ isActive }) =>
                   cn(
-                    'group relative flex items-center gap-3.5 pl-4 pr-3.5 py-3 rounded-xl transition-all duration-150 text-[14.5px] cursor-pointer',
+                    'group flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-semibold text-xs transition-colors duration-150 cursor-pointer',
                     isActive
-                      ? 'bg-[#005248] text-white shadow-xs'
-                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100/90 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white font-medium'
+                      ? 'bg-[#EBF3FE] text-[#136DEC] border border-[#136DEC]/20 shadow-xs dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800'
+                      : 'text-[#64748B] hover:text-[#0F172A] hover:bg-[#F8FAFC] dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800/60'
                   )
                 }
               >
                 {({ isActive }) => (
                   <>
-                    {/* Active Accent Pill on the left inside button */}
-                    {isActive && (
-                      <span
-                        className="absolute left-2.5 top-1/2 -translate-y-1/2 w-1 h-[22px] rounded-full bg-[#2DD4BF] shadow-xs"
-                        aria-hidden="true"
-                      />
-                    )}
                     <Icon
                       className={cn(
-                        'w-5 h-5 shrink-0 transition-colors',
+                        'w-4 h-4 shrink-0 transition-colors',
                         isActive
-                          ? 'text-white'
-                          : 'text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white'
+                          ? 'text-[#136DEC] dark:text-blue-400'
+                          : 'text-[#64748B] dark:text-slate-400 group-hover:text-[#0F172A] dark:group-hover:text-white'
                       )}
-                      strokeWidth={isActive ? 2.1 : 1.9}
+                      strokeWidth={isActive ? 2.3 : 1.9}
                     />
-                    <span className={cn('tracking-tight truncate', isActive ? 'font-bold' : 'font-medium')}>
-                      {item.label}
-                    </span>
+                    <span className="flex-1 truncate tracking-tight">{item.label}</span>
+                    {isActive && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#136DEC] dark:bg-blue-400 shrink-0" />
+                    )}
                     {item.badge !== undefined && (
-                      <span className="ml-auto px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-red-500 text-white leading-none">
+                      <span className="ml-auto px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-[#EF4444] text-white leading-none">
                         {item.badge}
                       </span>
                     )}
@@ -164,40 +196,47 @@ export function Sidebar({
         </nav>
       </div>
 
-      {/* Bottom Section: Account Status Card */}
-      <div className="p-3.5 border-t border-slate-200/90 dark:border-slate-800 shrink-0">
-        <div className="p-3.5 rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-[#F8FAFC] dark:bg-slate-800/40 flex flex-col gap-3 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-          {/* Status Header */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex flex-col min-w-0">
-              <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-tight">
-                Account status
-              </span>
-              <span className="text-sm font-bold text-slate-900 dark:text-white leading-tight mt-0.5 truncate">
-                {!isPaid ? 'Full-access trial' : (user?.plan_name || 'Active Pro')}
-              </span>
-            </div>
+      {/* Footer Controls & Profiles */}
+      <div className="flex flex-col gap-2 pt-3 border-t border-[#E2E8F0] dark:border-slate-800 shrink-0">
+        {/* Branch Switcher Strip */}
+        <div className="p-2.5 rounded-xl bg-[#F8FAFC] dark:bg-slate-800/60 border border-[#E2E8F0] dark:border-slate-700/60 flex items-center justify-between shadow-2xs">
+          <div className="flex items-center gap-2 overflow-hidden">
+            <span className="w-2 h-2 rounded-full bg-[#10B981] shrink-0 ring-2 ring-emerald-100 dark:ring-emerald-900/40" />
+            <span className="text-[11px] font-semibold text-[#0F172A] dark:text-slate-200 truncate">
+              Store: {user?.store_name || user?.name || 'Main Counter'}
+            </span>
+          </div>
+          <button
+            type="button"
+            className="w-6 h-6 rounded-lg flex items-center justify-center text-[#64748B] hover:text-[#0F172A] hover:bg-white dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            title="Switch Branch"
+          >
+            <ArrowLeftRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
 
-            {/* Trial / Active pill badge */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-semibold shrink-0">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-              <span>
-                {!isPaid
-                  ? `Trial: ${trialDays} ${trialDays === 1 ? 'day' : 'days'} left`
-                  : `${subDaysLeft} ${subDaysLeft === 1 ? 'day' : 'days'} left`}
+        {/* Profile Cluster */}
+        <div className="p-2 rounded-xl bg-white dark:bg-slate-800/40 border border-[#E2E8F0] dark:border-slate-700/60 flex items-center justify-between shadow-2xs">
+          <div className="flex items-center gap-2.5 overflow-hidden">
+            <div className="w-8 h-8 rounded-xl bg-[#0F172A] text-white font-bold text-xs flex items-center justify-center shrink-0">
+              {initials}
+            </div>
+            <div className="flex flex-col truncate">
+              <span className="text-xs font-bold truncate text-[#0F172A] dark:text-white leading-tight">
+                {user?.owner_name || user?.name || 'Store Director'}
+              </span>
+              <span className="text-[10px] text-[#64748B] dark:text-slate-400 font-medium truncate leading-tight">
+                {!isPaid ? `Trial: ${trialDays}d left` : `${user?.plan_name || 'Pro'}: ${subDaysLeft}d left`}
               </span>
             </div>
           </div>
-
-          {/* Action Button: Purchase / Upgrade */}
           <button
             type="button"
             onClick={() => openPurchaseModal('qr_pay')}
-            className="w-full py-2.5 px-3 rounded-xl bg-[#005248] hover:bg-[#00423a] active:bg-[#003630] text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer active:scale-[0.98]"
+            className="px-2 py-1 rounded-lg text-[10px] font-bold bg-[#EBF3FE] text-[#136DEC] hover:bg-[#136DEC] hover:text-white border border-[#136DEC]/20 transition-all cursor-pointer"
             title={!isPaid ? 'Purchase subscription' : 'Manage subscription'}
           >
-            <Sparkles className="w-4 h-4 text-emerald-300 shrink-0" strokeWidth={2} />
-            <span>{!isPaid ? 'Purchase subscription' : 'Manage / Upgrade plan'}</span>
+            {!isPaid ? 'Upgrade' : 'Pro'}
           </button>
         </div>
       </div>
@@ -206,3 +245,4 @@ export function Sidebar({
 }
 
 export default Sidebar;
+

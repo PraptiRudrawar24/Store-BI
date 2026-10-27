@@ -223,7 +223,7 @@ export function DockItem({
         onClick={onClick}
         aria-label={ariaLabel}
         className={cn(
-          'block outline-none focus-visible:ring-2 focus-visible:ring-[#00665F] rounded-xl no-underline overflow-visible w-full',
+          'block outline-none focus-visible:ring-2 focus-visible:ring-blue-600 rounded-xl no-underline overflow-visible w-full',
           className
         )}
       >
@@ -312,8 +312,8 @@ export function DockIcon({ children, className, ...props }: DockIconProps) {
       className={cn(
         'w-11 h-11 rounded-full flex items-center justify-center shrink-0 transition-colors duration-150 relative shadow-xs',
         itemContext?.isActive
-          ? 'bg-[#00665F] text-white shadow-md shadow-[#00665F]/30 ring-2 ring-[#00665F]/20'
-          : 'bg-slate-100/90 dark:bg-slate-800/90 text-[#475569] dark:text-slate-300 group-hover:bg-[#E6F4F1] group-hover:text-[#00665F] dark:group-hover:bg-teal-950/60 dark:group-hover:text-teal-300 border border-slate-200/80 dark:border-slate-700/80',
+          ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 ring-2 ring-blue-600/20'
+          : 'bg-slate-100/90 dark:bg-slate-800/90 text-[#475569] dark:text-slate-300 group-hover:bg-blue-50 group-hover:text-blue-600 dark:group-hover:bg-blue-950/60 dark:group-hover:text-blue-300 border border-slate-200/80 dark:border-slate-700/80',
         className
       )}
       {...(props as any)}
@@ -365,8 +365,8 @@ export function DockLabel({ children, className, asTooltip = false, ...props }: 
       className={cn(
         'text-[10px] sm:text-[10.5px] font-semibold tracking-tight text-center leading-[1.2] mt-1 select-none max-w-[72px] truncate transition-colors duration-150',
         itemContext?.isActive
-          ? 'text-[#00665F] dark:text-teal-400 font-bold'
-          : 'text-slate-500 dark:text-slate-400 group-hover:text-[#00665F] dark:group-hover:text-teal-300',
+          ? 'text-blue-600 dark:text-blue-400 font-bold'
+          : 'text-slate-500 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-300',
         className
       )}
       {...props}

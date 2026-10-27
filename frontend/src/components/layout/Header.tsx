@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   XCircle,
   Info,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { Badge } from '../ui/Badge';
 import { useAuth } from '../../context/AuthContext';
@@ -148,15 +149,15 @@ export function Header({ onOpenMobileMenu }: HeaderProps = {}) {
         </div>
       )}
 
-      {/* Left: Mobile Brand & Desktop Search Field with STORE BI & Shop name */}
-      <div className="flex items-center gap-4 flex-1 max-w-xl">
+      {/* Left: Mobile Brand & Desktop Breadcrumbs + Search Field */}
+      <div className="flex items-center gap-6 flex-1 max-w-2xl">
         {/* Mobile Menu Button & Brand Presentation */}
         <div className="flex items-center gap-2 lg:hidden">
           {onOpenMobileMenu && (
             <button
               type="button"
               onClick={onOpenMobileMenu}
-              className="w-10 h-10 -ml-1.5 rounded-[6px] border border-border bg-surface flex items-center justify-center text-text-medium hover:text-text-high hover:bg-canvas transition-colors cursor-pointer"
+              className="w-10 h-10 -ml-1.5 rounded-xl border border-border bg-surface flex items-center justify-center text-text-medium hover:text-text-high hover:bg-canvas transition-colors cursor-pointer"
               aria-label="Open navigation sidebar"
               title="Open menu"
             >
@@ -174,39 +175,39 @@ export function Header({ onOpenMobileMenu }: HeaderProps = {}) {
               }
             }}
           >
-            <img
-              src="/logo/store-bi-logo.jpeg"
-              alt="Store BI logo"
-              className="w-8 h-8 rounded-[8px] object-cover border border-border"
-            />
+            <div className="w-8 h-8 rounded-xl bg-[#136DEC] text-white font-extrabold text-sm flex items-center justify-center shadow-xs">
+              S
+            </div>
             <div className="flex flex-col">
-              <span className="font-bold text-base text-text-high leading-tight">Store BI</span>
-              <span className="text-[11px] text-text-medium leading-tight truncate max-w-[120px]">
-                {user?.name || 'Retail store'}
+              <span className="font-bold text-sm text-[#0F172A] dark:text-white leading-tight">Store BI</span>
+              <span className="text-[11px] text-[#64748B] dark:text-slate-400 leading-tight truncate max-w-[120px]">
+                {user?.store_name || user?.name || 'Retail Intelligence'}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Desktop Search Field & STORE BI + Shop Name on Right Side */}
-        <div className="hidden lg:flex items-center gap-3.5">
-          <ProductSearchBar placeholder="Search products in inventory... (⌘K)" />
+        {/* Desktop Breadcrumbs Hierarchy */}
+        <div className="hidden lg:flex items-center gap-2 text-xs font-semibold shrink-0 select-none">
+          <span className="text-[#64748B] dark:text-slate-400">{user?.store_name || user?.name || 'Store BI'}</span>
+          <span className="text-[#94A3B8]">/</span>
+          <span className="text-[#0F172A] dark:text-white font-bold">Executive Overview</span>
+        </div>
 
-          <div className="flex items-center gap-3 pl-3.5 border-l border-border/80 select-none">
-            <div className="flex flex-col min-w-0">
-              <span className="font-extrabold text-sm text-text-high tracking-tight leading-tight uppercase font-mono sm:font-sans">
-                STORE BI
-              </span>
-              <span className="text-[11px] font-medium text-text-medium leading-tight truncate max-w-[180px]">
-                {user?.name || 'Retail store'}
-              </span>
-            </div>
-          </div>
+        {/* Desktop Search Field */}
+        <div className="hidden lg:block flex-1 max-w-sm">
+          <ProductSearchBar placeholder="Search SKU, category, bills..." />
         </div>
       </div>
 
-      {/* Right: Notification Bell & Profile Menu */}
-      <div className="flex items-center gap-2 sm:gap-3.5">
+      {/* Right: Branch Selector, Notifications, Tune & Profile */}
+      <div className="flex items-center gap-2.5 sm:gap-3">
+        {/* Branch Selector Pill */}
+        <div className="hidden xl:flex items-center gap-2 h-9 px-3.5 bg-white dark:bg-slate-800 border border-[#E2E8F0] dark:border-slate-700 rounded-xl text-xs font-semibold text-[#0F172A] dark:text-slate-200 shadow-2xs hover:bg-[#F8FAFC] dark:hover:bg-slate-750 transition-colors select-none cursor-pointer">
+          <Store className="w-4 h-4 text-[#136DEC]" strokeWidth={2} />
+          <span className="max-w-[190px] truncate">{user?.store_name || user?.name || 'Main Counter'}</span>
+          <ChevronDown className="w-3.5 h-3.5 text-[#64748B]" strokeWidth={2} />
+        </div>
         {/* Subscription / Trial status badge in app header */}
         {subStatus?.state === 'Payment Pending Review' ? (
           <Badge
@@ -313,21 +314,21 @@ export function Header({ onOpenMobileMenu }: HeaderProps = {}) {
             type="button"
             title={unreadCount > 0 ? `${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}` : 'Notifications'}
             onClick={() => setNotificationsOpen(!notificationsOpen)}
-            className="w-12 h-12 min-h-[48px] min-w-[48px] rounded-[6px] border border-border bg-surface flex items-center justify-center text-text-medium hover:text-text-high hover:bg-canvas transition-colors relative"
+            className="w-10 h-10 rounded-xl border border-border bg-surface flex items-center justify-center text-text-medium hover:text-text-high hover:bg-canvas transition-colors relative cursor-pointer shadow-2xs"
             aria-label={`View notifications (${unreadCount})`}
           >
-            <Bell className="w-5 h-5" strokeWidth={2} />
+            <Bell className="w-4 h-4" strokeWidth={2} />
             {unreadCount > 0 ? (
               <span
                 id="header-notification-badge"
-                className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center leading-none ring-2 ring-surface tabular-nums"
+                className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-[#EF4444] text-white text-[10px] font-bold flex items-center justify-center leading-none ring-2 ring-white tabular-nums"
               >
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             ) : alertCount > 0 ? (
               <span
                 id="header-alert-badge"
-                className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-destructive-solid text-white text-[10px] font-bold flex items-center justify-center leading-none ring-2 ring-surface tabular-nums"
+                className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-[#EF4444] text-white text-[10px] font-bold flex items-center justify-center leading-none ring-2 ring-white tabular-nums"
               >
                 {alertCount > 99 ? '99+' : alertCount}
               </span>
@@ -430,6 +431,16 @@ export function Header({ onOpenMobileMenu }: HeaderProps = {}) {
           )}
         </div>
 
+        {/* Tune / Metric Customization Button */}
+        <button
+          type="button"
+          onClick={() => navigate('/settings')}
+          className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-border flex items-center justify-center text-text-medium hover:text-text-high hover:bg-canvas transition-colors shadow-2xs cursor-pointer"
+          title="Customize Metrics"
+        >
+          <SlidersHorizontal className="w-4 h-4" strokeWidth={2} />
+        </button>
+
         <div className="h-6 w-[1px] bg-border hidden sm:block" />
 
         {/* Profile Menu with Dropdown */}
@@ -437,7 +448,7 @@ export function Header({ onOpenMobileMenu }: HeaderProps = {}) {
           <button
             type="button"
             onClick={() => setProfileOpen(!profileOpen)}
-            className="flex items-center gap-2.5 min-h-[48px] px-2 sm:px-2.5 py-1.5 rounded-[8px] hover:bg-canvas border border-transparent hover:border-border transition-colors text-left"
+            className="flex items-center gap-2.5 min-h-[40px] px-2 py-1 rounded-xl hover:bg-canvas border border-transparent hover:border-border transition-colors text-left cursor-pointer"
             aria-expanded={profileOpen}
             aria-haspopup="true"
           >
