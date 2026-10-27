@@ -2,74 +2,74 @@
  * Store-BI Central Design Tokens (Light & Dark Theme)
  * 
  * Clean, minimal enterprise design system tokens adhering strictly to:
- * - Brand (#005c55 in light / #80d5cb in dark)
- * - Surfaces (#f8f9ff in light / #0b1220 in dark)
+ * - Brand (#2563eb in light / #3b82f6 in dark)
+ * - Surfaces (#f8fafc in light / #0f172a in dark)
  * - Typography (Inter, tabular numerals)
  * - Status colors (Healthy, Warning, Critical, Forecast)
- * - Elevation & Shadows (no gradients, glows, or glassmorphism)
+ * - Elevation & Shadows (clean 1px borders, subtle soft shadows)
  */
 
 export const tokens = {
   light: {
     colors: {
       brand: {
-        primary: '#005c55',
-        primaryHover: '#004843',
-        primaryActive: '#003631',
-        primaryContainer: '#0f766e',
-        primaryLight: '#9cf2e8',
-        primaryLightAlt: '#80d5cb',
+        primary: '#2563eb',
+        primaryHover: '#1d4ed8',
+        primaryActive: '#1e40af',
+        primaryContainer: '#1d4ed8',
+        primaryLight: '#eff6ff',
+        primaryLightAlt: '#dbeafe',
         primaryForeground: '#ffffff',
-        secondary: '#565e74',
-        secondaryHover: '#454c60',
-        tertiary: '#3b3bc9',
-        tertiaryContainer: '#5457e2',
-        tertiaryLight: '#e1e0ff',
-        focusRing: 'rgba(0, 92, 85, 0.15)',
+        secondary: '#475569',
+        secondaryHover: '#334155',
+        tertiary: '#7c3aed',
+        tertiaryContainer: '#6d28d9',
+        tertiaryLight: '#faf5ff',
+        focusRing: 'rgba(37, 99, 235, 0.2)',
       },
       surfaces: {
-        pageBackground: '#f8f9ff',
-        surfaceLow: '#eff4ff',
+        pageBackground: '#f8fafc',
+        surfaceLow: '#f1f5f9',
         card: '#ffffff',
-        surfaceDefault: '#e5eeff',
-        surfaceHigh: '#dce9ff',
+        surfaceDefault: '#f8fafc',
+        surfaceHigh: '#f1f5f9',
       },
       text: {
-        primary: '#0b1c30',
-        muted: '#3e4947',
-        outline: '#6e7977',
+        primary: '#0f172a',
+        muted: '#475569',
+        outline: '#94a3b8',
       },
       borders: {
-        divider: '#bdc9c6',
-        card: '#E2E8F0',
-        hover: '#CBD5E1',
-        tableRow: '#F1F5F9',
-        strong: '#CBD5E1',
+        divider: '#e2e8f0',
+        card: '#e2e8f0',
+        hover: '#cbd5e1',
+        tableRow: '#f1f5f9',
+        strong: '#cbd5e1',
       },
       status: {
         healthy: {
           text: '#065F46',
           bg: '#ECFDF5',
           border: '#A7F3D0',
-          solid: '#059669',
+          solid: '#10B981',
         },
         warning: {
           text: '#92400E',
           bg: '#FFFBEB',
           border: '#FDE68A',
-          solid: '#D97706',
+          solid: '#F59E0B',
         },
         critical: {
           text: '#991B1B',
           bg: '#FEF2F2',
           border: '#FECACA',
-          solid: '#DC2626',
+          solid: '#EF4444',
         },
         forecast: {
           text: '#4338CA',
           bg: '#EEF2FF',
           border: '#C7D2FE',
-          solid: '#6366f1',
+          solid: '#6366F1',
         },
       },
     },
@@ -83,38 +83,38 @@ export const tokens = {
   dark: {
     colors: {
       brand: {
-        primary: '#80d5cb',
-        primaryHover: '#9cf2e8',
-        primaryActive: '#5fc0b5',
-        primaryContainer: '#0f766e',
-        primaryLight: '#9cf2e8',
-        primaryLightAlt: '#80d5cb',
-        primaryForeground: '#00201d', // Text on primary buttons: #00201d
-        secondary: '#bec6e0',
-        secondaryHover: '#d2d9ee',
-        tertiary: '#c0c1ff',
-        tertiaryContainer: '#3b3bc9',
-        tertiaryLight: '#e1e0ff',
-        focusRing: 'rgba(128, 213, 203, 0.25)',
+        primary: '#3b82f6',
+        primaryHover: '#60a5fa',
+        primaryActive: '#2563eb',
+        primaryContainer: '#1d4ed8',
+        primaryLight: '#1e3a8a',
+        primaryLightAlt: '#2563eb',
+        primaryForeground: '#ffffff',
+        secondary: '#94a3b8',
+        secondaryHover: '#cbd5e1',
+        tertiary: '#a78bfa',
+        tertiaryContainer: '#6d28d9',
+        tertiaryLight: '#2e1065',
+        focusRing: 'rgba(59, 130, 246, 0.25)',
       },
       surfaces: {
-        pageBackground: '#0b1220',
-        surfaceLow: '#101a2e',
-        card: '#131f33',
-        surfaceDefault: '#101a2e',
-        surfaceHigh: '#1c2b42',
+        pageBackground: '#0f172a',
+        surfaceLow: '#1e293b',
+        card: '#1e293b',
+        surfaceDefault: '#1e293b',
+        surfaceHigh: '#334155',
       },
       text: {
-        primary: '#e6edf7',
-        muted: '#9aa8bd',
+        primary: '#f8fafc',
+        muted: '#94a3b8',
         outline: '#64748b',
       },
       borders: {
-        divider: '#263650',
-        card: '#263650',
-        hover: '#334155',
-        tableRow: '#1c2b42',
-        strong: '#334155',
+        divider: '#334155',
+        card: '#334155',
+        hover: '#475569',
+        tableRow: '#1e293b',
+        strong: '#475569',
       },
       status: {
         healthy: {
@@ -192,30 +192,30 @@ export const tokens = {
  */
 export const chartColors = {
   light: {
-    primary: '#005c55',
-    secondary: '#565e74',
-    tertiary: '#3b3bc9',
-    success: '#059669',
-    warning: '#d97706',
-    critical: '#dc2626',
+    primary: '#2563eb', // Royal Blue (Sales)
+    secondary: '#10b981', // Emerald (Gross Profit)
+    tertiary: '#7c3aed', // Purple (Net / Insight)
+    success: '#10b981',
+    warning: '#f59e0b',
+    critical: '#f43f5e',
     grid: '#e2e8f0',
-    axis: '#3e4947',
+    axis: '#64748b',
     tooltipBg: '#ffffff',
     tooltipBorder: '#e2e8f0',
-    tooltipText: '#0b1c30',
+    tooltipText: '#0f172a',
   },
   dark: {
-    primary: '#80d5cb', // teal
-    secondary: '#bec6e0',
-    tertiary: '#a5b4fc', // indigo
-    success: '#6ee7b7',
-    warning: '#fcd34d', // amber
-    critical: '#fca5a5', // rose
-    grid: '#263650',
-    axis: '#9aa8bd',
-    tooltipBg: '#131f33',
-    tooltipBorder: '#263650',
-    tooltipText: '#e6edf7',
+    primary: '#3b82f6', // blue
+    secondary: '#34d399', // emerald
+    tertiary: '#a78bfa', // purple
+    success: '#34d399',
+    warning: '#fbbf24',
+    critical: '#f87171',
+    grid: '#334155',
+    axis: '#94a3b8',
+    tooltipBg: '#1e293b',
+    tooltipBorder: '#334155',
+    tooltipText: '#f8fafc',
   },
 } as const;
 

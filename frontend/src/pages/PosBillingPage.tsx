@@ -1,6 +1,5 @@
 import * as React from 'react';
 import type { ProductCategory, ProductItem, CartItem, CustomerInfo, PaymentMethod, CompletedSale } from '../types/pos';
-import { MOCK_TERMINAL_CONFIG } from '../data/posMockData';
 import { calculateCartTotals } from '../utils/money';
 import { BarcodeSearch } from '../components/pos/BarcodeSearch';
 import { CategoryFilter } from '../components/pos/CategoryFilter';
@@ -510,9 +509,9 @@ export function PosBillingPage() {
       totals: { ...totals },
       customer: { ...customer },
       paymentMethod,
-      storeName: user?.name || MOCK_TERMINAL_CONFIG.storeName,
-      storeDivision: MOCK_TERMINAL_CONFIG.storeDivision,
-      storeCode: MOCK_TERMINAL_CONFIG.storeCode,
+      storeName: user?.store_name || user?.name || 'Main Counter',
+      storeDivision: 'Billing Counter 01',
+      storeCode: 'POS-01',
     };
 
     setLastCompletedSale(completedSale);
@@ -672,7 +671,7 @@ export function PosBillingPage() {
           </div>
 
           {/* Terminal Bottom Status Bar */}
-          <HotkeyBar hardwareStatus={MOCK_TERMINAL_CONFIG.hardwarePrinter} />
+          <HotkeyBar hardwareStatus="Thermal Printer Ready" />
         </section>
 
         {/* RIGHT PANEL: CURRENT BILL / ACTIVE CART */}

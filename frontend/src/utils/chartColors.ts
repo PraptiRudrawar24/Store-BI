@@ -2,38 +2,38 @@
  * Unified Analytics Chart Color Tokens & Palettes
  *
  * Standardized across all business analytics, reports, and dashboards:
- * - Sales: `#6366F1` (Indigo)
+ * - Sales: `#2563EB` (Royal Blue)
  * - Profit: `#10B981` (Emerald)
- * - Costs: `#F59E0B` (Amber)
- * - Inventory: `#06B6D4` (Cyan)
- * - Expenses: `#F43F5E` (Rose)
- * - Secondary / Predictions / Targets: `#8B5CF6` (Violet)
+ * - Costs: `#F43F5E` (Rose)
+ * - Expenses: `#F59E0B` (Amber)
+ * - Inventory: `#0284C7` (Sky / Cyan)
+ * - Secondary / Predictions / Targets: `#7C3AED` (Purple)
  */
 
 export const CHART_COLORS = {
-  sales: '#6366F1',       // Indigo
-  salesLight: 'rgba(99, 102, 241, 0.15)',
-  salesHover: '#4F46E5',
+  sales: '#2563EB',       // Royal Blue
+  salesLight: 'rgba(37, 99, 235, 0.15)',
+  salesHover: '#1D4ED8',
 
   profit: '#10B981',      // Emerald
   profitLight: 'rgba(16, 185, 129, 0.15)',
   profitHover: '#059669',
 
-  costs: '#F59E0B',       // Amber
-  costsLight: 'rgba(245, 158, 11, 0.15)',
-  costsHover: '#D97706',
+  costs: '#F43F5E',       // Rose (COGS)
+  costsLight: 'rgba(244, 63, 94, 0.15)',
+  costsHover: '#E11D48',
 
-  inventory: '#06B6D4',   // Cyan
-  inventoryLight: 'rgba(6, 182, 212, 0.15)',
-  inventoryHover: '#0891B2',
+  inventory: '#0284C7',   // Sky / Cyan
+  inventoryLight: 'rgba(2, 132, 199, 0.15)',
+  inventoryHover: '#0369A1',
 
-  expenses: '#F43F5E',    // Rose
-  expensesLight: 'rgba(244, 63, 94, 0.15)',
-  expensesHover: '#E11D48',
+  expenses: '#F59E0B',    // Amber
+  expensesLight: 'rgba(245, 158, 11, 0.15)',
+  expensesHover: '#D97706',
 
-  secondary: '#8B5CF6',   // Violet (Forecast/Predictions)
-  secondaryLight: 'rgba(139, 92, 246, 0.15)',
-  secondaryHover: '#7C3AED',
+  secondary: '#7C3AED',   // Purple (Forecast/Predictions)
+  secondaryLight: 'rgba(124, 58, 237, 0.15)',
+  secondaryHover: '#6D28D9',
 
   // Grid, axis & chrome
   grid: 'rgba(148, 163, 184, 0.25)',
@@ -43,13 +43,13 @@ export const CHART_COLORS = {
 } as const;
 
 export const CATEGORY_PALETTE = [
-  '#6366F1', // Indigo
+  '#2563EB', // Royal Blue
   '#10B981', // Emerald
   '#F59E0B', // Amber
-  '#06B6D4', // Cyan
-  '#8B5CF6', // Violet
+  '#0284C7', // Sky
+  '#7C3AED', // Purple
   '#F43F5E', // Rose
-  '#3B82F6', // Blue
+  '#6366F1', // Indigo
   '#14B8A6', // Teal
   '#EC4899', // Pink
   '#EAB308', // Gold

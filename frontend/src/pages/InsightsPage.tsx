@@ -5,8 +5,7 @@ import {
   Sparkles,
   Upload,
 } from 'lucide-react';
-import { Tabs, type TabItem } from '../components/ui/Tabs';
-import { Button } from '../components/ui/Button';
+import { type TabItem } from '../components/ui/Tabs';
 import { SalesPredictionTab } from '../components/insights/SalesPredictionTab';
 import { DemandForecastTab } from '../components/insights/DemandForecastTab';
 import { ProductRecommendationsTab } from '../components/insights/ProductRecommendationsTab';
@@ -52,33 +51,46 @@ export function InsightsPage() {
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-text-high">AI insights & forecasting</h1>
-          <p className="text-sm text-text-medium mt-0.5">
+          <h1 className="text-2xl font-bold text-[#0F172A] dark:text-white tracking-tight">AI Insights & Forecasting</h1>
+          <p className="text-[13px] text-[#64748B] dark:text-slate-400 mt-0.5">
             Statistical time-series forecasting, 14-day stock-out mitigation, and automated replenishment recommendations.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
+          <button
+            type="button"
             onClick={() => navigate('/upload')}
-            className="text-xs min-h-[48px] px-3 gap-1.5"
+            className="h-9 px-4 bg-[#136DEC] hover:bg-[#0D5CC9] text-white text-[13px] font-semibold rounded-lg flex items-center gap-2 transition-all shadow-sm cursor-pointer"
           >
-            <Upload className="w-3.5 h-3.5" />
+            <Upload className="w-4 h-4" />
             <span>Upload sales data</span>
-          </Button>
+          </button>
         </div>
       </div>
 
-      {/* Tabs Navigation */}
-      <div className="border-b border-border">
-        <Tabs
-          tabs={INSIGHTS_TABS}
-          activeTab={activeTab}
-          onChange={handleTabChange}
-        />
+      {/* Primary Sub-nav Tabs (Stitch Underline Style) */}
+      <div className="flex items-center border-b border-[#E2E8F0] dark:border-slate-700 gap-6 sm:gap-8 pt-1 overflow-x-auto no-scrollbar">
+        {INSIGHTS_TABS.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => handleTabChange(tab.id)}
+              className={`flex items-center gap-2 pb-3 border-b-2 text-[13px] transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                isActive
+                  ? 'border-[#136DEC] text-[#136DEC] font-semibold'
+                  : 'border-transparent text-[#64748B] dark:text-slate-400 hover:text-[#0F172A] dark:hover:text-white font-medium'
+              }`}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Active Tab Panel */}
