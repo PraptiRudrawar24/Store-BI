@@ -100,7 +100,7 @@ const StoreBI_Charts = (() => {
     let dotsSvg = "";
     points.forEach((p, i) => {
       dotsSvg += `
-        <circle cx="${p.x}" cy="${p.y}" r="4" fill="#0B5D4B" stroke="#FFFFFF" stroke-width="2" class="chart-interactive-dot" style="cursor: pointer;" data-idx="${i}"/>
+        <circle cx="${p.x}" cy="${p.y}" r="4" fill="#2563EB" stroke="#FFFFFF" stroke-width="2" class="chart-interactive-dot" style="cursor: pointer;" data-idx="${i}"/>
       `;
     });
 
@@ -114,7 +114,7 @@ const StoreBI_Charts = (() => {
         </defs>
         ${gridLinesSvg}
         <path d="${areaPathD}" fill="url(#areaGradient_${containerId})"/>
-        <path d="${linePathD}" fill="none" stroke="#0B5D4B" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="${linePathD}" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round"/>
         ${dotsSvg}
         ${xLabelsSvg}
       </svg>
@@ -171,7 +171,7 @@ const StoreBI_Charts = (() => {
       const yInactive = padding.top + chartH - hInactive;
 
       barsSvg += `
-        <rect x="${groupX + 8}" y="${yActive}" width="${barWidth}" height="${hActive}" rx="4" fill="#0B5D4B" class="bar-elem" data-label="${d.label} (Active)" data-val="${d.active}" style="cursor: pointer;"/>
+        <rect x="${groupX + 8}" y="${yActive}" width="${barWidth}" height="${hActive}" rx="4" fill="#2563EB" class="bar-elem" data-label="${d.label} (Active)" data-val="${d.active}" style="cursor: pointer;"/>
         <rect x="${groupX + 8 + barWidth + 4}" y="${yInactive}" width="${barWidth}" height="${hInactive}" rx="4" fill="#94A3B8" class="bar-elem" data-label="${d.label} (Inactive / Expired)" data-val="${d.inactive}" style="cursor: pointer;"/>
       `;
 
@@ -232,7 +232,7 @@ const StoreBI_Charts = (() => {
     const center = size / 2;
     const total = items.reduce((sum, item) => sum + item.count, 0);
 
-    const colors = ["#0B5D4B", "#10B981", "#3B82F6", "#F59E0B", "#8B5CF6", "#EC4899"];
+    const colors = ["#2563EB", "#10B981", "#F59E0B", "#0284C7", "#8B5CF6", "#EC4899"];
 
     let cumulativePercent = 0;
     let pathsSvg = "";
@@ -326,7 +326,7 @@ const StoreBI_Charts = (() => {
             <span class="font-mono" style="font-weight: 600; color: var(--text-medium);">${city.count} stores</span>
           </div>
           <div style="width: 100%; height: 8px; background: var(--bg-subtle); border-radius: 4px; overflow: hidden;">
-            <div style="width: ${pct}%; height: 100%; background: #0B5D4B; border-radius: 4px; transition: width 0.5s ease;"></div>
+            <div style="width: ${pct}%; height: 100%; background: #2563EB; border-radius: 4px; transition: width 0.5s ease;"></div>
           </div>
         </div>
       `;
@@ -360,7 +360,7 @@ const StoreBI_Charts = (() => {
             </div>
           </div>
           <div style="width: 100%; height: 10px; background: var(--bg-subtle); border-radius: 5px; overflow: hidden;">
-            <div style="width: ${pctOfBase}%; height: 100%; background: ${idx === steps.length - 1 ? '#0B5D4B' : '#10B981'}; border-radius: 5px;"></div>
+            <div style="width: ${pctOfBase}%; height: 100%; background: ${idx === steps.length - 1 ? '#2563EB' : '#3B82F6'}; border-radius: 5px;"></div>
           </div>
         </div>
       `;

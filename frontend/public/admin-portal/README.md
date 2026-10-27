@@ -8,7 +8,7 @@ The **Admin Web Panel** is the centralized, multi-tenant platform operations int
 
 - **Design System Compliance**: Adheres strictly to the Store BI `/design/DESIGN.md` guidelines:
   - **Typography**: Inter (with `monospace` for shop IDs, phone numbers, and emails).
-  - **Primary Palette**: Deep green (`#0B5D4B`), mint (`#10B981` / `#E6F4EA`), amber warning (`#D97706` / `#FEF3C7`), and failure red (`#DC2626` / `#FEE2E2`).
+  - **Primary Palette**: Vivid royal blue (`#2563EB`), mint (`#10B981` / `#E6F4EA`), amber warning (`#D97706` / `#FEF3C7`), and failure red (`#DC2626` / `#FEE2E2`).
   - **Card Surfaces**: 1px borders (`#E2E8F0`), 8–12px border radiuses, zero decorative shadows.
   - **Indian Currency & Number System**: Formatted strictly in INR (`₹1,25,000`, `₹14,86,500`) using Indian lakhs and crores notation.
   - **Dark & Light Mode**: Seamless real-time theme toggle via CSS variables.
