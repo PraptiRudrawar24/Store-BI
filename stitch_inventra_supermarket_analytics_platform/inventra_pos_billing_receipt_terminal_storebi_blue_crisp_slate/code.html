@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en" style=""><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Inventra Intel - POS Billing Terminal</title>
+<!-- Inter & Plus Jakarta Sans Font Family -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config with StoreBI Theme Palette -->
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-background": "#0F172A",
+            "on-secondary-fixed-variant": "#475569",
+            "primary-fixed": "#DCE9FE",
+            "on-primary-container": "#FFFFFF",
+            "on-secondary-container": "#1E293B",
+            "on-error": "#FFFFFF",
+            "on-primary-fixed": "#0B3C82",
+            "secondary": "#64748B",
+            "surface-container": "#F1F5F9",
+            "surface-container-low": "#F8FAFC",
+            "surface-container-lowest": "#FFFFFF",
+            "secondary-container": "#EBF3FF",
+            "on-secondary-fixed": "#0F172A",
+            "surface-variant": "#E2E8F0",
+            "error-container": "#FEE2E2",
+            "inverse-primary": "#93C5FD",
+            "primary": "#136DEC",
+            "inverse-surface": "#1E293B",
+            "on-tertiary": "#FFFFFF",
+            "on-tertiary-container": "#FFFFFF",
+            "outline-variant": "#E2E8F0",
+            "on-tertiary-fixed": "#2E1065",
+            "surface-tint": "#136DEC",
+            "tertiary": "#6366F1",
+            "on-tertiary-fixed-variant": "#4338CA",
+            "surface-container-highest": "#E2E8F0",
+            "primary-fixed-dim": "#BFDBFE",
+            "surface-container-high": "#EBF2FA",
+            "surface-bright": "#FFFFFF",
+            "background": "#F4F7FC",
+            "on-secondary": "#FFFFFF",
+            "tertiary-container": "#4F46E5",
+            "on-primary-fixed-variant": "#0C4A9E",
+            "secondary-fixed-dim": "#CBD5E1",
+            "on-surface-variant": "#475569",
+            "surface-dim": "#E2E8F0",
+            "primary-container": "#136DEC",
+            "tertiary-fixed-dim": "#C7D2FE",
+            "error": "#EF4444",
+            "inverse-on-surface": "#F8FAFC",
+            "secondary-fixed": "#E2E8F0",
+            "outline": "#94A3B8",
+            "on-error-container": "#991B1B",
+            "on-surface": "#0F172A",
+            "surface": "#F4F7FC",
+            "tertiary-fixed": "#EEF2FF",
+            "on-primary": "#FFFFFF"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.375rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "2xl": "1rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "space-lg": "1rem",
+            "gutter": "1rem",
+            "space-sm": "0.5rem",
+            "space-xl": "1.5rem",
+            "gutter-compact": "0.75rem",
+            "margin-mobile": "1rem",
+            "space-xs": "0.25rem",
+            "space-md": "0.75rem",
+            "margin": "1.5rem"
+          },
+          "fontFamily": {
+            "metric-tabular": ["'Plus Jakarta Sans'", "Inter", "sans-serif"],
+            "label-md": ["Inter", "sans-serif"],
+            "body-xs": ["Inter", "sans-serif"],
+            "body-md": ["Inter", "sans-serif"],
+            "body-lg": ["Inter", "sans-serif"],
+            "headline-md": ["'Plus Jakarta Sans'", "Inter", "sans-serif"],
+            "display-metric": ["'Plus Jakarta Sans'", "Inter", "sans-serif"],
+            "headline-sm": ["'Plus Jakarta Sans'", "Inter", "sans-serif"],
+            "body-sm": ["Inter", "sans-serif"],
+            "headline-lg": ["'Plus Jakarta Sans'", "Inter", "sans-serif"],
+            "label-sm": ["Inter", "sans-serif"],
+            "table-header": ["Inter", "sans-serif"],
+            "mono-receipt": ["'JetBrains Mono'", "monospace"]
+          },
+          "fontSize": {
+            "metric-tabular": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "label-md": ["13px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "600" }],
+            "body-xs": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+            "body-lg": ["15px", { "lineHeight": "22px", "fontWeight": "400" }],
+            "headline-md": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.015em", "fontWeight": "700" }],
+            "display-metric": ["32px", { "lineHeight": "38px", "letterSpacing": "-0.025em", "fontWeight": "800" }],
+            "headline-sm": ["15px", { "lineHeight": "22px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+            "body-sm": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600" }],
+            "table-header": ["11px", { "lineHeight": "14px", "letterSpacing": "0.05em", "fontWeight": "600" }]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 19px;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .material-symbols-outlined.fill-icon {
+      font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 20;
+    }
+    /* Thermal paper texture & font styling */
+    .receipt-paper {
+      background-color: #ffffff;
+      box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(226, 232, 240, 0.8);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .receipt-divider {
+      border-top: 1px dashed #CBD5E1;
+    }
+    /* Custom scrollbar for clean StoreBI view */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #F1F5F9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94A3B8;
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface h-full overflow-hidden flex font-body-md antialiased select-none">
+<!-- ========================================================================= -->
+<!-- 1. LEFT NAVIGATION RAIL (SideNavBar Component Blueprint from JSON)        -->
+<!-- ========================================================================= -->
+<aside class="fixed top-0 left-0 h-screen w-60 bg-surface-container-lowest border-r border-outline-variant shadow-sm flex flex-col justify-between p-space-md z-40 transition-all duration-150 ease-in-out">
+<!-- Top Brand & Division -->
+<div class="flex flex-col gap-4">
+<div class="flex items-center gap-3 px-1 py-1">
+<div class="w-9 h-9 rounded-xl bg-primary text-on-primary flex items-center justify-center font-bold shadow-sm">
+<span class="material-symbols-outlined fill-icon" data-icon="storefront">storefront</span>
+</div>
+<div class="overflow-hidden">
+<h1 class="text-headline-md font-headline-md font-bold text-primary tracking-tight leading-none">Inventra Intel</h1>
+<p class="text-label-sm font-label-sm text-secondary truncate mt-1">Pune Regional Division</p>
+</div>
+</div>
+<!-- Quick Action Upload CTA from JSON Blueprint -->
+<button class="w-full flex items-center justify-center gap-2 py-2 px-3 bg-surface-container-low hover:bg-surface-container-high border border-outline-variant text-primary rounded-lg font-label-md text-label-md transition-all duration-150 font-medium">
+<span class="material-symbols-outlined text-primary text-base" data-icon="upload_file">upload_file</span>
+<span class="">+ Upload Invoice</span>
+</button>
+<!-- Navigation Tabs (10 tabs as defined in JSON) -->
+<nav class="flex flex-col gap-1 overflow-y-auto max-h-[calc(100vh-320px)] pr-1">
+<!-- Overview -->
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-lg font-body-sm text-body-sm transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="">Overview</span>
+</a>
+<!-- Sales (Active Category in Store Ops / POS) -->
+<a class="flex items-center gap-3 px-3 py-2 bg-secondary-container text-primary rounded-lg font-label-md text-label-md font-semibold" href="#">
+<span class="material-symbols-outlined fill-icon text-primary" data-icon="point_of_sale">point_of_sale</span>
+<span class="font-semibold text-primary">POS Billing</span>
+<span class="ml-auto w-2 h-2 rounded-full bg-primary"></span>
+</a><a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-lg font-body-sm text-body-sm transition-colors" href="#"><span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span><span class="">Sales</span></a>
+<!-- Products -->
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-lg font-body-sm text-body-sm transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="">Inventory</span>
+</a><a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-lg font-body-sm text-body-sm transition-colors" href="#"><span class="material-symbols-outlined" data-icon="bar_chart">bar_chart</span><span class="">Analytics</span></a>
+<!-- Predictions -->
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-lg font-body-sm text-body-sm transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="auto_graph">auto_graph</span>
+<span class="">Predictions</span>
+</a>
+</nav>
+</div>
+<!-- SideNav Footer Tabs (JSON Blueprint) -->
+<div class="pt-3 border-t border-outline-variant flex flex-col gap-1">
+<div class="px-3 py-1.5 rounded-lg bg-surface-container-low flex items-center justify-between text-secondary border border-outline-variant/60">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-secondary" data-icon="swap_horiz">swap_horiz</span>
+<span class="text-label-sm font-label-sm truncate font-medium text-slate-700">Branch: Pune Central</span>
+</div>
+<span class="inline-block w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-emerald-100"></span>
+</div>
+<a class="flex items-center gap-3 px-3 py-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-lg font-body-sm text-body-sm transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-lg font-body-sm text-body-sm transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+<span class="">Help &amp; Support</span>
+</a>
+</div>
+</aside>
+<!-- ========================================================================= -->
+<!-- MAIN APPLICATION VIEWPORT (Left margin = 240px / 60 Tailwind)             -->
+<!-- ========================================================================= -->
+<div class="ml-60 flex-1 flex flex-col h-screen min-w-0">
+<!-- 2. TOP APP BAR (TopNavBar Component Blueprint from JSON) -->
+<header class="sticky top-0 w-full h-14 bg-surface-container-lowest border-b border-outline-variant shadow-sm flex items-center justify-between px-space-xl z-30"><div class="flex items-center gap-4 flex-1 max-w-xl"><div class="relative flex-1"><span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-secondary text-base" data-icon="search">search</span><input class="w-full h-9 pl-9 pr-12 text-body-sm font-body-sm bg-surface-container-low text-on-surface rounded-xl border border-outline-variant focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-secondary transition-all" placeholder="Search orders, products, SKU (Ctrl + K)" type="text"/><kbd class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-container-lowest border border-outline-variant text-secondary shadow-2xs">⌘K</kbd></div></div><div class="flex items-center gap-3"><button class="relative w-9 h-9 flex items-center justify-center rounded-xl text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors" title="Notifications"><span class="material-symbols-outlined" data-icon="notifications">notifications</span><span class="absolute top-1.5 right-1.5 w-4 h-4 bg-error text-on-error rounded-full text-[10px] font-bold flex items-center justify-center">3</span></button><button class="w-9 h-9 flex items-center justify-center rounded-xl text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors" title="Configuration &amp; Settings"><span class="material-symbols-outlined" data-icon="tune">tune</span></button><div class="flex items-center gap-2 pl-2 border-l border-outline-variant"><div class="w-8 h-8 rounded-full bg-secondary-container text-primary flex items-center justify-center font-bold text-xs ring-1 ring-primary/20 font-mono">DR</div><div class="hidden lg:block text-left"><p class="font-label-md text-label-md text-on-surface leading-tight font-semibold">Dr. Rajesh Sharma</p><p class="text-[11px] text-secondary leading-tight">Store Manager</p></div></div></div></header>
+<!-- ========================================================================= -->
+<!-- 3. POS MAIN TERMINAL CANVAS                                               -->
+<!-- Two Column Bento Layout: Product Catalog (Left) + Cart Checkout (Right)   -->
+<!-- ========================================================================= -->
+<div class="flex-1 flex overflow-hidden">
+<!-- LEFT WORKSPACE: PRODUCT DISCOVERY, BARCODE SCAN & GRID (65%) -->
+<section class="flex-1 flex flex-col min-w-0 bg-background border-r border-outline-variant">
+<!-- Search & Barcode Command Bar -->
+<div class="p-space-lg bg-surface-container-lowest border-b border-outline-variant flex flex-col gap-3 shadow-xs">
+<div class="flex items-center gap-3">
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-secondary" data-icon="barcode_scanner">barcode_scanner</span>
+<input class="w-full h-11 pl-11 pr-24 bg-surface-container-low text-on-surface rounded-xl border border-outline-variant text-body-md font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-secondary shadow-2xs" id="barcode-input" placeholder="Search product name, SKU, or scan barcode (e.g. 8901030...)" type="text" value=""/>
+<span class="absolute right-3 top-1/2 -translate-y-1/2 text-label-sm font-label-sm font-mono px-2 py-0.5 bg-surface-container-lowest rounded-md text-secondary border border-outline-variant shadow-2xs">Enter to Add</span>
+</div>
+<!-- Fast Scan Trigger -->
+<button class="h-11 px-4 bg-surface-container-low hover:bg-surface-container border border-outline-variant text-primary rounded-xl font-label-md text-label-md flex items-center gap-2 active:scale-95 transition-all shadow-2xs font-semibold" title="Barcode Scanner [F2]">
+<span class="material-symbols-outlined text-primary" data-icon="document_scanner">document_scanner</span>
+<span class="">Scan [F2]</span>
+</button>
+<!-- Quick Add Custom SKU -->
+<button class="h-11 px-3 bg-surface-container-low hover:bg-surface-container border border-outline-variant text-secondary hover:text-on-surface rounded-xl flex items-center justify-center transition-all shadow-2xs" title="Add Custom Price Item">
+<span class="material-symbols-outlined" data-icon="more_horiz">more_horiz</span>
+</button>
+</div>
+<!-- Category Pill Filter Tabs -->
+<div class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar text-label-md font-label-md">
+<button class="px-3.5 py-1.5 rounded-xl bg-primary text-on-primary font-semibold shadow-xs whitespace-nowrap transition-all">
+              All Items
+            </button>
+<button class="px-3.5 py-1.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container border border-outline-variant text-secondary hover:text-on-surface font-medium whitespace-nowrap transition-all">
+              Personal Care
+            </button>
+<button class="px-3.5 py-1.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container border border-outline-variant text-secondary hover:text-on-surface font-medium whitespace-nowrap transition-all">
+              Health &amp; OTC
+            </button>
+<button class="px-3.5 py-1.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container border border-outline-variant text-secondary hover:text-on-surface font-medium whitespace-nowrap transition-all">
+              Snacks &amp; Sweets
+            </button>
+<button class="px-3.5 py-1.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container border border-outline-variant text-secondary hover:text-on-surface font-medium whitespace-nowrap transition-all">
+              Dairy &amp; Staples
+            </button>
+<button class="px-3.5 py-1.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container border border-outline-variant text-secondary hover:text-on-surface font-medium whitespace-nowrap transition-all">
+              Beverages
+            </button>
+<button class="px-3.5 py-1.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container border border-outline-variant text-secondary hover:text-on-surface font-medium whitespace-nowrap transition-all">
+              Household
+            </button>
+</div>
+</div>
+<!-- Product Grid (High Performance Visual Catalog) -->
+<div class="flex-1 overflow-y-auto p-space-lg">
+<div class="flex items-center justify-between mb-3">
+<div class="flex items-center gap-2">
+<span class="text-label-sm font-label-sm text-secondary uppercase tracking-wider font-semibold">Fast Pick Catalog</span>
+<span class="text-xs bg-surface-container-lowest border border-outline-variant px-2 py-0.5 rounded-full text-secondary font-mono font-medium">24 SKUs Shown</span>
+</div>
+<div class="flex items-center gap-2 text-xs text-secondary font-medium">
+<span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Adequate Stock</span>
+<span class="flex items-center gap-1.5 ml-2"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Low Stock</span>
+</div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-3.5">
+<!-- Card 1: Dettol Antiseptic Liquid (In Cart) -->
+<div class="group bg-surface-container-lowest border border-outline-variant hover:border-primary rounded-xl p-3.5 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all relative shadow-2xs" onclick="addToCart('Dettol Antiseptic Liquid 550ml', 225.00, 'Personal Care', 'DET-550')">
+<div class="flex items-start justify-between gap-2 mb-2">
+<span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-label-sm font-label-sm rounded-md font-semibold">Personal Care</span>
+<span class="text-label-sm font-label-sm text-secondary font-mono font-medium">27 left</span>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold group-hover:text-primary transition-colors line-clamp-2">
+                  Dettol Antiseptic Liquid 550ml
+                </h3>
+<p class="text-body-xs font-body-xs text-secondary mt-0.5 font-mono">SKU: DET-550M</p>
+</div>
+<div class="flex items-baseline justify-between mt-4 pt-3 border-t border-slate-100">
+<div class="font-metric-tabular text-metric-tabular text-on-surface font-bold text-lg">
+                  ₹225.00
+                </div>
+<button class="w-8 h-8 rounded-lg bg-surface-container-low group-hover:bg-primary group-hover:text-on-primary text-primary flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="add">add</span>
+</button>
+</div>
+<!-- Selected Marker badge -->
+<div class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-primary text-white rounded-full flex items-center justify-center text-xs font-bold shadow-xs">
+                1
+              </div>
+</div>
+<!-- Card 2: Paracetamol 500mg (In Cart - Low Stock Alert) -->
+<div class="group bg-surface-container-lowest border border-outline-variant hover:border-primary rounded-xl p-3.5 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all relative shadow-2xs" onclick="addToCart('Paracetamol 500mg 3004 81234', 52.50, 'Health &amp; OTC', 'PCM-500')">
+<div class="flex items-start justify-between gap-2 mb-2">
+<span class="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 text-label-sm font-label-sm rounded-md font-semibold">Health &amp; OTC</span>
+<span class="px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-mono rounded-md font-bold">2 left</span>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold group-hover:text-primary transition-colors line-clamp-2">
+                  Paracetamol 500mg 3004 81234
+                </h3>
+<p class="text-body-xs font-body-xs text-secondary mt-0.5 font-mono">SKU: 12/26 2 20.00</p>
+</div>
+<div class="flex items-baseline justify-between mt-4 pt-3 border-t border-slate-100">
+<div class="font-metric-tabular text-metric-tabular text-on-surface font-bold text-lg">
+                  ₹52.50
+                </div>
+<button class="w-8 h-8 rounded-lg bg-surface-container-low group-hover:bg-primary group-hover:text-on-primary text-primary flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="add">add</span>
+</button>
+</div>
+<div class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-primary text-white rounded-full flex items-center justify-center text-xs font-bold shadow-xs">
+                1
+              </div>
+</div>
+<!-- Card 3: Lay's India's Magic Masala Chips (In Cart) -->
+<div class="group bg-surface-container-lowest border border-outline-variant hover:border-primary rounded-xl p-3.5 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all relative shadow-2xs" onclick="addToCart('Lay\'s India\'s Magic Masala 90g', 30.00, 'Snacks &amp; Sweets', 'LAYS-90')">
+<div class="flex items-start justify-between gap-2 mb-2">
+<span class="px-2 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 text-label-sm font-label-sm rounded-md font-semibold">Snacks &amp; Sweets</span>
+<span class="text-label-sm font-label-sm text-secondary font-mono font-medium">109 left</span>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold group-hover:text-primary transition-colors line-clamp-2">
+                  Lay's India's Magic Masala 90g
+                </h3>
+<p class="text-body-xs font-body-xs text-secondary mt-0.5 font-mono">SKU: LYS-90G-MM</p>
+</div>
+<div class="flex items-baseline justify-between mt-4 pt-3 border-t border-slate-100">
+<div class="font-metric-tabular text-metric-tabular text-on-surface font-bold text-lg">
+                  ₹30.00
+                </div>
+<button class="w-8 h-8 rounded-lg bg-surface-container-low group-hover:bg-primary group-hover:text-on-primary text-primary flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="add">add</span>
+</button>
+</div>
+<div class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-primary text-white rounded-full flex items-center justify-center text-xs font-bold shadow-xs">
+                1
+              </div>
+</div>
+<!-- Card 4: Cadbury Dairy Milk Silk Chocolate -->
+<div class="group bg-surface-container-lowest border border-outline-variant hover:border-primary rounded-xl p-3.5 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all shadow-2xs" onclick="addToCart('Cadbury Dairy Milk Silk 150g', 175.00, 'Snacks &amp; Sweets', 'CAD-150')">
+<div class="flex items-start justify-between gap-2 mb-2">
+<span class="px-2 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 text-label-sm font-label-sm rounded-md font-semibold">Snacks &amp; Sweets</span>
+<span class="text-label-sm font-label-sm text-secondary font-mono font-medium">69 left</span>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold group-hover:text-primary transition-colors line-clamp-2">
+                  Cadbury Dairy Milk Silk 150g
+                </h3>
+<p class="text-body-xs font-body-xs text-secondary mt-0.5 font-mono">SKU: CAD-SLK-150</p>
+</div>
+<div class="flex items-baseline justify-between mt-4 pt-3 border-t border-slate-100">
+<div class="font-metric-tabular text-metric-tabular text-on-surface font-bold text-lg">
+                  ₹175.00
+                </div>
+<button class="w-8 h-8 rounded-lg bg-surface-container-low group-hover:bg-primary group-hover:text-on-primary text-primary flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="add">add</span>
+</button>
+</div>
+</div>
+<!-- Card 5: Amul Pasteurized Butter 500g -->
+<div class="group bg-surface-container-lowest border border-outline-variant hover:border-primary rounded-xl p-3.5 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all shadow-2xs" onclick="addToCart('Amul Butter 500g Tub', 275.00, 'Dairy &amp; Staples', 'AMUL-500')">
+<div class="flex items-start justify-between gap-2 mb-2">
+<span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 text-label-sm font-label-sm rounded-md font-semibold">Dairy &amp; Staples</span>
+<span class="text-label-sm font-label-sm text-secondary font-mono font-medium">42 left</span>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold group-hover:text-primary transition-colors line-clamp-2">
+                  Amul Butter 500g Tub
+                </h3>
+<p class="text-body-xs font-body-xs text-secondary mt-0.5 font-mono">SKU: AML-BTR-500</p>
+</div>
+<div class="flex items-baseline justify-between mt-4 pt-3 border-t border-slate-100">
+<div class="font-metric-tabular text-metric-tabular text-on-surface font-bold text-lg">
+                  ₹275.00
+                </div>
+<button class="w-8 h-8 rounded-lg bg-surface-container-low group-hover:bg-primary group-hover:text-on-primary text-primary flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="add">add</span>
+</button>
+</div>
+</div>
+<!-- Card 6: Tata Salt Vacuum Evaporated 1kg -->
+<div class="group bg-surface-container-lowest border border-outline-variant hover:border-primary rounded-xl p-3.5 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all shadow-2xs" onclick="addToCart('Tata Salt Iodized 1kg', 30.00, 'Dairy &amp; Staples', 'TATA-1KG')">
+<div class="flex items-start justify-between gap-2 mb-2">
+<span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 text-label-sm font-label-sm rounded-md font-semibold">Dairy &amp; Staples</span>
+<span class="text-label-sm font-label-sm text-secondary font-mono font-medium">215 left</span>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold group-hover:text-primary transition-colors line-clamp-2">
+                  Tata Salt Iodized 1kg
+                </h3>
+<p class="text-body-xs font-body-xs text-secondary mt-0.5 font-mono">SKU: TAT-SLT-1KG</p>
+</div>
+<div class="flex items-baseline justify-between mt-4 pt-3 border-t border-slate-100">
+<div class="font-metric-tabular text-metric-tabular text-on-surface font-bold text-lg">
+                  ₹30.00
+                </div>
+<button class="w-8 h-8 rounded-lg bg-surface-container-low group-hover:bg-primary group-hover:text-on-primary text-primary flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="add">add</span>
+</button>
+</div>
+</div>
+<!-- Card 7: Colgate Total Active Health 120g -->
+<div class="group bg-surface-container-lowest border border-outline-variant hover:border-primary rounded-xl p-3.5 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all shadow-2xs" onclick="addToCart('Colgate Total Toothpaste 120g', 115.00, 'Personal Care', 'COLG-120')">
+<div class="flex items-start justify-between gap-2 mb-2">
+<span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-label-sm font-label-sm rounded-md font-semibold">Personal Care</span>
+<span class="text-label-sm font-label-sm text-secondary font-mono font-medium">54 left</span>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold group-hover:text-primary transition-colors line-clamp-2">
+                  Colgate Total Toothpaste 120g
+                </h3>
+<p class="text-body-xs font-body-xs text-secondary mt-0.5 font-mono">SKU: CLG-TOT-120</p>
+</div>
+<div class="flex items-baseline justify-between mt-4 pt-3 border-t border-slate-100">
+<div class="font-metric-tabular text-metric-tabular text-on-surface font-bold text-lg">
+                  ₹115.00
+                </div>
+<button class="w-8 h-8 rounded-lg bg-surface-container-low group-hover:bg-primary group-hover:text-on-primary text-primary flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="add">add</span>
+</button>
+</div>
+</div>
+<!-- Card 8: Frooti Fresh Mango Drink 1.2L -->
+<div class="group bg-surface-container-lowest border border-outline-variant hover:border-primary rounded-xl p-3.5 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all shadow-2xs" onclick="addToCart('Frooti Fresh Mango 1.2L', 65.00, 'Beverages', 'FRT-12L')">
+<div class="flex items-start justify-between gap-2 mb-2">
+<span class="px-2 py-0.5 bg-orange-50 text-orange-800 border border-orange-200 text-label-sm font-label-sm rounded-md font-semibold">Beverages</span>
+<span class="text-label-sm font-label-sm text-secondary font-mono font-medium">38 left</span>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold group-hover:text-primary transition-colors line-clamp-2">
+                  Frooti Fresh Mango 1.2L
+                </h3>
+<p class="text-body-xs font-body-xs text-secondary mt-0.5 font-mono">SKU: FRT-MNG-12L</p>
+</div>
+<div class="flex items-baseline justify-between mt-4 pt-3 border-t border-slate-100">
+<div class="font-metric-tabular text-metric-tabular text-on-surface font-bold text-lg">
+                  ₹65.00
+                </div>
+<button class="w-8 h-8 rounded-lg bg-surface-container-low group-hover:bg-primary group-hover:text-on-primary text-primary flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="add">add</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Terminal Status Bar / Keyboard Shortcuts -->
+<div class="h-9 px-space-lg bg-surface-container-lowest border-t border-outline-variant flex items-center justify-between text-xs text-secondary shadow-xs">
+<div class="flex items-center gap-4 font-medium">
+<span class=""><kbd class="px-1.5 py-0.5 bg-surface-container-low border border-outline-variant rounded font-mono font-semibold text-slate-700 shadow-2xs">F2</kbd> Scanner</span>
+<span class=""><kbd class="px-1.5 py-0.5 bg-surface-container-low border border-outline-variant rounded font-mono font-semibold text-slate-700 shadow-2xs">F4</kbd> Custom Discount</span>
+<span class=""><kbd class="px-1.5 py-0.5 bg-surface-container-low border border-outline-variant rounded font-mono font-semibold text-slate-700 shadow-2xs">Ctrl + P</kbd> Print Last Bill</span>
+<span class=""><kbd class="px-1.5 py-0.5 bg-surface-container-low border border-outline-variant rounded font-mono font-semibold text-slate-700 shadow-2xs">Esc</kbd> Reset Terminal</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-emerald-100"></span>
+<span class="font-mono text-slate-700 font-medium">Hardware Connected: Citizen CTS-310II (Thermal)</span>
+</div>
+</div>
+</section>
+<!-- RIGHT PANEL: CURRENT BILL / ACTIVE CART (35%) -->
+<section class="w-[430px] xl:w-[480px] bg-surface-container-lowest flex flex-col justify-between shrink-0 shadow-sm z-10 border-l border-outline-variant">
+<!-- Cart Header & Fast Clear -->
+<div class="p-space-lg border-b border-outline-variant bg-surface-container-lowest">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-primary text-xl" data-icon="receipt_long">receipt_long</span>
+<h2 class="text-headline-sm font-headline-sm text-on-surface font-bold tracking-tight">Current Bill</h2>
+<span class="px-2.5 py-0.5 bg-secondary-container text-primary text-label-sm font-label-sm rounded-full font-bold" id="cart-counter">3 items</span>
+</div>
+<button class="text-label-sm font-label-sm text-error hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded-lg transition-colors flex items-center gap-1 font-semibold" onclick="clearCurrentCart()">
+<span class="material-symbols-outlined text-sm" data-icon="delete_sweep">delete_sweep</span>
+<span class="">Clear Cart</span>
+</button>
+</div>
+<!-- Customer Name & Phone Number (WhatsApp Bill Sync) -->
+<div class="grid grid-cols-2 gap-2 mt-3.5">
+<div>
+<label class="block text-[11px] font-label-sm text-secondary uppercase font-semibold mb-1">Customer Name (Optional)</label>
+<input class="w-full h-8 px-2.5 bg-surface-container-low text-on-surface rounded-lg border border-outline-variant text-body-sm font-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-secondary" placeholder="e.g. Vikram Joshi" type="text" value="Vikram Joshi"/>
+</div>
+<div>
+<label class="block text-[11px] font-label-sm text-secondary uppercase font-semibold mb-1">WhatsApp / Mobile</label>
+<div class="relative">
+<span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-secondary font-mono">+91</span>
+<input class="w-full h-8 pl-9 pr-2 bg-surface-container-low text-on-surface rounded-lg border border-outline-variant text-body-sm font-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-mono transition-all" placeholder="98765 43210" type="text" value="98230 44129"/>
+</div>
+</div>
+</div>
+</div>
+<!-- Line Items Cart Container (Scrollable) -->
+<div class="flex-1 overflow-y-auto p-space-md flex flex-col gap-2" id="cart-items-container">
+<!-- Item 1: Dettol Antiseptic Liquid 550ml -->
+<div class="p-2.5 rounded-xl border border-outline-variant bg-surface-container-low hover:bg-surface-container transition-colors flex items-center justify-between shadow-2xs">
+<div class="flex-1 min-w-0 pr-2">
+<h4 class="text-body-sm font-body-sm text-on-surface font-semibold truncate leading-tight">Dettol Antiseptic Liquid 550ml</h4>
+<p class="text-body-xs font-body-xs text-secondary font-mono mt-0.5">₹225.00 / unit</p>
+</div>
+<div class="flex items-center gap-3">
+<!-- Qty Stepper -->
+<div class="flex items-center border border-outline-variant bg-surface-container-lowest rounded-lg shadow-2xs">
+<button class="w-6 h-6 flex items-center justify-center text-secondary hover:text-on-surface hover:bg-surface-container-low rounded-l transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="remove">remove</span>
+</button>
+<span class="w-6 text-center text-body-sm font-body-sm font-mono font-bold text-on-surface">1</span>
+<button class="w-6 h-6 flex items-center justify-center text-secondary hover:text-on-surface hover:bg-surface-container-low rounded-r transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+</button>
+</div>
+<!-- Item Total -->
+<div class="w-20 text-right font-metric-tabular text-metric-tabular text-on-surface font-bold">
+                ₹225.00
+              </div>
+<!-- Delete Action -->
+<button class="text-secondary hover:text-error p-1 rounded-md transition-colors">
+<span class="material-symbols-outlined text-base" data-icon="close">close</span>
+</button>
+</div>
+</div>
+<!-- Item 2: Paracetamol 500mg 3004 81234 12/26 -->
+<div class="p-2.5 rounded-xl border border-outline-variant bg-surface-container-low hover:bg-surface-container transition-colors flex items-center justify-between shadow-2xs">
+<div class="flex-1 min-w-0 pr-2">
+<h4 class="text-body-sm font-body-sm text-on-surface font-semibold truncate leading-tight">Paracetamol 500mg 3004 81234</h4>
+<p class="text-body-xs font-body-xs text-secondary font-mono mt-0.5">12/26 2 20.00 • ₹52.50</p>
+</div>
+<div class="flex items-center gap-3">
+<!-- Qty Stepper -->
+<div class="flex items-center border border-outline-variant bg-surface-container-lowest rounded-lg shadow-2xs">
+<button class="w-6 h-6 flex items-center justify-center text-secondary hover:text-on-surface hover:bg-surface-container-low rounded-l transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="remove">remove</span>
+</button>
+<span class="w-6 text-center text-body-sm font-body-sm font-mono font-bold text-on-surface">1</span>
+<button class="w-6 h-6 flex items-center justify-center text-secondary hover:text-on-surface hover:bg-surface-container-low rounded-r transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+</button>
+</div>
+<!-- Item Total -->
+<div class="w-20 text-right font-metric-tabular text-metric-tabular text-on-surface font-bold">
+                ₹52.50
+              </div>
+<!-- Delete Action -->
+<button class="text-secondary hover:text-error p-1 rounded-md transition-colors">
+<span class="material-symbols-outlined text-base" data-icon="close">close</span>
+</button>
+</div>
+</div>
+<!-- Item 3: Lay's India's Magic Masala Chips 90g -->
+<div class="p-2.5 rounded-xl border border-outline-variant bg-surface-container-low hover:bg-surface-container transition-colors flex items-center justify-between shadow-2xs">
+<div class="flex-1 min-w-0 pr-2">
+<h4 class="text-body-sm font-body-sm text-on-surface font-semibold truncate leading-tight">Lay's India's Magic Masala Chips 90g</h4>
+<p class="text-body-xs font-body-xs text-secondary font-mono mt-0.5">₹30.00 / unit</p>
+</div>
+<div class="flex items-center gap-3">
+<!-- Qty Stepper -->
+<div class="flex items-center border border-outline-variant bg-surface-container-lowest rounded-lg shadow-2xs">
+<button class="w-6 h-6 flex items-center justify-center text-secondary hover:text-on-surface hover:bg-surface-container-low rounded-l transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="remove">remove</span>
+</button>
+<span class="w-6 text-center text-body-sm font-body-sm font-mono font-bold text-on-surface">1</span>
+<button class="w-6 h-6 flex items-center justify-center text-secondary hover:text-on-surface hover:bg-surface-container-low rounded-r transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+</button>
+</div>
+<!-- Item Total -->
+<div class="w-20 text-right font-metric-tabular text-metric-tabular text-on-surface font-bold">
+                ₹30.00
+              </div>
+<!-- Delete Action -->
+<button class="text-secondary hover:text-error p-1 rounded-md transition-colors">
+<span class="material-symbols-outlined text-base" data-icon="close">close</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Billing Breakdown & Payment Method Selection -->
+<div class="p-space-lg border-t border-outline-variant bg-surface-container-lowest flex flex-col gap-3">
+<!-- Summary Breakdown Rows -->
+<div class="flex flex-col gap-1.5 text-body-sm font-body-sm">
+<div class="flex items-center justify-between text-secondary">
+<span class="">Subtotal</span>
+<span class="font-metric-tabular text-on-surface font-semibold">₹307.50</span>
+</div>
+<div class="flex items-center justify-between text-secondary">
+<div class="flex items-center gap-1.5">
+<span class="">Discount</span>
+<span class="text-xs px-1.5 py-0.2 bg-emerald-50 text-emerald-700 rounded font-mono font-medium border border-emerald-200">Coupon / Inst.</span>
+</div>
+<span class="font-metric-tabular text-emerald-600 font-semibold">-₹0.00</span>
+</div>
+<div class="flex items-center justify-between text-secondary">
+<div class="flex items-center gap-1">
+<span class="">GST / Tax (5%)</span>
+<span class="text-[11px] text-slate-400 font-mono">(CGST 2.5% + SGST 2.5%)</span>
+</div>
+<span class="font-metric-tabular text-on-surface font-semibold">₹15.38</span>
+</div>
+<!-- Grand Total Highlight Box -->
+<div class="pt-2 mt-1 border-t border-dashed border-outline-variant flex items-baseline justify-between">
+<div>
+<span class="text-label-md font-label-md uppercase tracking-wider text-secondary font-bold">Grand Total</span>
+<p class="text-[11px] text-emerald-600 font-medium">Rounded off to nearest rupee</p>
+</div>
+<div class="text-right">
+<span class="font-display-metric text-display-metric text-on-surface font-extrabold tracking-tight" id="grand-total-display">
+                  ₹322.88
+                </span>
+</div>
+</div>
+</div>
+<!-- Payment Mode Buttons (Cash, UPI / QR, Card, Credit) -->
+<div class="pt-1">
+<div class="grid grid-cols-4 gap-1.5">
+<!-- Cash (Default Selected) -->
+<button class="py-2.5 px-1 rounded-xl bg-emerald-600 text-white border border-emerald-600 flex flex-col items-center justify-center gap-1 shadow-xs transition-all font-label-md text-label-md" id="pay-cash" onclick="setPaymentMethod('Cash')">
+<span class="material-symbols-outlined text-lg" data-icon="payments">payments</span>
+<span class="text-xs font-semibold">Cash</span>
+</button>
+<!-- UPI / QR -->
+<button class="py-2.5 px-1 rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface border border-outline-variant flex flex-col items-center justify-center gap-1 transition-all font-label-md text-label-md" id="pay-upi" onclick="setPaymentMethod('UPI / QR')">
+<span class="material-symbols-outlined text-lg text-secondary" data-icon="qr_code_scanner">qr_code_scanner</span>
+<span class="text-xs font-medium">UPI / QR</span>
+</button>
+<!-- Card -->
+<button class="py-2.5 px-1 rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface border border-outline-variant flex flex-col items-center justify-center gap-1 transition-all font-label-md text-label-md" id="pay-card" onclick="setPaymentMethod('Card')">
+<span class="material-symbols-outlined text-lg text-secondary" data-icon="credit_card">credit_card</span>
+<span class="text-xs font-medium">Card</span>
+</button>
+<!-- Credit / Khata -->
+<button class="py-2.5 px-1 rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface border border-outline-variant flex flex-col items-center justify-center gap-1 transition-all font-label-md text-label-md" id="pay-credit" onclick="setPaymentMethod('Store Credit')">
+<span class="material-symbols-outlined text-lg text-secondary" data-icon="account_balance_wallet">account_balance_wallet</span>
+<span class="text-xs font-medium">Credit</span>
+</button>
+</div>
+</div>
+<!-- PRIMARY ACTION BUTTON (StoreBI signature blue #136DEC) -->
+<button class="w-full h-12 bg-primary hover:bg-[#0B5FD3] text-white rounded-xl font-headline-sm text-headline-sm font-bold flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-[0.99]" onclick="openReceiptModal()">
+<span class="material-symbols-outlined text-xl" data-icon="point_of_sale">point_of_sale</span>
+<span class="">Complete Sale &amp; Generate Bill</span>
+<span class="text-xs px-2 py-0.5 rounded bg-white/20 font-mono font-medium ml-1">[Enter]</span>
+</button>
+</div>
+</section>
+</div>
+</div>
+<!-- ========================================================================= -->
+<!-- 4. INTERACTIVE RECEIPT MODAL (Strictly Faithful to User Reference Image)   -->
+<!-- ========================================================================= -->
+<div class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 transition-all duration-200 hidden" id="receipt-modal">
+<div class="receipt-paper max-w-md w-full rounded-2xl p-6 flex flex-col shadow-2xl relative animate-in fade-in zoom-in duration-150 border border-slate-200">
+<!-- Close icon button -->
+<button class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 p-1 rounded-lg" onclick="closeReceiptModal()">
+<span class="material-symbols-outlined text-xl" data-icon="close">close</span>
+</button>
+<!-- Thermal Receipt Header matching Image 2 -->
+<div class="text-center pt-2">
+<h2 class="text-base font-bold tracking-tight text-slate-900 uppercase">Metro Retail &amp; Supermart</h2>
+<p class="text-xs text-slate-500 font-mono mt-0.5">Pune Regional Division • Store #114</p>
+<div class="mt-3">
+<p class="text-xs font-bold text-slate-800 tracking-wider">TAX INVOICE / CASH RECEIPT</p>
+<p class="text-[11px] text-slate-600 font-mono mt-0.5">Bill: POS-202610-1173 | 10/8/2026, 5:49:32 PM</p>
+</div>
+</div>
+<!-- Dashed Line separator -->
+<div class="receipt-divider my-3.5"></div>
+<!-- Itemised Receipt Table -->
+<div class="text-xs text-slate-900 font-mono">
+<div class="flex items-center justify-between font-bold border-b border-slate-300 pb-1 mb-2 text-[11px] text-slate-600 uppercase">
+<span class="flex-1">Item</span>
+<span class="w-10 text-center">Qty</span>
+<span class="w-16 text-right">Price</span>
+<span class="w-16 text-right">Total</span>
+</div>
+<div class="flex flex-col gap-2.5">
+<!-- Item 1 -->
+<div>
+<div class="flex items-start justify-between font-medium">
+<span class="flex-1 leading-tight text-slate-900">Dettol Antiseptic Liquid 550ml</span>
+<span class="w-10 text-center font-bold">1</span>
+<span class="w-16 text-right text-slate-600">₹225.00</span>
+<span class="w-16 text-right font-bold text-slate-900">₹225.00</span>
+</div>
+</div>
+<!-- Item 2 -->
+<div>
+<div class="flex items-start justify-between font-medium">
+<span class="flex-1 leading-tight text-slate-900">Paracetamol 500mg 3004 81234 12/26 2 20.00</span>
+<span class="w-10 text-center font-bold">1</span>
+<span class="w-16 text-right text-slate-600">₹52.50</span>
+<span class="w-16 text-right font-bold text-slate-900">₹52.50</span>
+</div>
+</div>
+<!-- Item 3 -->
+<div>
+<div class="flex items-start justify-between font-medium">
+<span class="flex-1 leading-tight text-slate-900">Lay's India's Magic Masala Chips 90g</span>
+<span class="w-10 text-center font-bold">1</span>
+<span class="w-16 text-right text-slate-600">₹30.00</span>
+<span class="w-16 text-right font-bold text-slate-900">₹30.00</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Dashed Line separator -->
+<div class="receipt-divider my-3.5"></div>
+<!-- Breakdown calculation matching Image 2 -->
+<div class="flex flex-col gap-1 text-xs font-mono text-slate-800">
+<div class="flex justify-between">
+<span class="text-slate-600">Subtotal:</span>
+<span class="font-bold">₹307.50</span>
+</div>
+<div class="flex justify-between">
+<span class="text-slate-600">GST (5%):</span>
+<span class="font-bold">₹15.38</span>
+</div>
+</div>
+<!-- Double separator line -->
+<div class="border-t border-slate-900 my-2.5"></div>
+<!-- Grand Total -->
+<div class="flex justify-between items-baseline font-mono text-slate-900">
+<span class="font-bold text-sm tracking-wide">GRAND TOTAL:</span>
+<span class="font-bold text-lg">₹322.88</span>
+</div>
+<!-- Payment Method info -->
+<div class="flex justify-between text-xs font-mono text-slate-700 mt-1">
+<span class="">Payment Method:</span>
+<span class="font-semibold text-slate-900" id="receipt-payment-method">Cash</span>
+</div>
+<!-- Thermal Receipt Footer -->
+<div class="text-center mt-6 pt-3 border-t border-dashed border-slate-300">
+<p class="text-xs text-slate-700 font-medium">Thank you for shopping with us!</p>
+<p class="text-[11px] text-slate-500 font-mono mt-0.5">Powered by Inventra Retail Intelligence</p>
+</div>
+<!-- Actions Buttons Bar -->
+<div class="mt-6 flex flex-col sm:flex-row gap-2">
+<button class="flex-1 h-10 bg-primary hover:bg-[#0B5FD3] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all" onclick="simulatePrint()">
+<span class="material-symbols-outlined text-base" data-icon="print">print</span>
+<span class="">Print Receipt [Ctrl+P]</span>
+</button>
+<button class="flex-1 h-10 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all" onclick="simulateWhatsApp()">
+<span class="material-symbols-outlined text-base" data-icon="send_to_mobile">send_to_mobile</span>
+<span class="">WhatsApp Bill</span>
+</button>
+<button class="h-10 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all" onclick="closeReceiptModal()">
+          New Sale
+        </button>
+</div>
+</div>
+</div>
+<!-- Micro-interactions & Functional Scripting -->
+<script>
+    let currentPayment = 'Cash';
+
+    function setPaymentMethod(method) {
+      currentPayment = method;
+      const buttons = ['pay-cash', 'pay-upi', 'pay-card', 'pay-credit'];
+      
+      buttons.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+          btn.className = "py-2.5 px-1 rounded-xl bg-surface-container-low hover:bg-surface-container text-on-surface border border-outline-variant flex flex-col items-center justify-center gap-1 transition-all font-label-md text-label-md";
+          const icon = btn.querySelector('.material-symbols-outlined');
+          if (icon) {
+            icon.className = "material-symbols-outlined text-lg text-secondary";
+          }
+        }
+      });
+
+      const activeMap = {
+        'Cash': { id: 'pay-cash', activeClass: 'py-2.5 px-1 rounded-xl bg-emerald-600 text-white border border-emerald-600 flex flex-col items-center justify-center gap-1 shadow-xs transition-all font-label-md text-label-md' },
+        'UPI / QR': { id: 'pay-upi', activeClass: 'py-2.5 px-1 rounded-xl bg-primary text-white border border-primary flex flex-col items-center justify-center gap-1 shadow-xs transition-all font-label-md text-label-md' },
+        'Card': { id: 'pay-card', activeClass: 'py-2.5 px-1 rounded-xl bg-primary text-white border border-primary flex flex-col items-center justify-center gap-1 shadow-xs transition-all font-label-md text-label-md' },
+        'Store Credit': { id: 'pay-credit', activeClass: 'py-2.5 px-1 rounded-xl bg-slate-800 text-white border border-slate-800 flex flex-col items-center justify-center gap-1 shadow-xs transition-all font-label-md text-label-md' }
+      };
+
+      const selectedConfig = activeMap[method];
+      if (selectedConfig) {
+        const selectedBtn = document.getElementById(selectedConfig.id);
+        if (selectedBtn) {
+          selectedBtn.className = selectedConfig.activeClass;
+          const icon = selectedBtn.querySelector('.material-symbols-outlined');
+          if (icon) {
+            icon.className = "material-symbols-outlined text-lg text-white";
+          }
+        }
+      }
+
+      const receiptMethodEl = document.getElementById('receipt-payment-method');
+      if (receiptMethodEl) {
+        receiptMethodEl.innerText = method;
+      }
+    }
+
+    function openReceiptModal() {
+      const modal = document.getElementById('receipt-modal');
+      modal.classList.remove('hidden');
+    }
+
+    function closeReceiptModal() {
+      const modal = document.getElementById('receipt-modal');
+      modal.classList.add('hidden');
+    }
+
+    function addToCart(title, price, category, sku) {
+      // Provide positive tactile feedback
+      const input = document.getElementById('barcode-input');
+      if (input) {
+        input.value = sku;
+        setTimeout(() => { input.value = ''; }, 700);
+      }
+      
+      // Update visual counter badge
+      const counter = document.getElementById('cart-counter');
+      if (counter) {
+        counter.innerText = '4 items';
+        counter.classList.add('animate-bounce');
+        setTimeout(() => counter.classList.remove('animate-bounce'), 500);
+      }
+    }
+
+    function clearCurrentCart() {
+      if (confirm('Are you sure you want to clear the current transaction cart?')) {
+        const container = document.getElementById('cart-items-container');
+        if (container) {
+          container.innerHTML = `
+            <div class="h-48 flex flex-col items-center justify-center text-secondary gap-2">
+              <span class="material-symbols-outlined text-4xl text-slate-300" data-icon="shopping_basket">shopping_basket</span>
+              <p class="text-body-sm font-body-sm font-medium">Cart is empty. Scan barcodes or select fast pick items.</p>
+            </div>
+          `;
+        }
+        document.getElementById('cart-counter').innerText = '0 items';
+        document.getElementById('grand-total-display').innerText = '₹0.00';
+      }
+    }
+
+    function simulatePrint() {
+      window.print();
+    }
+
+    function simulateWhatsApp() {
+      alert("WhatsApp E-Receipt link sent successfully to +91 98230 44129 with GST Tax Invoice attachment.");
+      closeReceiptModal();
+    }
+
+    // Keyboard Hotkey Listener
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        const modal = document.getElementById('receipt-modal');
+        if (modal.classList.contains('hidden')) {
+          openReceiptModal();
+        }
+      } else if (e.key === 'Escape') {
+        closeReceiptModal();
+      } else if (e.key === 'F2') {
+        e.preventDefault();
+        const barcodeInput = document.getElementById('barcode-input');
+        if (barcodeInput) barcodeInput.focus();
+      }
+    });
+  </script>
+</body></html>

@@ -1,7 +1,7 @@
 /* ==============================================================================
    STORE BI - ADMIN WEB PANEL DESIGN SYSTEM (admin.css)
-   Strictly compliant with Store BI DESIGN.md:
-   - Primary: Deep green #0B5D4B
+   Compliant with Store BI Stitch Retail Intelligence Design:
+   - Primary: Vivid Royal Blue #2563EB
    - Clean 1px borders (#E2E8F0), 8-12px radiuses, zero decorative shadows
    - Inter typography + Monospace for IDs, phones & emails
    - Light & Dark mode support
@@ -12,12 +12,12 @@
 
 :root {
   /* Color Palette - Light Mode */
-  --primary: #0B5D4B;
-  --primary-hover: #08483A;
-  --primary-active: #06362B;
-  --primary-light: #EBF5F0;
-  --primary-subtle: #F2F8F5;
-  --primary-ring: rgba(11, 93, 75, 0.2);
+  --primary: #2563EB;
+  --primary-hover: #1D4ED8;
+  --primary-active: #1E40AF;
+  --primary-light: #EFF6FF;
+  --primary-subtle: #DBEAFE;
+  --primary-ring: rgba(37, 99, 235, 0.2);
 
   --mint: #10B981;
   --mint-bg: #E6F4EA;
@@ -73,12 +73,12 @@
 
 /* Dark Mode Palette */
 [data-theme="dark"] {
-  --primary: #10B981;
-  --primary-hover: #059669;
-  --primary-active: #047857;
-  --primary-light: rgba(16, 185, 129, 0.15);
-  --primary-subtle: rgba(16, 185, 129, 0.08);
-  --primary-ring: rgba(16, 185, 129, 0.3);
+  --primary: #3B82F6;
+  --primary-hover: #60A5FA;
+  --primary-active: #2563EB;
+  --primary-light: rgba(59, 130, 246, 0.15);
+  --primary-subtle: rgba(59, 130, 246, 0.08);
+  --primary-ring: rgba(59, 130, 246, 0.3);
 
   --mint: #34D399;
   --mint-bg: rgba(52, 211, 153, 0.12);

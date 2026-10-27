@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Inventra Intel - Analytics Dashboard</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container-high": "#e2e7ff",
+            "primary-container": "#136dec",
+            "on-background": "#0f172a",
+            "surface-variant": "#f1f5f9",
+            "outline": "#64748b",
+            "surface-container-low": "#f8fafc",
+            "secondary": "#475569",
+            "on-primary": "#ffffff",
+            "surface-container-lowest": "#ffffff",
+            "surface-dim": "#e2e8f0",
+            "on-surface": "#0f172a",
+            "on-surface-variant": "#334155",
+            "surface-container-highest": "#f1f5f9",
+            "primary": "#136dec",
+            "background": "#f6faff",
+            "surface-container": "#f1f5f9",
+            "error-container": "#ffdad6",
+            "surface-bright": "#f6faff",
+            "on-error": "#ffffff",
+            "error": "#ef4444",
+            "outline-variant": "#e2e8f0",
+            "surface": "#f6faff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.375rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "space-xs": "0.25rem",
+            "space-sm": "0.5rem",
+            "space-md": "0.75rem",
+            "space-lg": "1.25rem",
+            "space-xl": "1.5rem"
+          },
+          "fontFamily": {
+            "headline-lg": ["Plus Jakarta Sans", "Inter", "sans-serif"],
+            "display-metric": ["Plus Jakarta Sans", "Inter", "sans-serif"],
+            "body-lg": ["Inter", "sans-serif"],
+            "metric-tabular": ["Inter", "sans-serif"],
+            "body-md": ["Inter", "sans-serif"],
+            "body-xs": ["Inter", "sans-serif"],
+            "headline-md": ["Plus Jakarta Sans", "Inter", "sans-serif"],
+            "table-header": ["Inter", "sans-serif"],
+            "body-sm": ["Inter", "sans-serif"],
+            "label-sm": ["Inter", "sans-serif"],
+            "label-md": ["Inter", "sans-serif"],
+            "headline-sm": ["Plus Jakarta Sans", "Inter", "sans-serif"]
+          },
+          "fontSize": {
+            "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "display-metric": ["30px", { "lineHeight": "36px", "letterSpacing": "-0.025em", "fontWeight": "700" }],
+            "body-lg": ["15px", { "lineHeight": "22px", "fontWeight": "400" }],
+            "metric-tabular": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+            "body-xs": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "headline-md": ["18px", { "lineHeight": "26px", "letterSpacing": "-0.015em", "fontWeight": "600" }],
+            "table-header": ["11px", { "lineHeight": "14px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+            "body-sm": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.03em", "fontWeight": "600" }],
+            "label-md": ["13px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "600" }],
+            "headline-sm": ["16px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 18px;
+      line-height: 1;
+    }
+    .material-symbols-outlined.fill-icon {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    }
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body class="bg-[#F6FAFF] text-[#0F172A] h-full flex font-body-md antialiased overflow-hidden selection:bg-[#136DEC] selection:text-white">
+<!-- ==================== SIDE NAVIGATION RAIL ==================== -->
+<aside class="fixed top-0 left-0 h-screen w-60 bg-white border-r border-[#E2E8F0] shadow-sm z-40 flex flex-col justify-between p-space-md">
+<!-- Brand & Top Identity -->
+<div>
+<div class="flex items-center gap-2.5 px-2 py-2 mb-4">
+<div class="w-9 h-9 rounded-lg bg-[#136DEC] flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
+<span class="material-symbols-outlined text-white text-[20px]">bar_chart</span>
+</div>
+<div class="leading-tight">
+<h1 class="text-headline-md font-headline-md font-bold text-[#0F172A] tracking-tight flex items-center gap-1">Inventra <span class="text-[#136DEC]">Intel</span></h1>
+<p class="text-label-sm font-label-sm text-[#64748B]">Pune Regional Division</p>
+</div>
+</div>
+<!-- Action Button -->
+<button class="w-full mb-4 flex items-center justify-center gap-2 py-2 px-3 bg-[#136DEC] hover:bg-[#0E58C4] text-white rounded-lg font-label-md text-label-md transition-colors shadow-sm shadow-blue-500/25">
+<span class="material-symbols-outlined text-sm font-bold">add</span>
+<span class="font-medium">+ Upload Invoice</span>
+</button>
+<!-- Main Navigation Links -->
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-[#475569] hover:text-[#0F172A] font-body-sm text-body-sm transition-colors rounded-lg hover:bg-[#F8FAFC]" href="#overview">
+<span class="material-symbols-outlined">dashboard</span>
+<span>Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#475569] hover:text-[#0F172A] font-body-sm text-body-sm transition-colors rounded-lg hover:bg-[#F8FAFC]" href="#pos">
+<span class="material-symbols-outlined">point_of_sale</span>
+<span>POS Billing</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#475569] hover:text-[#0F172A] font-body-sm text-body-sm transition-colors rounded-lg hover:bg-[#F8FAFC]" href="#sales">
+<span class="material-symbols-outlined">receipt_long</span>
+<span>Sales</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#475569] hover:text-[#0F172A] font-body-sm text-body-sm transition-colors rounded-lg hover:bg-[#F8FAFC]" href="#inventory">
+<span class="material-symbols-outlined">inventory_2</span>
+<span>Inventory</span>
+</a>
+<!-- ACTIVE TAB: Analytics (StoreBI Style) -->
+<a class="flex items-center gap-3 px-3 py-2 bg-[#136DEC] text-white rounded-lg font-label-md text-label-md shadow-sm shadow-blue-500/25" href="#analytics">
+<span class="material-symbols-outlined fill-icon text-white">assessment</span>
+<span>Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#475569] hover:text-[#0F172A] font-body-sm text-body-sm transition-colors rounded-lg hover:bg-[#F8FAFC]" href="#predictions">
+<span class="material-symbols-outlined">auto_graph</span>
+<span>Predictions</span>
+</a>
+</nav>
+</div>
+<!-- Sidebar Bottom Utilities -->
+<div class="border-t border-[#E2E8F0] pt-space-sm space-y-1">
+<div class="px-3 py-1.5 flex items-center justify-between text-[#64748B]">
+<span class="text-label-sm font-label-sm uppercase tracking-wider text-[10px]">Branch</span>
+<span class="text-label-sm font-label-sm font-semibold text-[#136DEC]">Pune Central</span>
+</div>
+<a class="flex items-center gap-3 px-3 py-2 text-[#475569] hover:text-[#0F172A] font-body-sm text-body-sm transition-colors rounded-lg hover:bg-[#F8FAFC]" href="#settings">
+<span class="material-symbols-outlined">settings</span>
+<span>Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#475569] hover:text-[#0F172A] font-body-sm text-body-sm transition-colors rounded-lg hover:bg-[#F8FAFC]" href="#help">
+<span class="material-symbols-outlined">help_outline</span>
+<span>Help &amp; Support</span>
+</a>
+</div>
+</aside>
+<!-- ==================== MAIN CONTENT CONTAINER ==================== -->
+<div class="flex-1 flex flex-col ml-60 h-screen overflow-hidden bg-[#F6FAFF]">
+<!-- Top Navigation Header -->
+<header class="h-14 bg-white border-b border-[#E2E8F0] px-space-xl flex items-center justify-between flex-shrink-0 z-30">
+<!-- Search on Left -->
+<div class="flex items-center gap-4 w-96">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-2.5 top-2 text-[#94A3B8]">search</span>
+<input class="w-full h-8 pl-8 pr-3 text-body-sm font-body-sm bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#136DEC] focus:bg-white transition-all" placeholder="Search SKUs, barcodes, invoices, categories..." type="text"/>
+</div>
+</div>
+<!-- Right Trailing Profile & Actions -->
+<div class="flex items-center gap-3">
+<button class="w-8 h-8 flex items-center justify-center rounded-lg text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#0F172A] relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-2 h-2 bg-[#EF4444] rounded-full"></span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#0F172A]">
+<span class="material-symbols-outlined">tune</span>
+</button>
+<div class="h-5 w-[1px] bg-[#E2E8F0] mx-1"></div>
+<!-- User Identity -->
+<div class="flex items-center gap-2 pl-1 cursor-pointer">
+<img class="w-7 h-7 rounded-full object-cover border border-[#E2E8F0]" data-alt="Corporate headshot of Rajiv, a middle-aged South Asian retail supermarket store manager wearing a crisp navy collared formal shirt with glasses in front of a soft neutral interior supermarket backdrop with balanced high-key warm professional lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAmMPwOQcPWpgD48Okqgt0skl9ga0j1DVcHCBM4a9mN1dgXuBIDAByXwCnc2XDqX_NmyL7FVF2ny7aRlqcY4BgsUja4WSg1dVV906mphFuO8czzHXjAZ4b-Dma3tE4fxs3PIZD60twG6dXtFDX6hJvCiMaKUL_-Q-UDzELCdLrT2IdVwjnIhjE6Lv9-bT2rICRjRy2ZIlJGYWkqSjVOLs3wPH950Vfqelwpanybty2_73sB5TdrQIgGjQ"/>
+<div class="text-left leading-tight hidden sm:block">
+<span class="text-label-md font-label-md font-semibold text-[#0F172A] block">Rajiv Mehta</span>
+<span class="text-label-sm font-label-sm text-[#64748B] block">Store Manager</span>
+</div>
+<span class="material-symbols-outlined text-[#94A3B8] text-xs">expand_more</span>
+</div>
+</div>
+</header>
+<!-- Scrollable Main Canvas -->
+<main class="flex-1 overflow-y-auto px-space-xl py-space-lg space-y-4">
+<!-- ==================== PAGE HEADER & ACTION CONTROLS ==================== -->
+<section class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pb-2 border-b border-[#E2E8F0]">
+<div>
+<div class="flex items-center gap-2">
+<h1 class="text-headline-lg font-headline-lg text-[#0F172A]">Analytics</h1>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-label-sm font-label-sm bg-emerald-50 text-emerald-700 border border-emerald-200">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Live Operational Data
+</span>
+</div>
+<p class="text-body-sm font-body-sm text-[#64748B]">Understand your business performance at a glance.</p>
+</div>
+<!-- Controls Cluster -->
+<div class="flex flex-wrap items-center gap-2">
+<!-- Time Range Selector Pills -->
+<div class="inline-flex bg-white rounded-lg border border-[#E2E8F0] p-0.5 shadow-sm">
+<button class="px-2.5 py-1 text-label-sm font-label-sm text-[#64748B] hover:text-[#0F172A] rounded-md transition-colors">Today</button>
+<button class="px-2.5 py-1 text-label-sm font-label-sm text-[#64748B] hover:text-[#0F172A] rounded-md transition-colors">7 Days</button>
+<button class="px-2.5 py-1 text-label-sm font-label-sm bg-[#136DEC] text-white rounded-md font-semibold shadow-xs">30 Days</button>
+<button class="px-2.5 py-1 text-label-sm font-label-sm text-[#64748B] hover:text-[#0F172A] rounded-md transition-colors">90 Days</button>
+<button class="px-2.5 py-1 text-label-sm font-label-sm text-[#64748B] hover:text-[#0F172A] rounded-md flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">calendar_today</span>
+<span>Custom</span>
+</button>
+</div>
+<!-- Refresh with Timestamp -->
+<div class="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-[#E2E8F0] rounded-lg text-label-sm font-label-sm text-[#64748B] shadow-sm">
+<button class="hover:text-[#136DEC] transition-colors flex items-center" title="Refresh Data">
+<span class="material-symbols-outlined text-xs">sync</span>
+</button>
+<span>Updated 2 mins ago</span>
+</div>
+<!-- Export Report Button -->
+<button class="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-[#F8FAFC] border border-[#E2E8F0] text-[#0F172A] rounded-lg font-label-md text-label-md transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[#136DEC] text-sm font-semibold">download</span>
+<span>Export Report</span>
+<span class="material-symbols-outlined text-xs text-[#94A3B8]">expand_more</span>
+</button>
+</div>
+</section>
+<!-- ==================== COMPACT GLOBAL FILTER BAR ==================== -->
+<div class="flex flex-wrap items-center justify-between gap-3 bg-white p-2.5 rounded-lg border border-[#E2E8F0] shadow-sm text-body-sm">
+<div class="flex flex-wrap items-center gap-3">
+<!-- Filter 1: Category -->
+<div class="flex items-center gap-1.5">
+<span class="text-label-sm font-label-sm text-[#64748B] uppercase font-semibold">Category:</span>
+<select class="h-7 text-label-md font-label-md bg-[#F8FAFC] border border-[#E2E8F0] rounded-md px-2 text-[#0F172A] focus:outline-none focus:border-[#136DEC]">
+<option selected="">All Categories</option>
+<option>Dairy &amp; Staples</option>
+<option>Personal Care &amp; Pharma</option>
+<option>Snacks &amp; Sweets</option>
+<option>Beverages</option>
+<option>Household</option>
+</select>
+</div>
+<div class="h-4 w-[1px] bg-[#E2E8F0]"></div>
+<!-- Filter 2: Store Branch -->
+<div class="flex items-center gap-1.5">
+<span class="text-label-sm font-label-sm text-[#64748B] uppercase font-semibold">Store Branch:</span>
+<select class="h-7 text-label-md font-label-md bg-[#F8FAFC] border border-[#E2E8F0] rounded-md px-2 text-[#0F172A] focus:outline-none focus:border-[#136DEC]">
+<option>All Branches (4)</option>
+<option selected="">Pune Central (Store #01)</option>
+<option>Kothrud Depot (Store #02)</option>
+<option>Viman Nagar Express (Store #03)</option>
+</select>
+</div>
+<div class="h-4 w-[1px] bg-[#E2E8F0]"></div>
+<!-- Active Filter Pill Date -->
+<div class="flex items-center gap-1.5 text-label-sm font-label-sm text-[#334155] bg-[#F1F5F9] px-2.5 py-0.5 rounded-md border border-[#E2E8F0]">
+<span class="material-symbols-outlined text-xs text-[#136DEC]">date_range</span>
+<span>Oct 01, 2026 – Oct 30, 2026</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-label-sm font-label-sm text-[#64748B]">Terminal ID: <strong class="text-[#0F172A]">POS-04</strong></span>
+</div>
+</div>
+<!-- ==================== OVERVIEW KPI CARDS (PRIMARY TIER) ==================== -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><!-- Card 1: Total Sales -->
+<div class="bg-white p-space-lg rounded-xl border border-blue-100 shadow-sm flex flex-col justify-between hover:border-blue-200 transition-colors relative overflow-hidden">
+<div class="absolute top-0 left-0 right-0 h-1 bg-[#136DEC]"></div>
+<div class="flex items-center justify-between">
+<span class="text-label-sm font-label-sm text-[#64748B] uppercase font-semibold tracking-wider text-[11px]">Total Sales</span>
+<div class="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-[#136DEC]">
+<span class="material-symbols-outlined text-base">payments</span>
+</div>
+</div>
+<div class="my-2">
+<div class="text-display-metric font-display-metric text-[#0F172A] tabular-nums font-bold">₹4,22,219<span class="text-headline-sm text-[#94A3B8] font-normal">.00</span></div>
+<p class="text-body-xs font-body-xs text-[#64748B] mt-0.5">Sum of net completed sales</p>
+</div>
+<div class="flex items-center gap-1.5 pt-2 border-t border-[#F1F5F9]">
+<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-label-sm font-label-sm bg-blue-50 text-[#136DEC] font-semibold border border-blue-200">
+<span class="material-symbols-outlined text-xs">trending_up</span> +12.4%
+</span>
+<span class="text-body-xs font-body-xs text-[#64748B]">vs previous 30 days</span>
+</div>
+</div>
+<!-- Card 2: Gross Profit -->
+<div class="bg-white p-space-lg rounded-xl border border-emerald-100 shadow-sm flex flex-col justify-between hover:border-emerald-200 transition-colors relative overflow-hidden">
+<div class="absolute top-0 left-0 right-0 h-1 bg-[#10B981]"></div>
+<div class="flex items-center justify-between">
+<span class="text-label-sm font-label-sm text-[#64748B] uppercase font-semibold tracking-wider text-[11px]">Gross Profit</span>
+<div class="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
+<span class="material-symbols-outlined text-base">account_balance_wallet</span>
+</div>
+</div>
+<div class="my-2">
+<div class="text-display-metric font-display-metric text-[#0F172A] tabular-nums font-bold">₹1,08,890<span class="text-headline-sm text-[#94A3B8] font-normal">.00</span></div>
+<p class="text-body-xs font-body-xs text-[#64748B] mt-0.5">Revenue minus COGS</p>
+</div>
+<div class="flex items-center gap-1.5 pt-2 border-t border-[#F1F5F9]">
+<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-label-sm font-label-sm bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">
+<span class="material-symbols-outlined text-xs">trending_up</span> +8.6%
+</span>
+<span class="text-body-xs font-body-xs text-[#64748B]">vs previous 30 days</span>
+</div>
+</div>
+<!-- Card 3: Gross Margin -->
+<div class="bg-white p-space-lg rounded-xl border border-amber-100 shadow-sm flex flex-col justify-between hover:border-amber-200 transition-colors relative overflow-hidden">
+<div class="absolute top-0 left-0 right-0 h-1 bg-[#F59E0B]"></div>
+<div class="flex items-center justify-between">
+<span class="text-label-sm font-label-sm text-[#64748B] uppercase font-semibold tracking-wider text-[11px]">Gross Margin</span>
+<div class="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+<span class="material-symbols-outlined text-base">percent</span>
+</div>
+</div>
+<div class="my-2">
+<div class="text-display-metric font-display-metric text-[#0F172A] tabular-nums font-bold">25.79<span class="text-headline-md text-amber-600 font-semibold">%</span></div>
+<p class="text-body-xs font-body-xs text-[#64748B] mt-0.5">Gross Profit / Revenue * 100</p>
+</div>
+<div class="flex items-center gap-1.5 pt-2 border-t border-[#F1F5F9]">
+<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-label-sm font-label-sm bg-rose-50 text-rose-700 font-semibold border border-rose-200">
+<span class="material-symbols-outlined text-xs">trending_down</span> -0.8%
+</span>
+<span class="text-body-xs font-body-xs text-[#64748B]">vs previous 30 days</span>
+</div>
+</div>
+<!-- Card 4: Units Sold -->
+<div class="bg-white p-space-lg rounded-xl border border-indigo-200 shadow-sm flex flex-col justify-between hover:border-indigo-200 transition-colors relative overflow-hidden">
+<div class="absolute top-0 left-0 right-0 h-1 bg-[#136DEC]"></div>
+<div class="flex items-center justify-between">
+<span class="text-label-sm font-label-sm text-[#64748B] uppercase font-semibold tracking-wider text-[11px]">Units Sold</span>
+<div class="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600">
+<span class="material-symbols-outlined text-base">shopping_bag</span>
+</div>
+</div>
+<div class="my-2">
+<div class="text-display-metric font-display-metric text-[#0F172A] tabular-nums font-bold">4,892 <span class="text-headline-sm text-[#94A3B8] font-normal">items</span></div>
+<p class="text-body-xs font-body-xs text-[#64748B] mt-0.5">Total actual units invoiced</p>
+</div>
+<div class="flex items-center gap-1.5 pt-2 border-t border-[#F1F5F9]">
+<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-label-sm font-label-sm bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200">
+<span class="material-symbols-outlined text-xs">trending_up</span> +15.2%
+</span>
+<span class="text-body-xs font-body-xs text-[#64748B]">vs previous 30 days</span>
+</div>
+</div></section>
+<!-- SECONDARY COMPACT METRICS BAR -->
+<section class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-white p-3.5 rounded-xl border border-[#E2E8F0] shadow-sm"><div class="flex items-center gap-3 px-2 border-r border-[#E2E8F0]">
+<div class="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-[#136DEC]">
+<span class="material-symbols-outlined text-sm font-semibold">receipt</span>
+</div>
+<div>
+<div class="text-label-sm font-label-sm text-[#64748B] uppercase text-[10px]">Total Transactions</div>
+<div class="text-headline-sm font-headline-sm text-[#0F172A] tabular-nums font-semibold">1,428 orders</div>
+</div>
+</div>
+<div class="flex items-center gap-3 px-2 border-r border-[#E2E8F0]">
+<div class="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700">
+<span class="material-symbols-outlined text-sm font-semibold">calculate</span>
+</div>
+<div>
+<div class="text-label-sm font-label-sm text-[#64748B] uppercase text-[10px]">Avg Transaction Value (ATV)</div>
+<div class="text-headline-sm font-headline-sm text-[#0F172A] tabular-nums font-semibold">₹295.67</div>
+</div>
+</div>
+<div class="flex items-center gap-3 px-2 border-r border-[#E2E8F0]">
+<div class="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700">
+<span class="material-symbols-outlined text-sm font-semibold">inventory</span>
+</div>
+<div>
+<div class="text-label-sm font-label-sm text-[#64748B] uppercase text-[10px]">Total Inventory Items</div>
+<div class="text-headline-sm font-headline-sm text-[#0F172A] tabular-nums font-semibold">348 Active SKUs</div>
+</div>
+</div>
+<div class="flex items-center gap-3 px-2 bg-rose-50/60 rounded-lg p-1.5 border border-rose-100">
+<div class="w-8 h-8 rounded-lg bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-700">
+<span class="material-symbols-outlined text-sm font-semibold">warning</span>
+</div>
+<div>
+<div class="text-label-sm font-label-sm text-rose-800 uppercase text-[10px] font-semibold">Low-Stock Alerts</div>
+<div class="text-headline-sm font-headline-sm text-rose-700 font-bold tabular-nums">7 SKUs Breach</div>
+</div>
+</div></section>
+<!-- ==================== INTERACTIVE SALES & PROFIT TRENDS CHART ==================== -->
+<section class="bg-white p-space-lg rounded-xl border border-[#E2E8F0] shadow-sm">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-4 border-b border-[#E2E8F0] gap-3">
+<div>
+<div class="flex items-center gap-2">
+<h2 class="text-headline-md font-headline-md text-[#0F172A]">Sales &amp; Profit Trends</h2>
+<span class="text-body-xs font-body-xs text-[#64748B] bg-[#F1F5F9] px-2 py-0.5 rounded">Aggregated Net Value</span>
+</div>
+<p class="text-body-xs font-body-xs text-[#64748B] mt-0.5">Interactive performance tracking across weekly retail billing cycles</p>
+</div>
+<div class="flex flex-wrap items-center gap-3">
+<!-- Toggle Metric -->
+<div class="inline-flex bg-[#F8FAFC] p-0.5 rounded-lg border border-[#E2E8F0] text-label-sm font-label-sm">
+<button class="px-2.5 py-1 text-[#64748B] hover:text-[#0F172A] rounded-md transition-colors">Sales</button>
+<button class="px-2.5 py-1 text-[#64748B] hover:text-[#0F172A] rounded-md transition-colors">Profit</button>
+<button class="px-2.5 py-1 bg-white text-[#0F172A] font-semibold shadow-xs rounded-md border border-[#E2E8F0]">Both</button>
+</div>
+<!-- Toggle Grouping -->
+<div class="inline-flex bg-[#F8FAFC] p-0.5 rounded-lg border border-[#E2E8F0] text-label-sm font-label-sm">
+<button class="px-2 py-1 text-[#64748B] hover:text-[#0F172A] rounded-md transition-colors">Daily</button>
+<button class="px-2 py-1 bg-white text-[#0F172A] font-semibold shadow-xs rounded-md border border-[#E2E8F0]">Weekly</button>
+<button class="px-2 py-1 text-[#64748B] hover:text-[#0F172A] rounded-md transition-colors">Monthly</button>
+</div>
+</div>
+</div>
+<!-- Trend Visualization Container -->
+<div class="relative w-full pt-4 pb-2">
+<!-- Legend -->
+<div class="flex items-center justify-end gap-6 mb-4 text-label-sm font-label-sm">
+<div class="flex items-center gap-1.5">
+<div class="w-3 h-3 rounded bg-[#136DEC]"></div>
+<span class="text-[#334155] font-medium">Sales Revenue (₹)</span>
+</div>
+<div class="flex items-center gap-1.5">
+<div class="w-3 h-3 rounded bg-[#10B981]"></div>
+<span class="text-[#334155] font-medium">Gross Profit (₹)</span>
+</div>
+<div class="flex items-center gap-1.5">
+<div class="w-3 h-1 bg-[#F59E0B] rounded-full"></div>
+<span class="text-[#64748B]">Target Baseline (₹1,00,000/wk)</span>
+</div>
+</div>
+<!-- CSS Bar Graphic with Real Tooltip Markers -->
+<div class="grid grid-cols-4 gap-4 sm:gap-8 h-64 border-b border-l border-[#E2E8F0] pl-4 pb-2 items-end relative">
+<!-- Gridlines Background -->
+<div class="absolute inset-x-0 top-0 h-[1px] bg-[#E2E8F0]/60"></div>
+<div class="absolute inset-x-0 top-1/4 h-[1px] bg-[#E2E8F0]/60"></div>
+<div class="absolute inset-x-0 top-2/4 h-[1px] bg-[#E2E8F0]/60"></div>
+<div class="absolute inset-x-0 top-3/4 h-[1px] bg-[#E2E8F0]/60"></div>
+<!-- Target Baseline Dotted Line -->
+<div class="absolute inset-x-0 bottom-[55%] border-b-2 border-dashed border-[#F59E0B] pointer-events-none z-10 flex justify-end pr-2">
+<span class="text-[10px] text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 font-mono font-medium">₹1,00,000 target</span>
+</div>
+<!-- Column 1: W1 Oct -->
+<div class="flex flex-col items-center h-full justify-end group relative z-20">
+<!-- Tooltip Hover Card -->
+<div class="absolute -top-12 bg-[#0F172A] text-white px-2.5 py-1.5 rounded-lg shadow-lg text-body-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-30 whitespace-nowrap">
+<p class="font-bold border-b border-slate-700 pb-0.5 mb-0.5">W1 Oct (Oct 01 - Oct 07)</p>
+<p>Sales: <span class="font-semibold text-blue-300">₹98,400.00</span></p>
+<p>Profit: <span class="font-semibold text-emerald-300">₹25,300.00</span> (25.7%)</p>
+</div>
+<div class="w-full flex items-end justify-center gap-2 max-w-[80px]">
+<!-- Sales Bar: 54% -->
+<div class="w-1/2 bg-[#136DEC] hover:bg-[#0E58C4] rounded-t-md transition-all shadow-sm" style="height: 54%;"></div>
+<!-- Profit Bar: 25% -->
+<div class="w-1/2 bg-[#10B981] hover:bg-emerald-600 rounded-t-md transition-all shadow-sm" style="height: 25%;"></div>
+</div>
+<div class="mt-2 text-center">
+<span class="text-label-sm font-label-sm font-semibold text-[#0F172A] block">W1 Oct</span>
+<span class="text-[10px] text-[#64748B] font-mono">₹98.4K / ₹25.3K</span>
+</div>
+</div>
+<!-- Column 2: W2 Oct -->
+<div class="flex flex-col items-center h-full justify-end group relative z-20">
+<!-- Tooltip Hover Card -->
+<div class="absolute -top-12 bg-[#0F172A] text-white px-2.5 py-1.5 rounded-lg shadow-lg text-body-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-30 whitespace-nowrap">
+<p class="font-bold border-b border-slate-700 pb-0.5 mb-0.5">W2 Oct (Oct 08 - Oct 14)</p>
+<p>Sales: <span class="font-semibold text-blue-300">₹1,05,200.00</span></p>
+<p>Profit: <span class="font-semibold text-emerald-300">₹27,100.00</span> (25.8%)</p>
+</div>
+<div class="w-full flex items-end justify-center gap-2 max-w-[80px]">
+<div class="w-1/2 bg-[#136DEC] hover:bg-[#0E58C4] rounded-t-md transition-all shadow-sm" style="height: 60%;"></div>
+<div class="w-1/2 bg-[#10B981] hover:bg-emerald-600 rounded-t-md transition-all shadow-sm" style="height: 27%;"></div>
+</div>
+<div class="mt-2 text-center">
+<span class="text-label-sm font-label-sm font-semibold text-[#0F172A] block">W2 Oct</span>
+<span class="text-[10px] text-[#64748B] font-mono">₹105.2K / ₹27.1K</span>
+</div>
+</div>
+<!-- Column 3: W3 Oct (Peak Week) -->
+<div class="flex flex-col items-center h-full justify-end group relative z-20">
+<!-- Tooltip Hover Card -->
+<div class="absolute -top-12 bg-[#0F172A] text-white px-2.5 py-1.5 rounded-lg shadow-lg text-body-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-30 whitespace-nowrap">
+<p class="font-bold border-b border-slate-700 pb-0.5 mb-0.5">W3 Oct (Oct 15 - Oct 21) [Peak]</p>
+<p>Sales: <span class="font-semibold text-blue-300">₹1,12,600.00</span></p>
+<p>Profit: <span class="font-semibold text-emerald-300">₹29,400.00</span> (26.1%)</p>
+</div>
+<div class="w-full flex items-end justify-center gap-2 max-w-[80px]">
+<div class="w-1/2 bg-[#136DEC] hover:bg-[#0E58C4] rounded-t-md transition-all ring-2 ring-[#136DEC]/30 shadow-md" style="height: 72%;"></div>
+<div class="w-1/2 bg-[#10B981] hover:bg-emerald-600 rounded-t-md transition-all ring-2 ring-emerald-500/30 shadow-md" style="height: 31%;"></div>
+</div>
+<div class="mt-2 text-center">
+<span class="text-label-sm font-label-sm font-bold text-[#136DEC] block">W3 Oct (Peak)</span>
+<span class="text-[10px] text-[#0F172A] font-mono font-medium">₹112.6K / ₹29.4K</span>
+</div>
+</div>
+<!-- Column 4: W4 Oct -->
+<div class="flex flex-col items-center h-full justify-end group relative z-20">
+<!-- Tooltip Hover Card -->
+<div class="absolute -top-12 bg-[#0F172A] text-white px-2.5 py-1.5 rounded-lg shadow-lg text-body-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-30 whitespace-nowrap">
+<p class="font-bold border-b border-slate-700 pb-0.5 mb-0.5">W4 Oct (Oct 22 - Oct 30)</p>
+<p>Sales: <span class="font-semibold text-blue-300">₹1,06,019.00</span></p>
+<p>Profit: <span class="font-semibold text-emerald-300">₹27,090.00</span> (25.5%)</p>
+</div>
+<div class="w-full flex items-end justify-center gap-2 max-w-[80px]">
+<div class="w-1/2 bg-[#136DEC] hover:bg-[#0E58C4] rounded-t-md transition-all shadow-sm" style="height: 61%;"></div>
+<div class="w-1/2 bg-[#10B981] hover:bg-emerald-600 rounded-t-md transition-all shadow-sm" style="height: 27%;"></div>
+</div>
+<div class="mt-2 text-center">
+<span class="text-label-sm font-label-sm font-semibold text-[#0F172A] block">W4 Oct</span>
+<span class="text-[10px] text-[#64748B] font-mono">₹106.0K / ₹27.1K</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Observation Note Below Chart -->
+<div class="mt-3 bg-gradient-to-r from-blue-50/80 via-emerald-50/50 to-amber-50/50 p-3 rounded-xl border border-blue-200 flex items-center justify-between text-body-xs font-body-xs shadow-xs">
+<div class="flex items-center gap-2.5 text-[#0F172A]">
+<span class="w-6 h-6 rounded-md bg-[#136DEC] text-white flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-sm">insights</span>
+</span>
+<span><strong>Data-derived Observation:</strong> Sales increased by <strong class="text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200">+12.4%</strong> compared with previous 30-day period, driven by festive inventory uplift in Dairy &amp; Staples during Week 3.</span>
+</div>
+<span class="text-indigo-800 font-mono text-[11px] font-semibold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">Confidence: 99.4%</span>
+</div>
+</section>
+<!-- ==================== CATEGORY PERFORMANCE & INVENTORY OVERVIEW ==================== -->
+<section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+<!-- LEFT: Sales by Category -->
+<div class="bg-white p-space-lg rounded-xl border border-[#E2E8F0] shadow-sm flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between pb-2 border-b border-[#E2E8F0]">
+<div>
+<h3 class="text-headline-sm font-headline-sm text-[#0F172A]">Sales by Category</h3>
+<p class="text-body-xs font-body-xs text-[#64748B]">Category contribution to monthly turnover</p>
+</div>
+<!-- Sub Switch -->
+<div class="inline-flex bg-[#F8FAFC] p-0.5 rounded-lg border border-[#E2E8F0] text-[11px]">
+<button class="px-2 py-0.5 bg-white text-[#0F172A] font-semibold rounded shadow-xs">Revenue</button>
+<button class="px-2 py-0.5 text-[#64748B] hover:text-[#0F172A]">Gross Profit</button>
+<button class="px-2 py-0.5 text-[#64748B] hover:text-[#0F172A]">Units Sold</button>
+</div>
+</div>
+<!-- Horizontal Progress Bars -->
+<div class="mt-4 space-y-3.5">
+<!-- Item 1: Dairy & Staples -->
+<div>
+<div class="flex justify-between text-body-sm font-body-sm mb-1">
+<span class="font-medium text-[#0F172A] flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-[#136DEC]"></span> Dairy &amp; Staples
+</span>
+<span class="tabular-nums font-semibold text-[#0F172A]">₹1,56,220 <span class="text-[#64748B] font-normal text-xs">(37.0% share)</span></span>
+</div>
+<div class="w-full bg-[#F1F5F9] h-2 rounded-full overflow-hidden">
+<div class="bg-[#136DEC] h-full rounded-full" style="width: 37.0%;"></div>
+</div>
+</div>
+<!-- Item 2: Personal Care & Pharma -->
+<div>
+<div class="flex justify-between text-body-sm font-body-sm mb-1">
+<span class="font-medium text-[#0F172A] flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-[#10B981]"></span> Personal Care &amp; Pharma
+</span>
+<span class="tabular-nums font-semibold text-[#0F172A]">₹1,14,000 <span class="text-[#64748B] font-normal text-xs">(27.0% share)</span></span>
+</div>
+<div class="w-full bg-[#F1F5F9] h-2 rounded-full overflow-hidden">
+<div class="bg-[#10B981] h-full rounded-full" style="width: 27.0%;"></div>
+</div>
+</div>
+<!-- Item 3: Snacks & Sweets -->
+<div>
+<div class="flex justify-between text-body-sm font-body-sm mb-1">
+<span class="font-medium text-[#0F172A] flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-[#F59E0B]"></span> Snacks &amp; Sweets
+</span>
+<span class="tabular-nums font-semibold text-[#0F172A]">₹88,660 <span class="text-[#64748B] font-normal text-xs">(21.0% share)</span></span>
+</div>
+<div class="w-full bg-[#F1F5F9] h-2 rounded-full overflow-hidden">
+<div class="bg-[#F59E0B] h-full rounded-full" style="width: 21.0%;"></div>
+</div>
+</div>
+<!-- Item 4: Beverages -->
+<div>
+<div class="flex justify-between text-body-sm font-body-sm mb-1">
+<span class="font-medium text-[#0F172A] flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-[#0284C7]"></span> Beverages
+</span>
+<span class="tabular-nums font-semibold text-[#0F172A]">₹42,220 <span class="text-[#64748B] font-normal text-xs">(10.0% share)</span></span>
+</div>
+<div class="w-full bg-[#F1F5F9] h-2 rounded-full overflow-hidden">
+<div class="bg-[#0284C7] h-full rounded-full" style="width: 10.0%;"></div>
+</div>
+</div>
+<!-- Item 5: Household -->
+<div>
+<div class="flex justify-between text-body-sm font-body-sm mb-1">
+<span class="font-medium text-[#0F172A] flex items-center gap-1.5">
+<span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span> Household
+</span>
+<span class="tabular-nums font-semibold text-[#0F172A]">₹21,119 <span class="text-[#64748B] font-normal text-xs">(5.0% share)</span></span>
+</div>
+<div class="w-full bg-[#F1F5F9] h-2 rounded-full overflow-hidden">
+<div class="bg-slate-400 h-full rounded-full" style="width: 5.0%;"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-[#E2E8F0] flex items-center justify-between text-label-sm font-label-sm text-[#64748B]">
+<span>Aggregated Gross Margin across categories: <strong class="text-[#0F172A]">25.8% avg</strong></span>
+<a class="text-[#136DEC] hover:underline font-semibold flex items-center gap-1" href="#categories">Category Drilldown →</a>
+</div>
+</div>
+<!-- RIGHT: Inventory Health & Stock Distribution -->
+<div class="bg-white p-space-lg rounded-xl border border-[#E2E8F0] shadow-sm flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between pb-2 border-b border-[#E2E8F0]">
+<div>
+<h3 class="text-headline-sm font-headline-sm text-[#0F172A]">Inventory Health &amp; Stock Distribution</h3>
+<p class="text-body-xs font-body-xs text-[#64748B]">Warehouse status and replenishment metrics</p>
+</div>
+<span class="text-label-sm font-label-sm bg-[#F1F5F9] px-2 py-0.5 rounded text-[#64748B] font-mono">Total SKUs: 348</span>
+</div>
+<!-- 4 Compact Status Indicators -->
+<div class="grid grid-cols-4 gap-2 my-4">
+<div class="bg-[#F8FAFC] p-2 rounded-lg border border-[#E2E8F0] text-center">
+<span class="text-[10px] text-[#64748B] uppercase font-semibold block">Total Items</span>
+<span class="text-headline-sm font-headline-sm text-[#0F172A] tabular-nums font-bold">348</span>
+</div>
+<div class="bg-[#F8FAFC] p-2 rounded-lg border border-[#E2E8F0] text-center">
+<span class="text-[10px] text-[#64748B] uppercase font-semibold block">Total Units</span>
+<span class="text-headline-sm font-headline-sm text-[#0F172A] tabular-nums font-bold">8,420</span>
+</div>
+<div class="bg-amber-50 p-2 rounded-lg border border-amber-200 text-center">
+<span class="text-[10px] text-amber-800 uppercase font-semibold block">Low Stock</span>
+<span class="text-headline-sm font-headline-sm text-amber-700 font-bold tabular-nums">7</span>
+</div>
+<div class="bg-rose-50 p-2 rounded-lg border border-rose-200 text-center">
+<span class="text-[10px] text-rose-800 uppercase font-semibold block">Out of Stock</span>
+<span class="text-headline-sm font-headline-sm text-rose-700 font-bold tabular-nums">2</span>
+</div>
+</div>
+<!-- Multi-segment Stock Distribution Progress Bar -->
+<div class="space-y-1.5">
+<div class="flex justify-between text-body-xs font-body-xs text-[#64748B]">
+<span>Stock Distribution Ratio</span>
+<span class="font-mono text-[#0F172A]">100% Floor Capacity</span>
+</div>
+<div class="h-3 w-full rounded-full bg-[#F1F5F9] flex overflow-hidden">
+<div class="bg-[#10B981] h-full" style="width: 92.5%;" title="In Stock: 92.5%"></div>
+<div class="bg-[#F59E0B] h-full" style="width: 5.2%;" title="Low Stock: 5.2%"></div>
+<div class="bg-[#EF4444] h-full" style="width: 0.8%;" title="Out of Stock: 0.8%"></div>
+<div class="bg-[#136DEC] h-full" style="width: 1.5%;" title="Near Expiry: 1.5%"></div>
+</div>
+</div>
+<!-- Detailed Status Legend Breakdown -->
+<div class="grid grid-cols-2 gap-2 mt-4 text-body-xs font-body-xs">
+<div class="flex items-center justify-between p-1.5 rounded-lg bg-emerald-50 border border-emerald-100">
+<span class="flex items-center gap-1.5 font-medium text-emerald-900">
+<span class="w-2 h-2 rounded-full bg-[#10B981]"></span> In Stock
+</span>
+<span class="font-bold text-emerald-800 tabular-nums">92.5% (7,788 units)</span>
+</div>
+<div class="flex items-center justify-between p-1.5 rounded-lg bg-amber-50 border border-amber-100">
+<span class="flex items-center gap-1.5 font-medium text-amber-900">
+<span class="w-2 h-2 rounded-full bg-[#F59E0B]"></span> Low Stock Alert
+</span>
+<span class="font-bold text-amber-800 tabular-nums">5.2% (438 units)</span>
+</div>
+<div class="flex items-center justify-between p-1.5 rounded-lg bg-rose-50 border border-rose-100">
+<span class="flex items-center gap-1.5 font-medium text-rose-900">
+<span class="w-2 h-2 rounded-full bg-[#EF4444]"></span> Out of Stock
+</span>
+<span class="font-bold text-rose-800 tabular-nums">0.8% (67 units)</span>
+</div>
+<div class="flex items-center justify-between p-1.5 rounded-lg bg-blue-50 border border-blue-100">
+<span class="flex items-center gap-1.5 font-medium text-blue-900">
+<span class="w-2 h-2 rounded-full bg-[#136DEC]"></span> Near Expiry (&lt;15d)
+</span>
+<span class="font-bold text-blue-800 tabular-nums">1.5% (127 units)</span>
+</div>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-[#E2E8F0] flex items-center justify-between text-label-sm font-label-sm text-[#64748B]">
+<span>Safety Stock Buffer Index: <strong class="text-emerald-700">Healthy (14.2 days)</strong></span>
+<a class="text-[#136DEC] hover:underline font-semibold flex items-center gap-1" href="#inventory">Audit Warehouse →</a>
+</div>
+</div>
+</section>
+<!-- ==================== TOP-PERFORMING PRODUCTS TABLE ==================== -->
+<section class="bg-white rounded-xl border border-[#E2E8F0] shadow-sm overflow-hidden">
+<div class="p-space-lg flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#E2E8F0] gap-3">
+<div>
+<div class="flex items-center gap-2">
+<h2 class="text-headline-md font-headline-md text-[#0F172A]">Top Products</h2>
+<span class="text-label-sm font-label-sm bg-[#F1F5F9] px-2 py-0.5 rounded text-[#64748B]">Sorted by Revenue</span>
+</div>
+<p class="text-body-xs font-body-xs text-[#64748B] mt-0.5">High velocity items determining store throughput</p>
+</div>
+<div class="flex items-center gap-2">
+<div class="inline-flex bg-[#F8FAFC] p-0.5 rounded-lg border border-[#E2E8F0] text-label-sm font-label-sm">
+<button class="px-2 py-1 bg-white font-semibold text-[#0F172A] rounded shadow-xs">Revenue</button>
+<button class="px-2 py-1 text-[#64748B] hover:text-[#0F172A]">Units Sold</button>
+<button class="px-2 py-1 text-[#64748B] hover:text-[#0F172A]">Gross Profit</button>
+</div>
+<a class="text-label-md font-label-md font-semibold text-[#136DEC] hover:underline ml-2" href="#products">View All Products →</a>
+</div>
+</div>
+<!-- Table Container -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-[#F8FAFC] border-b border-[#E2E8F0] text-table-header font-table-header text-[#64748B] uppercase tracking-wider h-9">
+<th class="px-4 py-2 font-semibold">Product Name</th>
+<th class="px-4 py-2 font-semibold">Category</th>
+<th class="px-4 py-2 font-semibold text-right">Units Sold</th>
+<th class="px-4 py-2 font-semibold text-right">Revenue (₹)</th>
+<th class="px-4 py-2 font-semibold text-right">Gross Profit (₹)</th>
+<th class="px-4 py-2 font-semibold text-right">Margin (%)</th>
+<th class="px-4 py-2 font-semibold text-center">Velocity</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-[#F1F5F9] text-body-sm font-body-sm">
+<!-- Row 1 -->
+<tr class="hover:bg-[#F8FAFC] transition-colors">
+<td class="px-4 py-2.5 font-medium text-[#0F172A] flex items-center gap-2.5">
+<div class="w-6 h-6 rounded-md bg-blue-50 border border-blue-200 flex items-center justify-center text-[#136DEC] text-xs font-bold">1</div>
+<div>
+<span class="font-semibold block text-[#0F172A]">Dettol Antiseptic Liquid 550ml</span>
+<span class="text-[11px] text-[#64748B] font-mono">SKU: DET-550-ANT</span>
+</div>
+</td>
+<td class="px-4 py-2.5 text-[#334155]">
+<span class="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">Personal Care</span>
+</td>
+<td class="px-4 py-2.5 text-right font-metric-tabular text-metric-tabular text-[#0F172A] tabular-nums">420 units</td>
+<td class="px-4 py-2.5 text-right font-metric-tabular text-metric-tabular text-[#0F172A] tabular-nums font-semibold">₹94,500.00</td>
+<td class="px-4 py-2.5 text-right font-metric-tabular text-metric-tabular text-emerald-700 tabular-nums">₹19,740.00</td>
+<td class="px-4 py-2.5 text-right font-metric-tabular text-metric-tabular text-[#0F172A] tabular-nums">20.9%</td>
+<td class="px-4 py-2.5 text-center">
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Fast Moving</span>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-[#F8FAFC] transition-colors">
+<td class="px-4 py-2.5 font-medium text-[#0F172A] flex items-center gap-2.5">
+<div class="w-6 h-6 rounded-md bg-blue-50 border border-blue-200 flex items-center justify-center text-[#136DEC] text-xs font-bold">2</div>
+<div>
+<span class="font-semibold block text-[#0F172A]">Amul Pure Ghee 1L Tin</span>
+<span class="text-[11px] text-[#64748B] font-mono">SKU: AMU-GHE-1000</span>
+</div>
+</td>
+<td class="px-4 py-2.5 text-[#334155]">
+<span class="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-50 text-[#136DEC] border border-blue-200">Dairy &amp; Staples</span>
+</td>
+<td class="px-4 py-2.5 text-right font-metric-tabular text-metric-tabular text-[#0F172A] tabular-nums">145 units</td>
+<td class="px-4 py-2.5 text-right font-metric-tabular text-metric-tabular text-[#0F172A] tabular-nums font-semibold">₹94,250.00</td>
+<td class="px-4 py-2.5 text-right font-metric-tabular text-metric-tabular text-emerald-700 tabular-nums">₹18,850.00</td>
+<td class="px-4 py-2.5 text-right font-metric-tabular text-metric-tabular text-[#0F172A] tabular-nums">20.0%</td>
+<td class="px-4 py-2.5 text-center">
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">Critical Stock</span>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-[#F8FAFC] transition-colors">
+<td class="px-4 py-2.5 font-medium text-[#0F172A] flex items-center gap-2.5">
+<div class="w-6 h-6 rounded-md bg-blue-50 border border-blue-200 flex items-center justify-center text-[#136DEC] text-xs font-bold">3</div>
+<div>
+<span class="font-semibold block text-[#0F172A]">Cadbury Dairy Milk Silk 150g</span>
+<span class="text-[11px] text-[#64748B] font-mono">SKU: CAD-SLK-0150</span>
+</div>
+</td>
+<td class="px-4 py-2.5 text-[#334155]">
+<span class="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">Snacks &amp; Sweets</span>
+</td>
+<td class="px-4 py-2.5 text-right font-metric-tabular text-metric-tabular text-[#0F172A] tabular-nums">380 units</td>
+<td class="px-4 py-2.5 text-right font-metric-tabular text-metric-tabular text-[#0F172A] tabular-nums font-semibold">₹66,500.00</td>
+<td class="px-4 py-2.5 text-right font-metric-tabular text-metric-tabular text-emerald-700 tabular-nums">₹19,950.00</td>
+<td class="px-4 py-2.5 text-right font-metric-tabular text-metric-tabular text-emerald-700 font-bold tabular-nums">30.0%</td>
+<td class="px-4 py-2.5 text-center">
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">High Margin</span>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-[#F8FAFC] transition-colors">
+<td class="px-4 py-2.5 font-medium text-[#0F172A] flex items-center gap-2.5">
+<div class="w-6 h-6 rounded-md bg-[#F1F5F9] border border-[#E2E8F0] flex items-center justify-center text-[#64748B] text-xs font-bold">4</div>
+<div>
+<span class="font-semibold block text-[#0F172A]">Lay's Magic Masala 90g</span>
+<span class="text-[11px] text-[#64748B] font-mono">SKU: LAY-MSL-0090</span>
+</div>
+</td>
+<td class="px-4 py-2.5 text-[#334155]">
+<span class="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">Snacks &amp; Sweets</span>
+</td>
+<td class="px-4 py-2.5 text-right font-metric-tabular text-metric-tabular text-[#0F172A] tabular-nums">950 units</td>
+<td class="px-4 py-2.5 text-right font-metric-tabular text-metric-tabular text-[#0F172A] tabular-nums font-semibold">₹28,500.00</td>
+<td class="px-4 py-2.5 text-right font-metric-tabular text-metric-tabular text-emerald-700 tabular-nums">₹8,550.00</td>
+<td class="px-4 py-2.5 text-right font-metric-tabular text-metric-tabular text-emerald-700 font-bold tabular-nums">30.0%</td>
+<td class="px-4 py-2.5 text-center">
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">High Velocity</span>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-[#F8FAFC] transition-colors">
+<td class="px-4 py-2.5 font-medium text-[#0F172A] flex items-center gap-2.5">
+<div class="w-6 h-6 rounded-md bg-[#F1F5F9] border border-[#E2E8F0] flex items-center justify-center text-[#64748B] text-xs font-bold">5</div>
+<div>
+<span class="font-semibold block text-[#0F172A]">Paracetamol 500mg (Strip of 10)</span>
+<span class="text-[11px] text-[#64748B] font-mono">SKU: PHR-PCM-0500</span>
+</div>
+</td>
+<td class="px-4 py-2.5 text-[#334155]">
+<span class="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">Pharma</span>
+</td>
+<td class="px-4 py-2.5 text-right font-metric-tabular text-metric-tabular text-[#0F172A] tabular-nums">290 units</td>
+<td class="px-4 py-2.5 text-right font-metric-tabular text-metric-tabular text-[#0F172A] tabular-nums font-semibold">₹15,225.00</td>
+<td class="px-4 py-2.5 text-right font-metric-tabular text-metric-tabular text-emerald-700 tabular-nums">₹3,045.00</td>
+<td class="px-4 py-2.5 text-right font-metric-tabular text-metric-tabular text-[#0F172A] tabular-nums">20.0%</td>
+<td class="px-4 py-2.5 text-center">
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">Urgent Restock</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- ==================== STOCK MOVEMENT & REORDER ALERTS ==================== -->
+<section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+<!-- Stock Movement & Replenishment -->
+<div class="bg-white p-space-lg rounded-xl border border-[#E2E8F0] shadow-sm flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between pb-2 border-b border-[#E2E8F0]">
+<div>
+<h3 class="text-headline-sm font-headline-sm text-[#0F172A]">Stock Movement &amp; Replenishment</h3>
+<p class="text-body-xs font-body-xs text-[#64748B]">Inventory flow balance for trailing 30 days</p>
+</div>
+<span class="text-label-sm font-label-sm text-[#64748B] font-mono">Depot: Central Pune</span>
+</div>
+<!-- Movement Flux Metric Tiles -->
+<div class="grid grid-cols-3 gap-3 my-4">
+<div class="p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+<span class="text-[11px] font-semibold text-emerald-800 uppercase block">Stock Inward</span>
+<span class="text-headline-md font-headline-md text-emerald-700 tabular-nums font-bold">+1,250</span>
+<span class="text-body-xs font-body-xs text-emerald-600 block mt-0.5">8 Invoices cleared</span>
+</div>
+<div class="p-3 rounded-lg bg-rose-50 border border-rose-200">
+<span class="text-[11px] font-semibold text-rose-800 uppercase block">Units Sold</span>
+<span class="text-headline-md font-headline-md text-rose-700 tabular-nums font-bold">-4,892</span>
+<span class="text-body-xs font-body-xs text-rose-600 block mt-0.5">1,428 POS receipts</span>
+</div>
+<div class="p-3 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0]">
+<span class="text-[11px] font-semibold text-[#0F172A] uppercase block">Net On Floor</span>
+<span class="text-headline-md font-headline-md text-[#136DEC] tabular-nums font-bold">8,420</span>
+<span class="text-body-xs font-body-xs text-[#64748B] block mt-0.5">Physical count sync</span>
+</div>
+</div>
+<!-- Replenishment Progress & Turn Rate -->
+<div class="bg-[#F8FAFC] p-3 rounded-lg border border-[#E2E8F0] space-y-2">
+<div class="flex justify-between text-body-xs font-body-xs">
+<span class="font-medium text-[#0F172A]">Monthly Inventory Turn Rate</span>
+<span class="font-semibold text-[#136DEC] font-mono">4.2x / month (Benchmark: 3.8x)</span>
+</div>
+<div class="w-full bg-[#E2E8F0] h-1.5 rounded-full overflow-hidden">
+<div class="bg-[#136DEC] h-full rounded-full" style="width: 78%;"></div>
+</div>
+<p class="text-[11px] text-[#64748B]">Inventory burn velocity is currently 12% faster than procurement intake schedules.</p>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-[#E2E8F0] flex items-center justify-between">
+<span class="text-label-sm font-label-sm text-[#64748B]">Scheduled Inward: <strong class="text-[#0F172A]">Tomorrow, 06:00 AM (Amul &amp; Britannia)</strong></span>
+<button class="px-3 py-1 bg-[#F1F5F9] text-[#136DEC] border border-[#E2E8F0] hover:bg-[#E2E8F0] rounded-md text-label-sm font-label-sm font-semibold transition-colors">View GRN Log</button>
+</div>
+</div>
+<!-- Reorder Alerts -->
+<div class="bg-white p-space-lg rounded-xl border border-[#E2E8F0] shadow-sm flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between pb-2 border-b border-[#E2E8F0]">
+<div>
+<h3 class="text-headline-sm font-headline-sm text-[#0F172A]">Reorder Alerts</h3>
+<p class="text-body-xs font-body-xs text-[#64748B]">Automated safety stock violation triggers</p>
+</div>
+<span class="px-2 py-0.5 rounded text-label-sm font-label-sm bg-rose-50 text-rose-700 font-bold border border-rose-200">3 Priority Items</span>
+</div>
+<!-- Urgent Items List -->
+<div class="divide-y divide-[#F1F5F9] mt-2">
+<!-- Alert 1 -->
+<div class="py-2.5 flex items-center justify-between gap-3">
+<div class="flex items-start gap-2.5">
+<div class="w-7 h-7 rounded-md bg-amber-100 text-amber-800 flex items-center justify-center flex-shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-sm">warning</span>
+</div>
+<div>
+<h4 class="text-body-sm font-body-sm font-semibold text-[#0F172A]">Amul Pure Ghee 1L Tin</h4>
+<p class="text-[11px] text-[#64748B]">Current: <span class="text-rose-700 font-bold font-mono">3 tins</span> | Safety Threshold: <span class="font-mono">10 tins</span></p>
+</div>
+</div>
+<button class="px-2.5 py-1 bg-[#136DEC] text-white rounded-md text-label-sm font-label-sm font-semibold hover:bg-[#0E58C4] transition-colors shadow-xs flex-shrink-0">
++ Reorder 20 units
+</button>
+</div>
+<!-- Alert 2 -->
+<div class="py-2.5 flex items-center justify-between gap-3">
+<div class="flex items-start gap-2.5">
+<div class="w-7 h-7 rounded-md bg-rose-100 text-rose-800 flex items-center justify-center flex-shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-sm">error</span>
+</div>
+<div>
+<h4 class="text-body-sm font-body-sm font-semibold text-[#0F172A]">Paracetamol 500mg Strip</h4>
+<p class="text-[11px] text-[#64748B]">Current: <span class="text-rose-700 font-bold font-mono">1 strip</span> | Safety Threshold: <span class="font-mono">15 strips</span></p>
+</div>
+</div>
+<button class="px-2.5 py-1 bg-[#EF4444] text-white rounded-md text-label-sm font-label-sm font-semibold hover:opacity-90 transition-opacity shadow-xs flex-shrink-0">
+Urgent Reorder 50
+</button>
+</div>
+<!-- Alert 3 -->
+<div class="py-2.5 flex items-center justify-between gap-3">
+<div class="flex items-start gap-2.5">
+<div class="w-7 h-7 rounded-md bg-amber-100 text-amber-800 flex items-center justify-center flex-shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-sm">warning</span>
+</div>
+<div>
+<h4 class="text-body-sm font-body-sm font-semibold text-[#0F172A]">Tata Salt 1kg Packet</h4>
+<p class="text-[11px] text-[#64748B]">Current: <span class="text-amber-700 font-bold font-mono">12 packets</span> | Safety Threshold: <span class="font-mono">25 packets</span></p>
+</div>
+</div>
+<button class="px-2.5 py-1 bg-[#136DEC] text-white rounded-md text-label-sm font-label-sm font-semibold hover:bg-[#0E58C4] transition-colors shadow-xs flex-shrink-0">
++ Reorder 100 units
+</button>
+</div>
+</div>
+</div>
+<div class="mt-2 pt-2 border-t border-[#E2E8F0] flex items-center justify-between text-label-sm font-label-sm">
+<span class="text-[#64748B]">Supplier PO Integration: <strong class="text-emerald-700">Online</strong></span>
+<button class="text-[#136DEC] hover:underline font-semibold">Bulk Generate Purchase Order →</button>
+</div>
+</div>
+</section>
+<!-- ==================== PROFITABILITY ANALYSIS & RECENT COMPLETED SALES ==================== -->
+<section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+<!-- Profitability Analysis Breakdown -->
+<div class="bg-white p-space-lg rounded-xl border border-[#E2E8F0] shadow-sm flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between pb-2 border-b border-[#E2E8F0]">
+<div>
+<h3 class="text-headline-sm font-headline-sm text-[#0F172A]">Profitability Analysis</h3>
+<p class="text-body-xs font-body-xs text-[#64748B]">Net Revenue vs Cost of Goods Sold (COGS)</p>
+</div>
+<span class="text-label-sm font-label-sm font-mono text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Margin: 25.8%</span>
+</div>
+<!-- Mathematical Equation Card -->
+<div class="my-4 bg-[#F8FAFC] p-3.5 rounded-lg border border-[#E2E8F0]">
+<div class="flex items-center justify-between text-body-sm font-body-sm">
+<div>
+<span class="text-label-sm font-label-sm text-[#64748B] uppercase block text-[10px]">Gross Sales Revenue</span>
+<span class="text-headline-sm font-headline-sm text-[#0F172A] font-bold tabular-nums">₹4,22,219.00</span>
+</div>
+<span class="text-[#94A3B8] font-bold text-headline-sm">-</span>
+<div>
+<span class="text-label-sm font-label-sm text-[#64748B] uppercase block text-[10px]">Total COGS (Wholesale)</span>
+<span class="text-headline-sm font-headline-sm text-[#EF4444] font-bold tabular-nums">₹3,13,329.00</span>
+</div>
+<span class="text-[#94A3B8] font-bold text-headline-sm">=</span>
+<div>
+<span class="text-label-sm font-label-sm text-emerald-800 uppercase block font-semibold text-[10px]">Gross Profit</span>
+<span class="text-headline-sm font-headline-sm text-emerald-700 font-bold tabular-nums">₹1,08,890.00</span>
+</div>
+</div>
+<!-- Bar Proportional Breakdown -->
+<div class="mt-4">
+<div class="h-3 w-full rounded-full bg-[#E2E8F0] overflow-hidden flex">
+<div class="bg-rose-400 h-full" style="width: 74.2%;" title="COGS: 74.2%"></div>
+<div class="bg-[#10B981] h-full" style="width: 25.8%;" title="Gross Profit: 25.8%"></div>
+</div>
+<div class="flex justify-between text-[11px] text-[#64748B] mt-1.5">
+<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-400"></span> COGS (74.2% of turnover)</span>
+<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-[#10B981]"></span> Retained Gross Margin (25.8%)</span>
+</div>
+</div>
+</div>
+<!-- Secondary Metrics Breakdown -->
+<div class="grid grid-cols-2 gap-2 text-body-xs font-body-xs">
+<div class="p-2.5 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0]">
+<span class="text-[#64748B] block text-[11px]">Operating Expense Ratio:</span>
+<span class="font-semibold text-[#0F172A] font-mono">11.4% (₹48,130)</span>
+</div>
+<div class="p-2.5 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0]">
+<span class="text-[#64748B] block text-[11px]">Estimated Net Profit:</span>
+<span class="font-semibold text-emerald-700 font-mono">14.4% (₹60,760)</span>
+</div>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-[#E2E8F0] flex items-center justify-between text-label-sm font-label-sm">
+<span class="text-[#64748B]">Tax Invoicing (GST): <strong class="text-[#0F172A]">SGST 9% + CGST 9% compliant</strong></span>
+<a class="text-[#136DEC] hover:underline font-semibold" href="#profitability">Detailed Margin Ledger →</a>
+</div>
+</div>
+<!-- Recent Completed Transactions -->
+<div class="bg-white p-space-lg rounded-xl border border-[#E2E8F0] shadow-sm flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between pb-2 border-b border-[#E2E8F0]">
+<div>
+<h3 class="text-headline-sm font-headline-sm text-[#0F172A]">Recent Completed Transactions</h3>
+<p class="text-body-xs font-body-xs text-[#64748B]">Real-time point-of-sale checkout stream</p>
+</div>
+<a class="text-label-sm font-label-sm text-[#136DEC] hover:underline font-semibold" href="#pos-sales">View All Sales →</a>
+</div>
+<!-- Transactions Micro Table / List -->
+<div class="divide-y divide-[#F1F5F9] mt-2">
+<!-- Item 1 -->
+<div class="py-2 flex items-center justify-between text-body-sm font-body-sm hover:bg-[#F8FAFC] px-1 rounded-md transition-colors">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-[#94A3B8] text-sm">receipt</span>
+<div>
+<span class="font-semibold text-[#0F172A] font-mono">INV-2026-1049</span>
+<span class="text-[11px] text-[#64748B] block">Today, 17:42 • 4 items</span>
+</div>
+</div>
+<div class="text-right">
+<span class="font-bold text-[#0F172A] tabular-nums block">₹1,240.00</span>
+<span class="text-[11px] text-emerald-700 font-mono">GP: ₹310.00</span>
+</div>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-[#F1F5F9] text-[#475569]">Cash</span>
+</div>
+<!-- Item 2 -->
+<div class="py-2 flex items-center justify-between text-body-sm font-body-sm hover:bg-[#F8FAFC] px-1 rounded-md transition-colors">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-[#94A3B8] text-sm">receipt</span>
+<div>
+<span class="font-semibold text-[#0F172A] font-mono">INV-2026-1048</span>
+<span class="text-[11px] text-[#64748B] block">Today, 16:15 • 2 items</span>
+</div>
+</div>
+<div class="text-right">
+<span class="font-bold text-[#0F172A] tabular-nums block">₹322.88</span>
+<span class="text-[11px] text-emerald-700 font-mono">GP: ₹68.50</span>
+</div>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-50 text-[#136DEC] border border-blue-200">UPI/QR</span>
+</div>
+<!-- Item 3 -->
+<div class="py-2 flex items-center justify-between text-body-sm font-body-sm hover:bg-[#F8FAFC] px-1 rounded-md transition-colors">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-[#94A3B8] text-sm">receipt</span>
+<div>
+<span class="font-semibold text-[#0F172A] font-mono">INV-2026-1047</span>
+<span class="text-[11px] text-[#64748B] block">Today, 15:30 • 7 items</span>
+</div>
+</div>
+<div class="text-right">
+<span class="font-bold text-[#0F172A] tabular-nums block">₹2,150.00</span>
+<span class="text-[11px] text-emerald-700 font-mono">GP: ₹530.00</span>
+</div>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-800 border border-indigo-200">Card</span>
+</div>
+<!-- Item 4 -->
+<div class="py-2 flex items-center justify-between text-body-sm font-body-sm hover:bg-[#F8FAFC] px-1 rounded-md transition-colors">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-[#94A3B8] text-sm">receipt</span>
+<div>
+<span class="font-semibold text-[#0F172A] font-mono">INV-2026-1046</span>
+<span class="text-[11px] text-[#64748B] block">Today, 14:02 • 1 item</span>
+</div>
+</div>
+<div class="text-right">
+<span class="font-bold text-[#0F172A] tabular-nums block">₹225.00</span>
+<span class="text-[11px] text-emerald-700 font-mono">GP: ₹47.00</span>
+</div>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-[#F1F5F9] text-[#475569]">Cash</span>
+</div>
+<!-- Item 5 -->
+<div class="py-2 flex items-center justify-between text-body-sm font-body-sm hover:bg-[#F8FAFC] px-1 rounded-md transition-colors">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-[#94A3B8] text-sm">receipt</span>
+<div>
+<span class="font-semibold text-[#0F172A] font-mono">INV-2026-1045</span>
+<span class="text-[11px] text-[#64748B] block">Today, 13:10 • 5 items</span>
+</div>
+</div>
+<div class="text-right">
+<span class="font-bold text-[#0F172A] tabular-nums block">₹1,880.00</span>
+<span class="text-[11px] text-emerald-700 font-mono">GP: ₹445.00</span>
+</div>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-50 text-[#136DEC] border border-blue-200">UPI</span>
+</div>
+</div>
+</div>
+<div class="mt-2 pt-2 border-t border-[#E2E8F0] flex items-center justify-between text-label-sm font-label-sm text-[#64748B]">
+<span>Terminal 04 Active Session: <strong class="text-[#0F172A]">Rajiv Mehta</strong></span>
+<span class="text-emerald-700 font-semibold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Cash Drawer Synced
+</span>
+</div>
+</div>
+</section>
+<!-- ==================== BUSINESS INSIGHTS (ACTIONABLE OBSERVATIONS) ==================== -->
+<section class="bg-white p-space-lg rounded-xl border border-[#E2E8F0] shadow-sm mb-6">
+<div class="flex items-center justify-between pb-2 mb-3 border-b border-[#E2E8F0]">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[#136DEC]">psychology</span>
+<h3 class="text-headline-sm font-headline-sm text-[#0F172A]">Inventra AI Business Insights</h3>
+</div>
+<span class="text-label-sm font-label-sm text-[#64748B] font-mono">Model v4.1 • Pune Division Engine</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+<!-- Insight 1 -->
+<div class="p-3.5 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-1.5 text-[#136DEC] text-label-sm font-label-sm font-bold uppercase mb-1">
+<span class="material-symbols-outlined text-xs">pie_chart</span>
+<span>Category Concentration</span>
+</div>
+<p class="text-body-sm font-body-sm text-[#0F172A]">
+<strong>Dairy &amp; Staples</strong> accounted for <strong>37.0%</strong> of total revenue this month with steady 20% margin. Bulk orders peaked during weekend festival cycles.
+</p>
+</div>
+<span class="text-[11px] text-[#64748B] font-mono mt-3">Action: Retain Amul safety buffers at 15 units.</span>
+</div>
+<!-- Insight 2 -->
+<div class="p-3.5 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-1.5 text-emerald-700 text-label-sm font-label-sm font-bold uppercase mb-1">
+<span class="material-symbols-outlined text-xs">shopping_basket</span>
+<span>Basket Size Expansion</span>
+</div>
+<p class="text-body-sm font-body-sm text-[#0F172A]">
+Average Transaction Value increased from <strong>₹278 to ₹295.67 (+6.3%)</strong> driven by bundled confectionery purchases alongside grocery staples at Checkout 02.
+</p>
+</div>
+<span class="text-[11px] text-[#64748B] font-mono mt-3">Action: Replicate Silk cross-merchandising at billing aisle.</span>
+</div>
+<!-- Insight 3 -->
+<div class="p-3.5 rounded-lg bg-amber-50 border border-amber-200 flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-1.5 text-amber-800 text-label-sm font-label-sm font-bold uppercase mb-1">
+<span class="material-symbols-outlined text-xs">alarm</span>
+<span>Stockout Vulnerability</span>
+</div>
+<p class="text-body-sm font-body-sm text-amber-950">
+<strong>2 high-velocity SKUs</strong> (Amul Ghee 1L, Paracetamol 500mg) require immediate supplier reordering to avoid stockout within <strong>48 hours</strong> based on run-rates.
+</p>
+</div>
+<span class="text-[11px] text-amber-800 font-semibold font-mono mt-3">Status: Supplier PO drafted automatically.</span>
+</div>
+</div>
+</section>
+</main>
+</div>
+</body></html>

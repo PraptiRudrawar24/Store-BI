@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-[#F6FAFF]" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Inventra Intel - Products &amp; Inventory Ledger</title>
+<!-- Google Fonts: Inter & Plus Jakarta Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config Injection with StoreBI Royal Blue theme -->
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface": "#F6FAFF",
+            "background": "#F6FAFF",
+            "on-surface": "#0F172A",
+            "on-surface-variant": "#475569",
+            "outline": "#94A3B8",
+            "outline-variant": "#E2E8F0",
+            "primary": "#136DEC",
+            "primary-container": "#136DEC",
+            "on-primary": "#FFFFFF",
+            "on-primary-container": "#FFFFFF",
+            "secondary": "#64748B",
+            "secondary-container": "#EBF3FF",
+            "surface-container": "#F1F5F9",
+            "surface-container-low": "#F8FAFC",
+            "surface-container-lowest": "#FFFFFF",
+            "surface-container-high": "#E2E8F0",
+            "error": "#EF4444",
+            "error-container": "#FEE2E2",
+            "warning": "#F59E0B",
+            "success": "#10B981"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.375rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "sans": ["Inter", "sans-serif"],
+            "heading": ["Plus Jakarta Sans", "Inter", "sans-serif"],
+            "table-header": ["Inter", "sans-serif"],
+            "label-md": ["Inter", "sans-serif"],
+            "headline-sm": ["Plus Jakarta Sans", "sans-serif"],
+            "body-sm": ["Inter", "sans-serif"],
+            "body-xs": ["Inter", "sans-serif"],
+            "metric-tabular": ["Inter", "sans-serif"],
+            "headline-lg": ["Plus Jakarta Sans", "sans-serif"],
+            "body-md": ["Inter", "sans-serif"],
+            "headline-md": ["Plus Jakarta Sans", "sans-serif"],
+            "display-metric": ["Plus Jakarta Sans", "sans-serif"],
+            "label-sm": ["Inter", "sans-serif"],
+            "body-lg": ["Inter", "sans-serif"]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      vertical-align: middle;
+      display: inline-block;
+      line-height: 1;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: #F1F5F9;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="h-full bg-[#F6FAFF] text-[#0F172A] antialiased overflow-x-hidden font-body-md text-body-md">
+<!-- ================= SIDE NAVIGATION BAR (SHARED COMPONENT) ================= -->
+<aside class="fixed top-0 left-0 h-screen w-60 bg-white border-r border-[#E2E8F0] shadow-sm flex flex-col justify-between h-full p-3.5 z-40 transition-all duration-150 ease-in-out">
+<!-- Top Header & Brand -->
+<div>
+<div class="flex items-center gap-3 px-2 py-2 mb-3">
+<div class="h-9 w-9 rounded-lg bg-[#136DEC] text-white flex items-center justify-center font-bold font-headline-sm text-headline-sm shadow-sm shadow-blue-500/20">
+<span class="material-symbols-outlined" data-icon="inventory_2" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+</div>
+<div>
+<h1 class="text-[17px] font-bold font-heading text-[#0F172A] tracking-tight leading-tight">Inventra Intel</h1>
+<p class="font-label-sm text-[11px] text-[#64748B]">Pune Regional Division</p>
+</div>
+</div>
+<!-- Quick Upload CTA -->
+<button class="w-full mb-3 flex items-center justify-center gap-2 py-2 px-3 bg-[#136DEC] hover:bg-[#0E5BCA] text-white rounded-lg font-semibold text-[13px] transition-all duration-150 active:scale-95 shadow-sm shadow-blue-500/25">
+<span class="material-symbols-outlined text-[18px]" data-icon="upload_file">upload_file</span>
+<span>+ Upload Invoice</span>
+</button>
+<!-- Navigation Tabs -->
+<nav class="space-y-0.5">
+<!-- Overview -->
+<a class="flex items-center gap-3 px-3 py-2 text-[#475569] hover:text-[#0F172A] font-body-sm text-[13px] font-medium transition-colors hover:bg-[#F1F5F9] rounded-lg" href="#">
+<span class="material-symbols-outlined text-[19px] text-[#64748B]" data-icon="dashboard">dashboard</span>
+<span>Overview</span>
+</a>
+<!-- POS Billing -->
+<a class="flex items-center gap-3 px-3 py-2 text-[#475569] hover:text-[#0F172A] font-body-sm text-[13px] font-medium transition-colors hover:bg-[#F1F5F9] rounded-lg" href="#">
+<span class="material-symbols-outlined text-[19px] text-[#64748B]" data-icon="point_of_sale">point_of_sale</span>
+<span>POS Billing</span>
+</a>
+<!-- Sales -->
+<a class="flex items-center gap-3 px-3 py-2 text-[#475569] hover:text-[#0F172A] font-body-sm text-[13px] font-medium transition-colors hover:bg-[#F1F5F9] rounded-lg" href="#">
+<span class="material-symbols-outlined text-[19px] text-[#64748B]" data-icon="receipt_long">receipt_long</span>
+<span>Sales</span>
+</a>
+<!-- Inventory (ACTIVE DESTINATION TAB) -->
+<a class="flex items-center gap-3 px-3 py-2 bg-[#136DEC] text-white rounded-lg font-semibold text-[13px] shadow-sm shadow-blue-500/25" href="#">
+<span class="material-symbols-outlined text-[19px]" data-icon="inventory_2" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+<span>Inventory</span>
+</a>
+<!-- Analytics -->
+<a class="flex items-center gap-3 px-3 py-2 text-[#475569] hover:text-[#0F172A] font-body-sm text-[13px] font-medium transition-colors hover:bg-[#F1F5F9] rounded-lg" href="#">
+<span class="material-symbols-outlined text-[19px] text-[#64748B]" data-icon="bar_chart">bar_chart</span>
+<span>Analytics</span>
+</a>
+<!-- Predictions -->
+<a class="flex items-center gap-3 px-3 py-2 text-[#475569] hover:text-[#0F172A] font-body-sm text-[13px] font-medium transition-colors hover:bg-[#F1F5F9] rounded-lg" href="#">
+<span class="material-symbols-outlined text-[19px] text-[#64748B]" data-icon="auto_graph">auto_graph</span>
+<span>Predictions</span>
+</a>
+</nav>
+</div>
+<!-- Footer Controls -->
+<div class="border-t border-[#E2E8F0] pt-2.5 space-y-1">
+<a class="flex items-center gap-3 px-3 py-1.5 text-[#475569] hover:text-[#0F172A] font-body-sm text-[13px] hover:bg-[#F1F5F9] rounded-lg" href="#">
+<span class="material-symbols-outlined text-[18px] text-[#64748B]" data-icon="settings">settings</span>
+<span>Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-1.5 text-[#475569] hover:text-[#0F172A] font-body-sm text-[13px] hover:bg-[#F1F5F9] rounded-lg" href="#">
+<span class="material-symbols-outlined text-[18px] text-[#64748B]" data-icon="help_outline">help_outline</span>
+<span>Help &amp; Support</span>
+</a>
+<div class="flex items-center justify-between px-3 py-1.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg mt-1">
+<div class="flex items-center gap-2">
+<span class="h-2 w-2 rounded-full bg-[#136DEC]"></span>
+<span class="font-semibold text-[11px] text-[#0F172A]">Branch: Pune Central</span>
+</div>
+<span class="material-symbols-outlined text-[16px] text-[#64748B]" data-icon="swap_horiz">swap_horiz</span>
+</div>
+</div>
+</aside>
+<!-- ================= MAIN CONTENT WRAPPER ================= -->
+<div class="ml-60 flex flex-col min-h-screen">
+<!-- ================= TOP NAVIGATION BAR (SHARED COMPONENT) ================= -->
+<header class="sticky top-0 w-full bg-white border-b border-[#E2E8F0] shadow-sm flex items-center justify-between h-14 px-6 z-30 transition-all duration-150 ease-in-out">
+<!-- Left: Breadcrumb & Search Bar -->
+<div class="flex items-center gap-6 flex-1 max-w-2xl">
+<div class="relative w-full max-w-md">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#94A3B8]">
+<span class="material-symbols-outlined text-[18px]">search</span>
+</span>
+<input class="block w-full pl-9 pr-12 py-1.5 text-[13px] bg-[#F8FAFC] rounded-lg border border-[#E2E8F0] focus:outline-none focus:border-[#136DEC] focus:ring-1 focus:ring-[#136DEC] placeholder-[#94A3B8]" placeholder="Search SKUs, categories, bills, tax inv..." type="text"/>
+<span class="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none">
+<kbd class="px-1.5 py-0.5 text-[10px] font-medium bg-white text-[#64748B] rounded border border-[#E2E8F0] shadow-2xs">⌘K</kbd>
+</span>
+</div>
+</div>
+<!-- Right Actions: Store Selector Dropdown, Notifications, Tune, User Profile -->
+<div class="flex items-center gap-3">
+<!-- Notifications with Red Count Badge '3' -->
+<button class="relative p-1.5 text-[#64748B] hover:text-[#0F172A] hover:bg-[#F1F5F9] rounded-lg transition-colors" title="Notifications">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+<span class="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 bg-[#EF4444] text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none ring-2 ring-white">3</span>
+</button>
+<!-- Tune / Preferences Icon -->
+<button class="p-1.5 text-[#64748B] hover:text-[#0F172A] hover:bg-[#F1F5F9] rounded-lg transition-colors" title="Settings Tune">
+<span class="material-symbols-outlined text-[20px]">tune</span>
+</button>
+<div class="h-6 w-[1px] bg-[#E2E8F0] mx-1"></div>
+<!-- Profile Cluster: Dr. Rajesh Sharma -->
+<div class="flex items-center gap-2.5 pl-1 cursor-pointer">
+<div class="h-8 w-8 rounded-full bg-[#EBF3FF] text-[#136DEC] flex items-center justify-center font-bold text-xs ring-1 ring-[#BFDBFE]">
+      DR
+    </div>
+<div class="hidden xl:block text-left leading-none">
+<span class="font-semibold text-[13px] text-[#0F172A] block">Dr. Rajesh Sharma</span>
+<span class="text-[11px] text-[#64748B] mt-0.5 block">Store Director</span>
+</div>
+</div>
+</div>
+</header>
+<!-- ================= CANVASES / PAGE CONTENT ================= -->
+<main class="flex-1 p-6 max-w-[1920px] w-full mx-auto space-y-5">
+<!-- 1. Page Header with Title, Breadcrumbs, & Action Cluster -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div>
+<div class="flex items-center gap-1.5 text-[#64748B] text-[12px] font-medium mb-1">
+<span>Inventory</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-[#136DEC] font-semibold">Inventory Ledger</span>
+</div>
+<h2 class="font-heading text-2xl font-bold text-[#0F172A] tracking-tight">Inventory Ledger</h2>
+<p class="text-[13px] text-[#475569] mt-0.5">Real-time stock ledger, pricing, margins, batch tracking, and status monitoring across shelves.</p>
+</div>
+<!-- Operational Action Button Group -->
+<div class="flex items-center gap-2 self-start md:self-auto">
+<button class="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-[#E2E8F0] text-[#0F172A] rounded-lg hover:bg-[#F8FAFC] transition-colors font-medium text-[13px] shadow-xs">
+<span class="material-symbols-outlined text-[18px] text-[#64748B]" data-icon="file_download">file_download</span>
+<span>Import CSV</span>
+</button>
+<button class="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-[#E2E8F0] text-[#0F172A] rounded-lg hover:bg-[#F8FAFC] transition-colors font-medium text-[13px] shadow-xs">
+<span class="material-symbols-outlined text-[18px] text-[#136DEC]" data-icon="document_scanner">document_scanner</span>
+<span>Scan Invoice (OCR)</span>
+</button>
+<button class="flex items-center gap-1.5 px-4 py-2 bg-[#136DEC] hover:bg-[#0E5BCA] text-white rounded-lg transition-all duration-150 active:scale-95 font-semibold text-[13px] shadow-sm shadow-blue-500/25">
+<span class="material-symbols-outlined text-[18px]" data-icon="add">add</span>
+<span>+ Add Product</span>
+</button>
+</div>
+</div>
+<!-- 2. Bento Quick-Metrics KPI Strip -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+<!-- KPI 1: Total SKUs -->
+<div class="bg-white border border-[#E2E8F0] border-t-4 border-t-[#136DEC] rounded-xl p-4 shadow-sm hover:shadow-md hover:border-[#136DEC]/40 transition-all">
+<div class="flex items-center justify-between mb-1.5">
+<span class="text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">Total Active SKUs</span>
+<div class="h-8 w-8 rounded-lg bg-[#EBF3FF] text-[#136DEC] flex items-center justify-center shadow-xs">
+<span class="material-symbols-outlined text-[18px]" data-icon="qr_code_2">qr_code_2</span>
+</div>
+</div>
+<div class="font-heading text-2xl font-bold text-[#0F172A] tabular-nums">1,482</div>
+<div class="mt-2.5 flex items-center gap-1.5">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-[#D1FAE5] text-[#065F46] border border-[#A7F3D0]">
+<span class="material-symbols-outlined text-[12px] mr-0.5" data-icon="arrow_upward">arrow_upward</span> +38 this month
+</span>
+<span class="text-[11px] text-[#64748B]">across 6 aisles</span>
+</div>
+</div>
+<!-- KPI 2: Low Stock Items -->
+<div class="bg-white border border-[#E2E8F0] border-t-4 border-t-[#D97706] rounded-xl p-4 shadow-sm hover:shadow-md hover:border-amber-300 transition-all">
+<div class="flex items-center justify-between mb-1.5">
+<span class="text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">Low Stock Triggers</span>
+<div class="h-8 w-8 rounded-lg bg-[#FEF3C7] text-[#D97706] flex items-center justify-center shadow-xs">
+<span class="material-symbols-outlined text-[18px]" data-icon="warning">warning</span>
+</div>
+</div>
+<div class="font-heading text-2xl font-bold text-[#D97706] tabular-nums">14</div>
+<div class="mt-2.5 flex items-center gap-1.5">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-[#FEF3C7] text-[#B45309] border border-[#FDE68A]">
+<span class="material-symbols-outlined text-[12px] mr-0.5" data-icon="priority_high">priority_high</span> Urgent PO Required
+</span>
+<span class="text-[11px] text-[#64748B]">below 2-day buffer</span>
+</div>
+</div>
+<!-- KPI 3: Stock Valuation -->
+<div class="bg-white border border-[#E2E8F0] border-t-4 border-t-[#10B981] rounded-xl p-4 shadow-sm hover:shadow-md hover:border-[#10B981]/40 transition-all">
+<div class="flex items-center justify-between mb-1.5">
+<span class="text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">Total Stock Valuation</span>
+<div class="h-8 w-8 rounded-lg bg-[#D1FAE5] text-[#065F46] flex items-center justify-center shadow-xs">
+<span class="material-symbols-outlined text-[18px]" data-icon="account_balance_wallet">account_balance_wallet</span>
+</div>
+</div>
+<div class="font-heading text-2xl font-bold text-[#0F172A] tabular-nums">₹1,24,209.00</div>
+<div class="mt-2.5 flex items-center gap-1.5">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-[#D1FAE5] text-[#065F46] border border-[#A7F3D0]">
+<span class="material-symbols-outlined text-[12px] mr-0.5" data-icon="trending_up">trending_up</span> +8.4%
+</span>
+<span class="text-[11px] text-[#64748B]">at cost price ledger</span>
+</div>
+</div>
+<!-- KPI 4: Active Reorders -->
+<div class="bg-white border border-[#E2E8F0] border-t-4 border-t-[#136DEC] rounded-xl p-4 shadow-sm hover:shadow-md hover:border-[#136DEC]/40 transition-all">
+<div class="flex items-center justify-between mb-1.5">
+<span class="text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">In-Transit Reorders</span>
+<div class="h-8 w-8 rounded-lg bg-[#EBF3FF] text-[#136DEC] flex items-center justify-center shadow-xs ring-1 ring-[#BFDBFE]">
+<span class="material-symbols-outlined text-[18px]" data-icon="local_shipping">local_shipping</span>
+</div>
+</div>
+<div class="font-heading text-2xl font-bold text-[#0F172A] tabular-nums">3 <span class="text-base font-normal text-[#64748B]">POs</span></div>
+<div class="mt-2.5 flex items-center gap-1.5">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-[#EBF3FF] text-[#136DEC] border border-[#BFDBFE]">
+<span class="material-symbols-outlined text-[12px] mr-0.5" data-icon="schedule">schedule</span> ETA: Today 5 PM
+</span>
+<span class="text-[11px] text-[#64748B]">Amul, ITC, HUL</span>
+</div>
+</div>
+</div>
+<!-- 3. Dynamic Filter & Search Control Bar -->
+<div class="bg-white border border-[#E2E8F0] rounded-xl p-3 shadow-sm flex flex-wrap items-center justify-between gap-3">
+<!-- Left Filter Stack -->
+<div class="flex flex-wrap items-center gap-2 flex-1 min-w-[280px]">
+<!-- Interactive Search Filter -->
+<div class="relative min-w-[260px] flex-1 max-w-md">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#94A3B8]">
+<span class="material-symbols-outlined text-[18px]" data-icon="search">search</span>
+</span>
+<input class="w-full pl-9 pr-3 py-1.5 bg-[#F8FAFC] text-[13px] rounded-lg border border-[#E2E8F0] focus:outline-none focus:border-[#136DEC] focus:ring-1 focus:ring-[#136DEC] placeholder-[#94A3B8]" id="inventorySearch" placeholder="Filter by product name, SKU, or batch..." type="text"/>
+</div>
+<!-- Category Dropdown -->
+<div class="relative">
+<select class="appearance-none bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg py-1.5 pl-3 pr-8 text-[13px] text-[#0F172A] focus:outline-none focus:border-[#136DEC] cursor-pointer">
+<option selected="">All Categories (All)</option>
+<option>Personal Care</option>
+<option>Health &amp; OTC</option>
+<option>Snacks &amp; Sweets</option>
+<option>Dairy &amp; Staples</option>
+<option>Beverages</option>
+</select>
+<span class="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#64748B] material-symbols-outlined text-[16px]" data-icon="keyboard_arrow_down">keyboard_arrow_down</span>
+</div>
+<!-- Stock Status Dropdown -->
+<div class="relative">
+<select class="appearance-none bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg py-1.5 pl-3 pr-8 text-[13px] text-[#0F172A] focus:outline-none focus:border-[#136DEC] cursor-pointer">
+<option selected="">All Stock Statuses</option>
+<option>In Stock</option>
+<option>Low Stock</option>
+<option>Out of Stock</option>
+<option>Expiring Soon (&lt; 30d)</option>
+</select>
+<span class="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#64748B] material-symbols-outlined text-[16px]" data-icon="filter_list">filter_list</span>
+</div>
+<!-- Supplier Filter -->
+<div class="relative">
+<select class="appearance-none bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg py-1.5 pl-3 pr-8 text-[13px] text-[#0F172A] focus:outline-none focus:border-[#136DEC] cursor-pointer">
+<option selected="">All Suppliers</option>
+<option>GSK Healthcare India</option>
+<option>Reckitt Benckiser</option>
+<option>PepsiCo India Holdings</option>
+<option>Mondelez International</option>
+<option>GCMMF (Amul)</option>
+<option>Tata Consumer Products</option>
+<option>Parle Agro Pvt Ltd</option>
+</select>
+<span class="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#64748B] material-symbols-outlined text-[16px]" data-icon="store">store</span>
+</div>
+</div>
+<!-- Right Quick Actions -->
+<div class="flex items-center gap-2">
+<button class="px-2.5 py-1.5 border border-[#E2E8F0] rounded-lg hover:bg-[#F8FAFC] text-[#64748B] hover:text-[#0F172A] transition-colors flex items-center gap-1 text-[13px]" title="Refresh Table">
+<span class="material-symbols-outlined text-[17px]" data-icon="refresh">refresh</span>
+</button>
+<button class="px-3 py-1.5 border border-[#E2E8F0] rounded-lg hover:bg-[#F8FAFC] text-[#0F172A] transition-colors flex items-center gap-1.5 text-[13px] font-medium">
+<span class="material-symbols-outlined text-[17px] text-[#64748B]" data-icon="download">download</span>
+<span>Export Excel</span>
+</button>
+<div class="h-5 w-[1px] bg-[#E2E8F0]"></div>
+<button class="px-3 py-1.5 bg-[#EBF3FF] text-[#136DEC] hover:bg-[#136DEC] hover:text-white font-semibold text-[13px] rounded-lg border border-[#BFDBFE] transition-colors flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]" data-icon="point_of_sale">point_of_sale</span>
+<span>Open POS</span>
+</button>
+</div>
+</div>
+<!-- 4. Enterprise High-Legibility Inventory Table -->
+<div class="bg-white border border-[#E2E8F0] rounded-xl shadow-sm overflow-hidden">
+<div class="overflow-x-auto custom-scroll">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-[#F8FAFC] border-b border-[#E2E8F0] h-10">
+<th class="w-10 px-4 py-2.5 text-center"><input class="rounded border-[#CBD5E1] text-[#136DEC] focus:ring-[#136DEC] cursor-pointer" type="checkbox"/></th>
+<th class="px-4 py-2.5 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">PRODUCT NAME</th>
+<th class="px-4 py-2.5 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">SKU</th>
+<th class="px-4 py-2.5 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">CATEGORY</th>
+<th class="px-4 py-2.5 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">BOUGHT DATE</th>
+<th class="px-4 py-2.5 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">EXPIRY DATE</th>
+<th class="px-4 py-2.5 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider text-right">BOUGHT QTY</th>
+<th class="px-4 py-2.5 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider text-right">IN STOCK QTY</th>
+<th class="px-4 py-2.5 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider text-right">COST PRICE</th>
+<th class="px-4 py-2.5 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider text-right">SELLING PRICE</th>
+<th class="px-4 py-2.5 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider text-right">VALUATION</th>
+<th class="px-4 py-2.5 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider text-center">STATUS</th>
+<th class="px-4 py-2.5 text-[11px] font-semibold text-[#64748B] uppercase tracking-wider text-right">ACTIONS</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-[#F1F5F9]">
+<!-- ROW 1: Paracetamol -->
+<tr class="hover:bg-[#F8FAFC] transition-colors duration-100 group">
+<td class="px-4 py-3 text-center"><input class="rounded border-[#CBD5E1] text-[#136DEC] focus:ring-[#136DEC] cursor-pointer" type="checkbox"/></td>
+<td class="px-4 py-3">
+<div class="text-[13px] font-semibold text-[#0F172A]">Paracetamol 500mg 3004 81234 12/26 2 20.00 o</div>
+<div class="text-[11px] text-[#64748B] flex items-center gap-2 mt-0.5"><span>Batch: #MED-81234</span></div>
+</td>
+<td class="px-4 py-3 font-mono text-[13px] text-[#334155] font-medium">MED-0006</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[12px] font-medium bg-[#F1F5F9] text-[#334155]">Health &amp; OTC</span>
+</td>
+<td class="px-4 py-3">
+<div class="text-[13px] text-[#0F172A] font-medium">14 Jan 2026</div>
+<div class="text-[11px] text-[#64748B]">GRN #4902</div>
+</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-[#FEF3C7] text-[#B45309] border border-[#FDE68A]">
+<span class="material-symbols-outlined text-[13px]">event</span>Dec 2026
+  </span>
+</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#64748B]">50 Tablets</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#D97706] font-bold">1 Tablet</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#64748B]">₹42.00</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#0F172A] font-semibold">₹52.50</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#0F172A]">₹42.00</td>
+<td class="px-4 py-3 text-center">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#FEF3C7] text-[#B45309] border border-[#FDE68A]">
+<span class="h-1.5 w-1.5 rounded-full bg-[#D97706]"></span>LOW STOCK
+  </span>
+</td>
+<td class="px-4 py-3 text-right">
+<div class="flex items-center justify-end gap-1.5">
+<button class="px-2.5 py-1 text-[12px] font-semibold text-[#136DEC] bg-[#EBF3FF] hover:bg-[#136DEC] hover:text-white rounded-md transition-colors">Details</button>
+<button class="p-1 text-[#64748B] hover:text-[#0F172A] rounded hover:bg-[#F1F5F9] transition-colors"><span class="material-symbols-outlined text-[18px]">more_vert</span></button>
+</div>
+</td>
+</tr>
+<!-- ROW 2: Dettol Antiseptic Liquid -->
+<tr class="hover:bg-[#F8FAFC] transition-colors duration-100 group">
+<td class="px-4 py-3 text-center"><input class="rounded border-[#CBD5E1] text-[#136DEC] focus:ring-[#136DEC] cursor-pointer" type="checkbox"/></td>
+<td class="px-4 py-3">
+<div class="text-[13px] font-semibold text-[#0F172A]">Dettol Antiseptic Liquid 550ml</div>
+<div class="text-[11px] text-[#64748B] flex items-center gap-2 mt-0.5"><span>Batch: #DET-5509</span></div>
+</td>
+<td class="px-4 py-3 font-mono text-[13px] text-[#334155] font-medium">RET-0142</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[12px] font-medium bg-[#F1F5F9] text-[#334155]">Personal Care</span>
+</td>
+<td class="px-4 py-3">
+<div class="text-[13px] text-[#0F172A] font-medium">02 Feb 2026</div>
+<div class="text-[11px] text-[#64748B]">GRN #5120</div>
+</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md bg-[#F1F5F9] text-[#475569]">
+<span class="material-symbols-outlined text-[13px]">event</span>Aug 2027
+  </span>
+</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#64748B]">40 Bottles</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#0F172A] font-semibold">26 Bottles</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#64748B]">₹178.00</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#0F172A] font-semibold">₹225.00</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#0F172A] font-bold">₹4,628.00</td>
+<td class="px-4 py-3 text-center">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#D1FAE5] text-[#065F46] border border-[#A7F3D0]">
+<span class="h-1.5 w-1.5 rounded-full bg-[#10B981]"></span>IN STOCK
+  </span>
+</td>
+<td class="px-4 py-3 text-right">
+<div class="flex items-center justify-end gap-1.5">
+<button class="px-2.5 py-1 text-[12px] font-semibold text-[#136DEC] bg-[#EBF3FF] hover:bg-[#136DEC] hover:text-white rounded-md transition-colors">Details</button>
+<button class="p-1 text-[#64748B] hover:text-[#0F172A] rounded hover:bg-[#F1F5F9] transition-colors"><span class="material-symbols-outlined text-[18px]">more_vert</span></button>
+</div>
+</td>
+</tr>
+<!-- ROW 3: Lay's Magic Masala -->
+<tr class="hover:bg-[#F8FAFC] transition-colors duration-100 group">
+<td class="px-4 py-3 text-center"><input class="rounded border-[#CBD5E1] text-[#136DEC] focus:ring-[#136DEC] cursor-pointer" type="checkbox"/></td>
+<td class="px-4 py-3">
+<div class="text-[13px] font-semibold text-[#0F172A]">Lay's India's Magic Masala 90g</div>
+<div class="text-[11px] text-[#64748B] flex items-center gap-2 mt-0.5"><span>Batch: #LAYS-992</span></div>
+</td>
+<td class="px-4 py-3 font-mono text-[13px] text-[#334155] font-medium">SNK-0089</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[12px] font-medium bg-[#F1F5F9] text-[#334155]">Snacks &amp; Sweets</span>
+</td>
+<td class="px-4 py-3">
+<div class="text-[13px] text-[#0F172A] font-medium">20 Dec 2025</div>
+<div class="text-[11px] text-[#64748B]">GRN #4781</div>
+</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-[#FEF3C7] text-[#B45309] border border-[#FDE68A]">
+<span class="material-symbols-outlined text-[13px]">warning</span>Apr 2025
+  </span>
+</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#64748B]">150 Packets</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#0F172A] font-semibold">109 Packets</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#64748B]">₹24.00</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#0F172A] font-semibold">₹30.00</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#0F172A] font-bold">₹2,616.00</td>
+<td class="px-4 py-3 text-center">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#D1FAE5] text-[#065F46] border border-[#A7F3D0]">
+<span class="h-1.5 w-1.5 rounded-full bg-[#10B981]"></span>IN STOCK
+  </span>
+</td>
+<td class="px-4 py-3 text-right">
+<div class="flex items-center justify-end gap-1.5">
+<button class="px-2.5 py-1 text-[12px] font-semibold text-[#136DEC] bg-[#EBF3FF] hover:bg-[#136DEC] hover:text-white rounded-md transition-colors">Details</button>
+<button class="p-1 text-[#64748B] hover:text-[#0F172A] rounded hover:bg-[#F1F5F9] transition-colors"><span class="material-symbols-outlined text-[18px]">more_vert</span></button>
+</div>
+</td>
+</tr>
+<!-- ROW 4: Cadbury Dairy Milk Silk -->
+<tr class="hover:bg-[#F8FAFC] transition-colors duration-100 group">
+<td class="px-4 py-3 text-center"><input class="rounded border-[#CBD5E1] text-[#136DEC] focus:ring-[#136DEC] cursor-pointer" type="checkbox"/></td>
+<td class="px-4 py-3">
+<div class="text-[13px] font-semibold text-[#0F172A]">Cadbury Dairy Milk Silk 150g</div>
+<div class="text-[11px] text-[#64748B] flex items-center gap-2 mt-0.5"><span>Batch: #MON-410</span></div>
+</td>
+<td class="px-4 py-3 font-mono text-[13px] text-[#334155] font-medium">SNK-0210</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[12px] font-medium bg-[#F1F5F9] text-[#334155]">Snacks &amp; Sweets</span>
+</td>
+<td class="px-4 py-3">
+<div class="text-[13px] text-[#0F172A] font-medium">10 Jan 2026</div>
+<div class="text-[11px] text-[#64748B]">GRN #4850</div>
+</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md bg-[#F1F5F9] text-[#475569]">
+<span class="material-symbols-outlined text-[13px]">event</span>Nov 2025
+  </span>
+</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#64748B]">100 Units</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#0F172A] font-semibold">69 Units</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#64748B]">₹142.00</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#0F172A] font-semibold">₹175.00</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#0F172A] font-bold">₹9,798.00</td>
+<td class="px-4 py-3 text-center">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#D1FAE5] text-[#065F46] border border-[#A7F3D0]">
+<span class="h-1.5 w-1.5 rounded-full bg-[#10B981]"></span>IN STOCK
+  </span>
+</td>
+<td class="px-4 py-3 text-right">
+<div class="flex items-center justify-end gap-1.5">
+<button class="px-2.5 py-1 text-[12px] font-semibold text-[#136DEC] bg-[#EBF3FF] hover:bg-[#136DEC] hover:text-white rounded-md transition-colors">Details</button>
+<button class="p-1 text-[#64748B] hover:text-[#0F172A] rounded hover:bg-[#F1F5F9] transition-colors"><span class="material-symbols-outlined text-[18px]">more_vert</span></button>
+</div>
+</td>
+</tr>
+<!-- ROW 5: Amul Pure Ghee 1L Tin -->
+<tr class="hover:bg-[#F8FAFC] transition-colors duration-100 group">
+<td class="px-4 py-3 text-center"><input class="rounded border-[#CBD5E1] text-[#136DEC] focus:ring-[#136DEC] cursor-pointer" type="checkbox"/></td>
+<td class="px-4 py-3">
+<div class="text-[13px] font-semibold text-[#0F172A]">Amul Pure Ghee 1L Tin</div>
+<div class="text-[11px] text-[#64748B] flex items-center gap-2 mt-0.5"><span>Batch: #AMU-7721</span></div>
+</td>
+<td class="px-4 py-3 font-mono text-[13px] text-[#334155] font-medium">DRY-0015</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[12px] font-medium bg-[#F1F5F9] text-[#334155]">Dairy &amp; Staples</span>
+</td>
+<td class="px-4 py-3">
+<div class="text-[13px] text-[#0F172A] font-medium">05 Feb 2026</div>
+<div class="text-[11px] text-[#64748B]">GRN #5219</div>
+</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-[#FEF3C7] text-[#B45309] border border-[#FDE68A]">
+<span class="material-symbols-outlined text-[13px]">event</span>Sep 2025
+  </span>
+</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#64748B]">20 Tins</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#D97706] font-bold">3 Tins</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#64748B]">₹580.00</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#0F172A] font-semibold">₹650.00</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#0F172A]">₹1,740.00</td>
+<td class="px-4 py-3 text-center">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#FEF3C7] text-[#B45309] border border-[#FDE68A]">
+<span class="h-1.5 w-1.5 rounded-full bg-[#D97706]"></span>LOW STOCK
+  </span>
+</td>
+<td class="px-4 py-3 text-right">
+<div class="flex items-center justify-end gap-1.5">
+<button class="px-2.5 py-1 text-[12px] font-semibold text-[#136DEC] bg-[#EBF3FF] hover:bg-[#136DEC] hover:text-white rounded-md transition-colors">Details</button>
+<button class="p-1 text-[#64748B] hover:text-[#0F172A] rounded hover:bg-[#F1F5F9] transition-colors"><span class="material-symbols-outlined text-[18px]">more_vert</span></button>
+</div>
+</td>
+</tr>
+<!-- ROW 6: Tata Salt Iodized 1kg -->
+<tr class="hover:bg-[#F8FAFC] transition-colors duration-100 group">
+<td class="px-4 py-3 text-center"><input class="rounded border-[#CBD5E1] text-[#136DEC] focus:ring-[#136DEC] cursor-pointer" type="checkbox"/></td>
+<td class="px-4 py-3">
+<div class="text-[13px] font-semibold text-[#0F172A]">Tata Salt Iodized 1kg</div>
+<div class="text-[11px] text-[#64748B] flex items-center gap-2 mt-0.5"><span>Batch: #TAT-9081</span></div>
+</td>
+<td class="px-4 py-3 font-mono text-[13px] text-[#334155] font-medium">STP-0004</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[12px] font-medium bg-[#F1F5F9] text-[#334155]">Dairy &amp; Staples</span>
+</td>
+<td class="px-4 py-3">
+<div class="text-[13px] text-[#0F172A] font-medium">18 Nov 2025</div>
+<div class="text-[11px] text-[#64748B]">GRN #4610</div>
+</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md bg-[#F1F5F9] text-[#475569]">
+<span class="material-symbols-outlined text-[13px]">event</span>Jan 2028
+  </span>
+</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#64748B]">250 Packets</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#0F172A] font-semibold">215 Packets</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#64748B]">₹24.50</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#0F172A] font-semibold">₹30.00</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#0F172A] font-bold">₹5,267.50</td>
+<td class="px-4 py-3 text-center">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#D1FAE5] text-[#065F46] border border-[#A7F3D0]">
+<span class="h-1.5 w-1.5 rounded-full bg-[#10B981]"></span>IN STOCK
+  </span>
+</td>
+<td class="px-4 py-3 text-right">
+<div class="flex items-center justify-end gap-1.5">
+<button class="px-2.5 py-1 text-[12px] font-semibold text-[#136DEC] bg-[#EBF3FF] hover:bg-[#136DEC] hover:text-white rounded-md transition-colors">Details</button>
+<button class="p-1 text-[#64748B] hover:text-[#0F172A] rounded hover:bg-[#F1F5F9] transition-colors"><span class="material-symbols-outlined text-[18px]">more_vert</span></button>
+</div>
+</td>
+</tr>
+<!-- ROW 7: Frooti Fresh Mango Drink 1.2L -->
+<tr class="hover:bg-red-50/50 transition-colors duration-100 group bg-red-50/30">
+<td class="px-4 py-3 text-center"><input class="rounded border-[#CBD5E1] text-[#136DEC] focus:ring-[#136DEC] cursor-pointer" type="checkbox"/></td>
+<td class="px-4 py-3">
+<div class="text-[13px] font-semibold text-[#0F172A]">Frooti Fresh Mango Drink 1.2L</div>
+<div class="text-[11px] text-[#64748B] flex items-center gap-2 mt-0.5"><span>Batch: #PAR-3312</span></div>
+</td>
+<td class="px-4 py-3 font-mono text-[13px] text-[#334155] font-medium">BEV-0051</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[12px] font-medium bg-[#F1F5F9] text-[#334155]">Beverages</span>
+</td>
+<td class="px-4 py-3">
+<div class="text-[13px] text-[#0F172A] font-medium">28 Jan 2026</div>
+<div class="text-[11px] text-[#64748B]">GRN #5033</div>
+</td>
+<td class="px-4 py-3">
+<span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-[#FEE2E2] text-[#DC2626] border border-[#FECACA]">
+<span class="material-symbols-outlined text-[13px]">error</span>Jun 2025
+  </span>
+</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#64748B]">60 Units</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#DC2626] font-bold">0 Units</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#64748B]">₹52.00</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#0F172A] font-semibold">₹65.00</td>
+<td class="px-4 py-3 text-right text-[13px] text-[#64748B]">₹0.00</td>
+<td class="px-4 py-3 text-center">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#FEE2E2] text-[#DC2626] border border-[#FECACA]">
+<span class="h-1.5 w-1.5 rounded-full bg-[#EF4444]"></span>OUT OF STOCK
+  </span>
+</td>
+<td class="px-4 py-3 text-right">
+<div class="flex items-center justify-end gap-1.5">
+<button class="px-2.5 py-1 text-[12px] font-semibold text-[#DC2626] bg-[#FEE2E2] hover:bg-[#EF4444] hover:text-white rounded-md transition-colors">Reorder</button>
+<button class="p-1 text-[#64748B] hover:text-[#0F172A] rounded hover:bg-[#F1F5F9] transition-colors"><span class="material-symbols-outlined text-[18px]">more_vert</span></button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- 5. Pagination & Table Footer Controls -->
+<div class="flex flex-col sm:flex-row items-center justify-between px-4 py-3 border-t border-[#E2E8F0] bg-[#F8FAFC] text-[13px] gap-3">
+<div class="flex items-center gap-4 text-[#64748B]">
+<span>Showing <strong class="text-[#0F172A] font-semibold">1 to 7</strong> of <strong class="text-[#0F172A] font-semibold">1,482</strong> items</span>
+<div class="flex items-center gap-1.5">
+<span>Rows per page:</span>
+<select class="bg-white border border-[#CBD5E1] rounded-md px-2 py-0.5 text-xs font-medium text-[#0F172A] focus:outline-none focus:border-[#136DEC]">
+<option>25</option>
+<option>50</option>
+<option>100</option>
+</select>
+</div>
+</div>
+<!-- Page Navigation Buttons -->
+<div class="flex items-center gap-1">
+<button class="px-2.5 py-1 rounded-md border border-[#E2E8F0] text-[#64748B] bg-white hover:bg-[#F1F5F9] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center text-xs font-medium" disabled="">
+<span class="material-symbols-outlined text-[16px] mr-1" data-icon="chevron_left">chevron_left</span> Previous
+</button>
+<button class="px-3 py-1 rounded-md bg-[#136DEC] text-white font-semibold text-xs shadow-xs">1</button>
+<button class="px-3 py-1 rounded-md bg-white border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F1F5F9] transition-colors text-xs font-medium">2</button>
+<button class="px-3 py-1 rounded-md bg-white border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F1F5F9] transition-colors text-xs font-medium">3</button>
+<span class="px-1 text-[#94A3B8] text-xs">...</span>
+<button class="px-3 py-1 rounded-md bg-white border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F1F5F9] transition-colors text-xs font-medium">45</button>
+<button class="px-2.5 py-1 rounded-md border border-[#E2E8F0] text-[#0F172A] bg-white hover:bg-[#F1F5F9] transition-colors flex items-center text-xs font-medium">
+Next <span class="material-symbols-outlined text-[16px] ml-1" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- 6. Bottom System Audit & Verification Strip -->
+<div class="flex flex-wrap items-center justify-between text-xs text-[#64748B] px-1 pb-2">
+<div class="flex items-center gap-2">
+<span class="inline-block h-2 w-2 rounded-full bg-[#10B981]"></span>
+<span>Ledger Live Sync: Automated OCR &amp; POS Webhook Active (Last updated: 4 mins ago)</span>
+</div>
+<div class="flex items-center gap-3">
+<span>Barcode Standard: EAN-13 / GS1 India Compliant</span>
+<span>•</span>
+<a class="text-[#136DEC] hover:underline font-semibold" href="#">Export Full Tax Audit (GSTR-2B)</a>
+</div>
+</div>
+</main>
+</div>
+<!-- Micro Interaction Script for Real-time Search Simulation -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const searchInput = document.getElementById('inventorySearch');
+      if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+          const val = e.target.value.toLowerCase();
+          const rows = document.querySelectorAll('tbody tr');
+          rows.forEach(row => {
+            const text = row.innerText.toLowerCase();
+            row.style.display = text.includes(val) ? '' : 'none';
+          });
+        });
+      }
+    });
+  </script>
+</body></html>

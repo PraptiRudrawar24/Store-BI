@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Inventra Intel - AI Insights &amp; Forecasting</title>
+<!-- Material Symbols Outlined font -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Fonts: Inter & Plus Jakarta Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 with configuration matching StoreBI Retail Intelligence -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface": "#F6FAFF",
+            "on-surface": "#0F172A",
+            "on-surface-variant": "#475569",
+            "primary": "#136DEC",
+            "primary-container": "#136DEC",
+            "on-primary": "#ffffff",
+            "on-primary-container": "#ffffff",
+            "primary-hover": "#0D5CC9",
+            "secondary": "#64748B",
+            "outline": "#94A3B8",
+            "outline-variant": "#E2E8F0",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-low": "#F1F5F9",
+            "surface-container": "#E8EFF9",
+            "surface-container-high": "#DDE7F6",
+            "secondary-container": "#EFF6FF",
+            "success": "#059669",
+            "success-bg": "#ECFDF5",
+            "success-border": "#A7F3D0"
+          },
+          "fontFamily": {
+            "headline": ["Plus Jakarta Sans", "Inter", "sans-serif"],
+            "body": ["Inter", "sans-serif"]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 18px;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body class="bg-[#F6FAFF] font-body text-[#0F172A] antialiased selection:bg-[#EFF6FF] selection:text-[#136DEC]">
+<div class="flex min-h-screen">
+<!-- SideNavBar (Restyled with StoreBI Theme) -->
+<aside class="fixed top-0 left-0 h-screen w-60 bg-white border-r border-[#E2E8F0] shadow-[0_1px_3px_rgba(0,0,0,0.05)] flex flex-col justify-between p-4 z-40">
+<div class="flex flex-col gap-y-4">
+<!-- Logo & Header info -->
+<div class="flex items-center gap-3 px-1 py-1">
+<div class="w-8 h-8 rounded-lg bg-[#136DEC] text-white flex items-center justify-center font-bold font-headline text-lg shadow-sm">
+            I
+          </div>
+<div>
+<h1 class="font-headline font-bold text-[#136DEC] tracking-tight text-[17px] leading-tight">Inventra Intel</h1>
+<p class="text-[11px] text-[#64748B] font-medium leading-none mt-0.5">Pune Regional Division</p>
+</div>
+</div>
+<!-- Quick CTA in StoreBI Royal Blue -->
+<button class="w-full h-9 bg-[#136DEC] hover:bg-[#0D5CC9] text-white text-[13px] font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all shadow-sm">
+<span class="material-symbols-outlined text-[16px]">add</span>
+          + Upload Invoice
+        </button>
+<!-- Navigation Tabs (Predictions is active with Royal Blue pill) -->
+<nav class="flex flex-col gap-1 overflow-y-auto max-h-[calc(100vh-280px)] pr-1 text-[13px]">
+<!-- Overview -->
+<a class="flex items-center gap-3 px-3 py-2 text-[#475569] hover:text-[#0F172A] hover:bg-[#F1F5F9] rounded-lg font-medium transition-colors" href="#">
+<span class="material-symbols-outlined text-[19px]">dashboard</span>
+<span>Overview</span>
+</a>
+<!-- POS Billing -->
+<a class="flex items-center gap-3 px-3 py-2 text-[#475569] hover:text-[#0F172A] hover:bg-[#F1F5F9] rounded-lg font-medium transition-colors" href="#">
+<span class="material-symbols-outlined text-[19px]">point_of_sale</span>
+<span>POS Billing</span>
+</a>
+<!-- Sales -->
+<a class="flex items-center gap-3 px-3 py-2 text-[#475569] hover:text-[#0F172A] hover:bg-[#F1F5F9] rounded-lg font-medium transition-colors" href="#">
+<span class="material-symbols-outlined text-[19px]">inventory_2</span>
+<span>Sales</span>
+</a>
+<!-- Inventory -->
+<a class="flex items-center gap-3 px-3 py-2 text-[#475569] hover:text-[#0F172A] hover:bg-[#F1F5F9] rounded-lg font-medium transition-colors" href="#">
+<span class="material-symbols-outlined text-[19px]">warehouse</span>
+<span>Inventory</span>
+</a>
+<!-- Analytics -->
+<a class="flex items-center gap-3 px-3 py-2 text-[#475569] hover:text-[#0F172A] hover:bg-[#F1F5F9] rounded-lg font-medium transition-colors" href="#">
+<span class="material-symbols-outlined text-[19px]">bar_chart</span>
+<span>Analytics</span>
+</a>
+<!-- Predictions (ACTIVE per StoreBI theme: Blue pill with white text) -->
+<a class="flex items-center gap-3 px-3 py-2 bg-[#136DEC] text-white rounded-lg font-semibold shadow-sm" href="#">
+<span class="material-symbols-outlined text-[19px]" style="font-variation-settings: 'FILL' 1;">auto_graph</span>
+<span>Predictions</span>
+</a>
+</nav>
+</div>
+<!-- Footer Tab Links -->
+<div class="pt-2 border-t border-[#E2E8F0] flex flex-col gap-1 text-[13px]">
+<a class="flex items-center gap-3 px-3 py-1.5 text-[#475569] hover:text-[#0F172A] hover:bg-[#F1F5F9] rounded-lg transition-colors font-medium" href="#">
+<span class="material-symbols-outlined text-[17px]">settings</span>
+<span>Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-1.5 text-[#475569] hover:text-[#0F172A] hover:bg-[#F1F5F9] rounded-lg transition-colors font-medium" href="#">
+<span class="material-symbols-outlined text-[17px]">help_outline</span>
+<span>Help &amp; Support</span>
+</a>
+<div class="flex items-center justify-between px-3 py-2 mt-1 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] text-[11px] font-medium text-[#475569]">
+<span class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[15px] text-[#136DEC]">swap_horiz</span>
+            Branch: Pune Central
+          </span>
+<span class="w-2 h-2 rounded-full bg-[#136DEC] inline-block"></span>
+</div>
+</div>
+</aside>
+<!-- Main Content Shell -->
+<div class="flex-1 ml-60 flex flex-col min-w-0">
+<!-- TopNavBar (Shared Component) -->
+<header class="sticky top-0 w-full bg-white border-b border-[#E2E8F0] shadow-sm flex items-center justify-between h-14 px-6 z-30">
+<!-- Search Bar -->
+<div class="flex items-center gap-4 w-96">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[#94A3B8] text-[18px]">search</span>
+<input class="w-full h-8 pl-8 pr-3 text-[13px] bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg focus:outline-none focus:border-[#136DEC] focus:ring-1 focus:ring-[#136DEC] transition-all" placeholder="Search SKU, brand, replenishment batch..." type="text"/>
+</div>
+</div>
+<!-- Trailing Actions & Profile -->
+<div class="flex items-center gap-3">
+<button class="p-1.5 rounded-lg text-[#64748B] hover:text-[#0F172A] hover:bg-[#F1F5F9] transition-colors relative" title="Notifications">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-[#136DEC] rounded-full"></span>
+</button>
+<button class="p-1.5 rounded-lg text-[#64748B] hover:text-[#0F172A] hover:bg-[#F1F5F9] transition-colors" title="Settings Tune">
+<span class="material-symbols-outlined">tune</span>
+</button>
+<div class="h-6 w-px bg-[#E2E8F0] mx-1"></div>
+<!-- Store Manager Profile -->
+<div class="flex items-center gap-2 pl-1 cursor-pointer">
+<div class="w-8 h-8 rounded-full bg-[#EFF6FF] text-[#136DEC] flex items-center justify-center font-bold text-[12px] border border-[#BFDBFE]">
+              SM
+            </div>
+<div class="hidden xl:flex flex-col text-left">
+<span class="text-[13px] font-semibold leading-none text-[#0F172A]">Rajesh V.</span>
+<span class="text-[11px] text-[#64748B] leading-tight mt-0.5">Floor Super</span>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Canvas / Viewport Area -->
+<main class="flex-1 p-6 space-y-5 max-w-[1920px]">
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div>
+<h1 class="text-[24px] font-bold font-headline text-[#0F172A] tracking-tight">AI Insights &amp; Forecasting</h1>
+<p class="text-[13px] text-[#64748B] mt-0.5">Statistical time-series forecasting, 14-day stock-out mitigation, and automated replenishment recommendations.</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="h-9 px-4 bg-[#136DEC] hover:bg-[#0D5CC9] text-white text-[13px] font-semibold rounded-lg flex items-center gap-2 transition-all shadow-sm">
+<span class="material-symbols-outlined text-[18px] text-white">upload</span>
+              Upload sales data
+            </button>
+</div>
+</div>
+<!-- Primary Sub-nav Tabs -->
+<div class="flex items-center border-b border-[#E2E8F0] gap-8 pt-1">
+<!-- Sales prediction (Active: StoreBI Royal Blue text & bottom underline bar) -->
+<button class="flex items-center gap-2 pb-3 border-b-2 border-[#136DEC] text-[#136DEC] font-semibold text-[13px] transition-all">
+<span class="material-symbols-outlined text-[19px]">trending_up</span>
+<span>Sales prediction</span>
+</button>
+<!-- Demand forecast -->
+<button class="flex items-center gap-2 pb-3 border-b-2 border-transparent text-[#64748B] hover:text-[#0F172A] font-medium text-[13px] transition-all">
+<span class="material-symbols-outlined text-[19px]">warehouse</span>
+<span>Demand forecast</span>
+</button>
+<!-- Product recommendations -->
+<button class="flex items-center gap-2 pb-3 border-b-2 border-transparent text-[#64748B] hover:text-[#0F172A] font-medium text-[13px] transition-all">
+<span class="material-symbols-outlined text-[19px]">auto_awesome</span>
+<span>Product recommendations</span>
+</button>
+</div>
+<!-- Section Title & Controls Bar -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+<div>
+<div class="flex items-center gap-2.5">
+<h2 class="text-[16px] font-bold font-headline text-[#0F172A]">Daily Sales Prediction</h2>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#ECFDF5] text-[#065F46] border border-[#A7F3D0]">
+<span class="w-1.5 h-1.5 rounded-full bg-[#059669]"></span>
+                Model Ready
+              </span>
+</div>
+<p class="text-[12px] text-[#64748B] mt-0.5">Additive Holt-Winters time-series forecast with weekly seasonal smoothing.</p>
+</div>
+<div class="flex items-center gap-2.5">
+<!-- Horizon Filter -->
+<div class="flex items-center bg-[#F1F5F9] p-1 rounded-lg border border-[#E2E8F0]">
+<button class="px-3 py-1 text-[12px] font-semibold bg-white text-[#0F172A] rounded shadow-sm">7 days</button>
+<button class="px-3 py-1 text-[12px] font-medium text-[#64748B] hover:text-[#0F172A] transition-colors rounded">14 days</button>
+<button class="px-3 py-1 text-[12px] font-medium text-[#64748B] hover:text-[#0F172A] transition-colors rounded">30 days</button>
+</div>
+<!-- Refresh Button -->
+<button class="h-8 px-3 bg-white border border-[#E2E8F0] text-[#0F172A] rounded-lg text-[12px] font-medium hover:bg-[#F8FAFC] flex items-center gap-1.5 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[16px] text-[#64748B]">refresh</span>
+              Refresh
+            </button>
+</div>
+</div>
+<!-- Model Summary / Projected Revenue Cards -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+<!-- Card Left: Projected Revenue (7 cols) -->
+<div class="lg:col-span-7 bg-white rounded-xl border border-[#E2E8F0] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col justify-between" style="border-top: 3px solid #136DEC;">
+<div>
+<p class="text-[11px] font-semibold text-[#64748B] uppercase tracking-wider mb-1">PROJECTED REVENUE</p>
+<h3 class="text-[20px] font-bold font-headline text-[#0F172A]">
+                Expected sales next 7 days: <span class="text-[#136DEC] tracking-tight">₹27,224</span>
+</h3>
+</div>
+<div class="flex items-center gap-2 text-[13px] text-[#64748B] mt-3">
+<span>Confidence interval: <span class="text-[#0F172A] font-semibold">₹5,458 – ₹51,348</span></span>
+<span>•</span>
+<span>Daily run rate: <span class="text-[#0F172A] font-semibold">₹3,889 / day</span></span>
+</div>
+</div>
+<!-- Card Right: Model Metadata (5 cols) -->
+<div class="lg:col-span-5 bg-white rounded-xl border border-[#E2E8F0] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col justify-between" style="border-top: 3px solid #8B5CF6;">
+<div class="flex items-start gap-3">
+<div class="p-2 rounded-lg bg-[#EFF6FF] text-[#136DEC] mt-0.5 border border-[#BFDBFE]" style="background-color: #F5F3FF; color: #7C3AED; border-color: #DDD6FE;">
+<span class="material-symbols-outlined text-[20px]">auto_graph</span>
+</div>
+<div>
+<h4 class="text-[15px] font-bold font-headline text-[#0F172A]">Holt-Winters (Weekly Seasonality)</h4>
+<p class="text-[12px] text-[#64748B] mt-1 leading-relaxed">
+                  Holt-Winters weekly seasonality model (76.0% historical backtest fit). Retrained automatically.
+                </p>
+</div>
+</div>
+<div class="flex items-center justify-between text-[11px] text-[#64748B] pt-2 border-t border-[#F1F5F9] mt-2">
+<span>Model Version: HW-Multiplicative-v2.4</span>
+<span class="font-semibold text-[#0F172A]">Trained on 25 days of transactions</span>
+</div>
+</div>
+</div>
+<!-- Main Chart Card (Pure White with Light Cool Slate Borders) -->
+<div class="bg-white rounded-xl border border-[#E2E8F0] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-4">
+<!-- Chart Header & Legend -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+<div>
+<h3 class="text-[16px] font-bold font-headline text-[#0F172A]">Sales Trajectory: Last 30 Days Actuals + Next 7 Days Forecast</h3>
+<p class="text-[12px] text-[#64748B] mt-0.5">Solid line denotes recorded receipts; dashed line is the seasonal expectation with shaded confidence band.</p>
+</div>
+<!-- Legend Indicators -->
+<div class="flex items-center gap-4 text-[12px]">
+<div class="flex items-center gap-1.5">
+<span class="w-4 h-0.5 bg-[#136DEC]"></span>
+<span class="text-[#475569] font-medium">— Actuals</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-4 h-0.5 border-t border-dashed border-[#136DEC]"></span>
+<span class="text-[#475569] font-medium">-- Forecast</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-3.5 h-3.5 rounded bg-[#DBEAFE] border border-[#BFDBFE]"></span>
+<span class="text-[#475569] font-medium">Confidence band</span>
+</div>
+</div>
+</div>
+<!-- Time-Series Chart Area -->
+<div class="relative w-full overflow-x-auto">
+<div class="min-w-[860px] h-[340px] relative">
+<!-- SVG Graph Surface -->
+<svg class="w-full h-full overflow-visible" preserveaspectratio="none" viewbox="0 0 960 300">
+<defs>
+<!-- Shaded Confidence Band Gradient in StoreBI Soft Blue -->
+<lineargradient id="confidenceBandGradient" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#136DEC" stop-opacity="0.22"></stop>
+<stop offset="100%" stop-color="#93C5FD" stop-opacity="0.08"></stop>
+</lineargradient>
+</defs>
+<!-- Grid Horizontal Lines & Y-Axis Labels -->
+<!-- Level ₹10,331 -->
+<line stroke="#E2E8F0" stroke-dasharray="3 3" x1="60" x2="940" y1="20" y2="20"></line>
+<text fill="#64748B" font-size="11" font-weight="500" text-anchor="end" x="50" y="24">₹10,331</text>
+<!-- Level ₹7,748 -->
+<line stroke="#E2E8F0" stroke-dasharray="3 3" x1="60" x2="940" y1="80" y2="80"></line>
+<text fill="#64748B" font-size="11" font-weight="500" text-anchor="end" x="50" y="84">₹7,748</text>
+<!-- Level ₹5,166 -->
+<line stroke="#E2E8F0" stroke-dasharray="3 3" x1="60" x2="940" y1="140" y2="140"></line>
+<text fill="#64748B" font-size="11" font-weight="500" text-anchor="end" x="50" y="144">₹5,166</text>
+<!-- Level ₹2,583 -->
+<line stroke="#E2E8F0" stroke-dasharray="3 3" x1="60" x2="940" y1="200" y2="200"></line>
+<text fill="#64748B" font-size="11" font-weight="500" text-anchor="end" x="50" y="204">₹2,583</text>
+<!-- Level ₹0 Baseline -->
+<line stroke="#CBD5E1" x1="60" x2="940" y1="260" y2="260"></line>
+<text fill="#64748B" font-size="11" font-weight="500" text-anchor="end" x="50" y="264">₹0</text>
+<!-- Transition Demarcation Line (Actuals vs AI Forecast) -->
+<line stroke="#94A3B8" stroke-dasharray="4 4" stroke-width="1.5" x1="720" x2="720" y1="10" y2="260"></line>
+<rect fill="#F8FAFC" height="20" rx="3" width="50" x="668" y="18"></rect>
+<text fill="#475569" font-size="11" font-weight="600" text-anchor="middle" x="693" y="32">ACTUALS</text>
+<rect fill="#EFF6FF" height="20" rx="3" width="84" x="725" y="18"></rect>
+<text fill="#136DEC" font-size="11" font-weight="600" text-anchor="middle" x="767" y="32">AI Forecast →</text>
+<!-- Shaded Prediction Envelope / Confidence Band (x: 720 to 930) -->
+<path d="M 720 195 
+                     L 735 110 
+                     L 755 95 
+                     L 785 130 
+                     L 815 160 
+                     L 850 175 
+                     L 885 170 
+                     L 930 100 
+                     L 930 240 
+                     L 885 255 
+                     L 850 255 
+                     L 815 250 
+                     L 785 230 
+                     L 755 205 
+                     L 735 220 
+                     Z" fill="url(#confidenceBandGradient)"></path>
+<!-- Historical Actuals Line (StoreBI Royal Blue #136DEC) -->
+<path d="M 80 200 
+                     L 120 225 
+                     L 155 185 
+                     L 185 155 
+                     L 220 115 
+                     L 255 165 
+                     L 290 180 
+                     L 325 195 
+                     L 360 170 
+                     L 395 205 
+                     L 430 120 
+                     L 465 190 
+                     L 500 75 
+                     L 535 145 
+                     L 570 155 
+                     L 605 190 
+                     L 640 205 
+                     L 675 195 
+                     L 700 130 
+                     L 720 195" fill="none" stroke="#136DEC" stroke-linejoin="round" stroke-width="2.2"></path>
+<!-- Actuals Data Point Circles -->
+<circle cx="80" cy="200" fill="#136DEC" r="3.5" stroke="#FFFFFF" stroke-width="1.5"></circle>
+<circle cx="120" cy="225" fill="#136DEC" r="3.5" stroke="#FFFFFF" stroke-width="1.5"></circle>
+<circle cx="155" cy="185" fill="#136DEC" r="3.5" stroke="#FFFFFF" stroke-width="1.5"></circle>
+<circle cx="185" cy="155" fill="#136DEC" r="3.5" stroke="#FFFFFF" stroke-width="1.5"></circle>
+<circle cx="220" cy="115" fill="#136DEC" r="3.5" stroke="#FFFFFF" stroke-width="1.5"></circle>
+<circle cx="255" cy="165" fill="#136DEC" r="3.5" stroke="#FFFFFF" stroke-width="1.5"></circle>
+<circle cx="290" cy="180" fill="#136DEC" r="3.5" stroke="#FFFFFF" stroke-width="1.5"></circle>
+<circle cx="325" cy="195" fill="#136DEC" r="3.5" stroke="#FFFFFF" stroke-width="1.5"></circle>
+<circle cx="360" cy="170" fill="#136DEC" r="3.5" stroke="#FFFFFF" stroke-width="1.5"></circle>
+<circle cx="395" cy="205" fill="#136DEC" r="3.5" stroke="#FFFFFF" stroke-width="1.5"></circle>
+<circle cx="430" cy="120" fill="#136DEC" r="3.5" stroke="#FFFFFF" stroke-width="1.5"></circle>
+<circle cx="465" cy="190" fill="#136DEC" r="3.5" stroke="#FFFFFF" stroke-width="1.5"></circle>
+<circle cx="500" cy="75" fill="#136DEC" r="4" stroke="#FFFFFF" stroke-width="1.5"></circle>
+<circle cx="535" cy="145" fill="#136DEC" r="3.5" stroke="#FFFFFF" stroke-width="1.5"></circle>
+<circle cx="570" cy="155" fill="#136DEC" r="3.5" stroke="#FFFFFF" stroke-width="1.5"></circle>
+<circle cx="605" cy="190" fill="#136DEC" r="3.5" stroke="#FFFFFF" stroke-width="1.5"></circle>
+<circle cx="640" cy="205" fill="#136DEC" r="3.5" stroke="#FFFFFF" stroke-width="1.5"></circle>
+<circle cx="675" cy="195" fill="#136DEC" r="3.5" stroke="#FFFFFF" stroke-width="1.5"></circle>
+<circle cx="700" cy="130" fill="#136DEC" r="3.5" stroke="#FFFFFF" stroke-width="1.5"></circle>
+<circle cx="720" cy="195" fill="#136DEC" r="3.5" stroke="#FFFFFF" stroke-width="1.5"></circle>
+<!-- AI Forecast Dashed Line (StoreBI Royal Blue #136DEC) -->
+<path d="M 720 195 
+                     L 745 150 
+                     L 780 138 
+                     L 815 185 
+                     L 850 198 
+                     L 885 210 
+                     L 910 205 
+                     L 930 160" fill="none" stroke="#136DEC" stroke-dasharray="4 4" stroke-linejoin="round" stroke-width="2.2"></path>
+<!-- AI Forecast Nodes with hollow/white centers -->
+<circle cx="745" cy="150" fill="#FFFFFF" r="4" stroke="#136DEC" stroke-width="2"></circle>
+<circle cx="780" cy="138" fill="#FFFFFF" r="4" stroke="#136DEC" stroke-width="2"></circle>
+<circle cx="815" cy="185" fill="#FFFFFF" r="4" stroke="#136DEC" stroke-width="2"></circle>
+<circle cx="850" cy="198" fill="#FFFFFF" r="4" stroke="#136DEC" stroke-width="2"></circle>
+<circle cx="885" cy="210" fill="#FFFFFF" r="4" stroke="#136DEC" stroke-width="2"></circle>
+<circle cx="910" cy="205" fill="#FFFFFF" r="4" stroke="#136DEC" stroke-width="2"></circle>
+<circle cx="930" cy="160" fill="#FFFFFF" r="4" stroke="#136DEC" stroke-width="2"></circle>
+<!-- X-Axis Date Ticks & Subtext -->
+<text fill="#64748B" font-size="11" font-weight="500" text-anchor="middle" x="80" y="278">Tue</text>
+<text fill="#94A3B8" font-size="9.5" text-anchor="middle" x="80" y="291">09-15</text>
+<text fill="#64748B" font-size="11" font-weight="500" text-anchor="middle" x="220" y="278">Sat</text>
+<text fill="#94A3B8" font-size="9.5" text-anchor="middle" x="220" y="291">09-19</text>
+<text fill="#64748B" font-size="11" font-weight="500" text-anchor="middle" x="360" y="278">Wed</text>
+<text fill="#94A3B8" font-size="9.5" text-anchor="middle" x="360" y="291">09-23</text>
+<text fill="#64748B" font-size="11" font-weight="500" text-anchor="middle" x="500" y="278">Sun</text>
+<text fill="#94A3B8" font-size="9.5" text-anchor="middle" x="500" y="291">09-27</text>
+<text fill="#64748B" font-size="11" font-weight="500" text-anchor="middle" x="605" y="278">Thu</text>
+<text fill="#94A3B8" font-size="9.5" text-anchor="middle" x="605" y="291">10-01</text>
+<text fill="#64748B" font-size="11" font-weight="500" text-anchor="middle" x="675" y="278">Mon</text>
+<text fill="#94A3B8" font-size="9.5" text-anchor="middle" x="675" y="291">10-05</text>
+<text fill="#64748B" font-size="11" font-weight="500" text-anchor="middle" x="710" y="278">Fri</text>
+<text fill="#94A3B8" font-size="9.5" text-anchor="middle" x="710" y="291">10-09</text>
+<!-- Sat 10-10 (Forecast Starts) -->
+<text fill="#136DEC" font-size="11" font-weight="700" text-anchor="middle" x="745" y="278">Sat</text>
+<text fill="#3B82F6" font-size="9.5" font-weight="600" text-anchor="middle" x="745" y="291">10-10</text>
+<text fill="#136DEC" font-size="11" font-weight="700" text-anchor="middle" x="850" y="278">Tue</text>
+<text fill="#3B82F6" font-size="9.5" font-weight="600" text-anchor="middle" x="850" y="291">10-13</text>
+<text fill="#136DEC" font-size="11" font-weight="700" text-anchor="middle" x="930" y="278">Fri</text>
+<text fill="#3B82F6" font-size="9.5" font-weight="600" text-anchor="middle" x="930" y="291">10-16</text>
+</svg>
+</div>
+</div>
+<!-- Bottom Chart Info Banner & Peak Day Callout -->
+<div class="pt-3 border-t border-[#F1F5F9] flex flex-col md:flex-row md:items-center justify-between gap-3 text-[12px]">
+<div class="flex items-start gap-2 text-[#64748B] max-w-2xl">
+<span class="material-symbols-outlined text-[16px] text-[#64748B] mt-0.5 shrink-0">info</span>
+<span><strong>Disclaimer:</strong> Forecasts are statistical projections based on past transaction patterns and weekly seasonality. Actual sales may vary due to stockouts, market conditions, or unforeseen events.</span>
+</div>
+<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#EFF6FF] text-[#0F172A] shrink-0 border border-[#BFDBFE]" style="background-color: #FFFBEB; border-color: #FDE68A; color: #78350F;"><span class="material-symbols-outlined text-[16px] text-[#D97706]">local_mall</span><span>Highest expected sales: <strong>Sun, 2026-10-11</strong> (<span class="text-[#B45309] font-bold">₹5,704</span>)</span></div>
+</div>
+</div>
+<!-- Bottom Metric Baseline Cards (3 Columns) -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<!-- Card 1: Forecast Horizon -->
+<div class="bg-white rounded-xl border border-[#E2E8F0] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03)]" style="border-top: 3px solid #0EA5E9;"><div class="flex items-center justify-between"><p class="text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">Forecast Horizon</p><span class="p-1 rounded-md bg-[#E0F2FE] text-[#0284C7] flex items-center"><span class="material-symbols-outlined text-[15px]">date_range</span></span></div><div class="flex items-baseline gap-2 mt-2"><span class="text-[24px] font-bold font-headline text-[#0F172A]">7 Days</span><span class="text-[12px] text-[#64748B]">through 2026-10-18</span></div></div>
+<!-- Card 2: Average Expected Daily Run -->
+<div class="bg-white rounded-xl border border-[#E2E8F0] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03)]" style="border-top: 3px solid #10B981;"><div class="flex items-center justify-between"><p class="text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">Average Expected Daily Run</p><span class="p-1 rounded-md bg-[#ECFDF5] text-[#059669] flex items-center"><span class="material-symbols-outlined text-[15px]">payments</span></span></div><div class="flex items-baseline gap-1.5 mt-2"><span class="text-[24px] font-bold font-headline text-[#059669]">₹3,889</span><span class="text-[13px] text-[#64748B] font-medium">/ day</span></div></div>
+<!-- Card 3: Historical Baseline -->
+<div class="bg-white rounded-xl border border-[#E2E8F0] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03)]" style="border-top: 3px solid #F59E0B;">
+<p class="text-[11px] font-semibold text-[#64748B] uppercase tracking-wider">Historical Baseline</p>
+<div class="flex items-center justify-between mt-1">
+<span class="text-[24px] font-bold font-headline text-[#0F172A]">25 Days</span>
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#FFFBEB] text-[#92400E] border border-[#FDE68A]"><span class="material-symbols-outlined text-[14px] text-[#D97706]">show_chart</span>Seasonality calibrated</span>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+</body></html>
