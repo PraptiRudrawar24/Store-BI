@@ -83,7 +83,8 @@ def clean_numeric_value(val: Any, field_type: str = "number") -> Optional[float]
       - 'O' / 'o' adjacent to digits -> '0'
       - 'l' / 'I' / '|' adjacent to digits -> '1'
       - 'S' / 's' adjacent to digits -> '5'
-    - Accurately handles thousands separators (1,250.50 -> 1250.50, 1.250,50 -> 1250.50)
+    - Accurately handles thousands separators (1,250.50 -> 1250.50, 1,00,000.00 -> 100000.00)
+    - Handles whitespace and multiple tokens without concatenating multiple numbers (e.g. '10 25.00' does NOT become 1025.0)
     - Preserves negative signs or parenthesized adjustments: (50.00) -> -50.00
     - Preserves decimal precision (e.g. 2.5, 0.75, 120.50).
     """
@@ -93,6 +94,36 @@ def clean_numeric_value(val: Any, field_type: str = "number") -> Optional[float]
         return float(val)
 
     s = str(val).strip()
+    if not s:
+        return None
+
+    # Handle multiple space-separated tokens if present
+    tokens = s.split()
+    if len(tokens) > 1:
+        unit_word_pattern = re.compile(
+            r"^(?:kg|g|gm|gms|l|ltr|ltrs|ml|pcs|pkt|pkts|box|boxes|nos|no|units?|rs\.?|inr|₹|\$|€|£|/-|@|=)$",
+            re.IGNORECASE,
+        )
+        non_unit_tokens = [t for t in tokens if not unit_word_pattern.match(t)]
+        if len(non_unit_tokens) == 1:
+            s = non_unit_tokens[0]
+        elif len(non_unit_tokens) > 1:
+            # Parse individual candidates; do NOT concatenate them!
+            candidates = []
+            for tok in non_unit_tokens:
+                sub_num = clean_numeric_value(tok, field_type=field_type)
+                if sub_num is not None:
+                    candidates.append(sub_num)
+            if candidates:
+                if field_type == "qty":
+                    qty_cand = [c for c in candidates if 0 < c <= 5000 and (c.is_integer() or c < 100)]
+                    return qty_cand[0] if qty_cand else candidates[0]
+                elif field_type == "price":
+                    price_cand = [c for c in candidates if c > 0]
+                    return price_cand[0] if price_cand else candidates[0]
+                return candidates[0]
+            return None
+
     is_neg = False
     if s.startswith("(") and s.endswith(")"):
         is_neg = True
@@ -101,17 +132,26 @@ def clean_numeric_value(val: Any, field_type: str = "number") -> Optional[float]
         is_neg = True
         s = s[1:].strip()
 
-    # Strip currency symbols and common words
+    # Strip currency symbols and common prefixes/suffixes
     s = re.sub(r"[₹\$€£]", "", s)
     s = re.sub(r"\brs\.?(?!\w)|\binr\b|\busd\b|\beur\b", "", s, flags=re.IGNORECASE).strip()
     s = re.sub(r"[\/=\-:]+$", "", s).strip()
+
+    # Unit suffix if attached (e.g. 10pcs, 2.5kg, 12nos)
+    m_unit = re.match(
+        r"^([0-9\.,]+)\s*(?:kg|g|gm|gms|l|ltr|ltrs|ml|pcs|pkt|pkts|box|boxes|nos|no|units?)$",
+        s,
+        re.IGNORECASE,
+    )
+    if m_unit:
+        s = m_unit.group(1).strip()
 
     # OCR character confusion correction in numeric context
     s = re.sub(r"(?<=\d)[Oo]|[Oo](?=\d)", "0", s)
     s = re.sub(r"(?<=\d)[lI\|]|[lI\|](?=\d)", "1", s)
     s = re.sub(r"(?<=\d)[Ss]|[Ss](?=\d)", "5", s)
 
-    # Thousands separators vs decimal commas
+    # Thousands separators vs decimal commas (Indian and International)
     if "," in s and "." in s:
         if s.rfind(".") > s.rfind(","):
             s = s.replace(",", "")
@@ -550,6 +590,7 @@ def parse_digital_table_line(line: str, column_order: Optional[List[str]] = None
             "name": desc,
             "qty": 1.0,
             "cost_price": None,
+            "mrp_unit": None,
             "tax": None,
             "amount": None,
             "taxable_amount": None,
@@ -558,55 +599,77 @@ def parse_digital_table_line(line: str, column_order: Optional[List[str]] = None
         }
         for col_name, tok in zip(numeric_cols, num_tokens):
             if col_name == "QTY":
-                res["qty"] = clean_numeric_value(tok) or 1.0
-            elif col_name == "UNIT_COST":
-                res["cost_price"] = clean_numeric_value(tok)
+                res["qty"] = clean_numeric_value(tok, field_type="qty") or 1.0
+            elif col_name in ("UNIT_COST", "RATE"):
+                res["cost_price"] = clean_numeric_value(tok, field_type="price")
+            elif col_name == "MRP":
+                res["mrp_unit"] = clean_numeric_value(tok, field_type="price")
             elif col_name == "TAX":
                 res["tax"] = tok
-            elif col_name == "AMOUNT":
-                res["amount"] = clean_numeric_value(tok)
+            elif col_name in ("AMOUNT", "TOTAL_MRP"):
+                res["amount"] = clean_numeric_value(tok, field_type="amount")
             elif col_name == "TAXABLE_BASE":
-                res["taxable_amount"] = clean_numeric_value(tok)
+                res["taxable_amount"] = clean_numeric_value(tok, field_type="amount")
             elif col_name == "TAX_AMOUNT":
-                res["tax_amount"] = clean_numeric_value(tok)
+                res["tax_amount"] = clean_numeric_value(tok, field_type="amount")
         return res
 
     qty_val = 1.0
     cost_val = None
     tax_val = None
     amt_val = None
+    mrp_unit_val = None
 
-    if len(num_tokens) >= 4:
-        if column_order and "UNIT_COST" in column_order and "QTY" in column_order:
-            if column_order.index("UNIT_COST") < column_order.index("QTY"):
-                cost_val = clean_numeric_value(num_tokens[0])
-                qty_val = clean_numeric_value(num_tokens[1]) or 1.0
-                tax_val = num_tokens[2]
-                amt_val = clean_numeric_value(num_tokens[3])
-            else:
-                qty_val = clean_numeric_value(num_tokens[0]) or 1.0
-                cost_val = clean_numeric_value(num_tokens[1])
-                tax_val = num_tokens[2]
-                amt_val = clean_numeric_value(num_tokens[3])
-        else:
-            qty_val = clean_numeric_value(num_tokens[0]) or 1.0
-            cost_val = clean_numeric_value(num_tokens[1])
-            tax_val = num_tokens[2]
-            amt_val = clean_numeric_value(num_tokens[3])
+    if column_order and "UNIT_COST" in column_order and "QTY" in column_order:
+        non_desc = [c for c in column_order if c != "DESCRIPTION"]
+        qi = non_desc.index("QTY")
+        ci = non_desc.index("UNIT_COST")
+        if qi < len(num_tokens):
+            qty_val = clean_numeric_value(num_tokens[qi], field_type="qty") or 1.0
+        if ci < len(num_tokens):
+            cost_val = clean_numeric_value(num_tokens[ci], field_type="price")
+        for amt_col in ("TOTAL_MRP", "AMOUNT", "LINE_TOTAL"):
+            if amt_col in non_desc:
+                ai = non_desc.index(amt_col)
+                if ai < len(num_tokens):
+                    amt_val = clean_numeric_value(num_tokens[ai], field_type="amount")
+                break
+        for tax_col in ("TAX", "GST"):
+            if tax_col in non_desc:
+                ti = non_desc.index(tax_col)
+                if ti < len(num_tokens):
+                    tax_val = num_tokens[ti]
+                break
+    elif len(num_tokens) >= 4:
+        qty_val = clean_numeric_value(num_tokens[0], field_type="qty") or 1.0
+        cost_val = clean_numeric_value(num_tokens[1], field_type="price")
+        tax_val = num_tokens[2]
+        amt_val = clean_numeric_value(num_tokens[3], field_type="amount")
     elif len(num_tokens) == 3:
         if "%" in str(num_tokens[1]):
-            qty_val = clean_numeric_value(num_tokens[0]) or 1.0
+            qty_val = clean_numeric_value(num_tokens[0], field_type="qty") or 1.0
             tax_val = num_tokens[1]
-            amt_val = clean_numeric_value(num_tokens[2])
+            amt_val = clean_numeric_value(num_tokens[2], field_type="amount")
         else:
-            qty_val = clean_numeric_value(num_tokens[0]) or 1.0
-            cost_val = clean_numeric_value(num_tokens[1])
-            amt_val = clean_numeric_value(num_tokens[2])
+            qty_val = clean_numeric_value(num_tokens[0], field_type="qty") or 1.0
+            cost_val = clean_numeric_value(num_tokens[1], field_type="price")
+            amt_val = clean_numeric_value(num_tokens[2], field_type="amount")
     elif len(num_tokens) == 2:
-        qty_val = clean_numeric_value(num_tokens[0]) or 1.0
-        amt_val = clean_numeric_value(num_tokens[1])
+        n0 = clean_numeric_value(num_tokens[0])
+        n1 = clean_numeric_value(num_tokens[1])
+        if n0 is not None and n1 is not None and n0 == n1 and n0 > 10:
+            cost_val = n0
+            amt_val = n1
+            qty_val = 1.0
+        elif n0 is not None and n1 is not None and (0 < n0 <= 100) and n1 > n0:
+            qty_val = n0
+            amt_val = n1
+            cost_val = round(n1 / n0, 2)
+        else:
+            qty_val = n0 or 1.0
+            amt_val = n1
     elif len(num_tokens) == 1:
-        amt_val = clean_numeric_value(num_tokens[0])
+        amt_val = clean_numeric_value(num_tokens[0], field_type="amount")
 
     return {
         "name": desc,
@@ -614,6 +677,7 @@ def parse_digital_table_line(line: str, column_order: Optional[List[str]] = None
         "cost_price": cost_val,
         "tax": tax_val,
         "amount": amt_val,
+        "mrp_unit": mrp_unit_val,
         "raw_text": line,
     }
 
@@ -694,21 +758,27 @@ def extract_digital_pdf_text_and_tables(pdf_bytes: bytes) -> Optional[Dict[str, 
                 )
                 if matches >= 3 and ("qty" in plow or "quantity" in plow or "rate" in plow or "price" in plow):
                     header_idx = idx
+                    claimed_chars = set()
                     kw_positions = []
                     for c_type, pats in [
-                        ("DESCRIPTION", [r"\bitem\b", r"\bdescription\b", r"\bproduct\b", r"\bparticulars\b"]),
-                        ("QTY", [r"\bqty\b", r"\bquantity\b", r"\border\s*qty\b", r"\bitem\s*quantity\b", r"\bquantities\b", r"\bunits\b", r"\bnos\b", r"\bpcs\b"]),
-                        ("UNIT_COST", [r"\bprice\s*per\s*unit\b", r"\brate\s*per\s*unit\b", r"\bunit\s*price\b", r"\bunit\s*cost\b", r"\bbasic\s*rate\b", r"\bitem\s*rate\b", r"\bcost\s*per\s*unit\b", r"\brate\b", r"\bprice\b"]),
+                        ("DESCRIPTION", [r"\bitem\s*desc(?:ription)?\b", r"\bproduct\s*desc(?:ription)?\b", r"\bdescription\b", r"\bparticulars\b", r"\bproduct\b", r"\bitem\b"]),
+                        ("MRP", [r"\bunit\s*mrp\b", r"\bm\.?r\.?p\.?\b"]),
+                        ("PACK_SIZE", [r"\bpack\s*size\b", r"\bpacking\b", r"\bpack\b", r"\buom\b"]),
+                        ("FREE_QTY", [r"\bfree\s*qty\b", r"\bfree\b"]),
+                        ("QTY", [r"\border\s*qty\b", r"\bquantity\s*ordered\b", r"\bitem\s*quantity\b", r"\bbilled\s*qty\b", r"\bquantities\b", r"\bquantity\b", r"\bqty\.?\b", r"\bnos\.?\b", r"\bunits\b", r"\bpcs\.?\b"]),
+                        ("UNIT_COST", [r"\bprice\s*per\s*unit\b", r"\brate\s*per\s*unit\b", r"\bcost\s*per\s*unit\b", r"\bper\s*unit\s*price\b", r"\bunit\s*price\b", r"\bunit\s*cost\b", r"\bbasic\s*rate\b", r"\bitem\s*rate\b", r"\brate\b", r"\bprice\b"]),
                         ("TAX", [r"\bgst\s*%\b", r"\btax\s*%\b", r"\bigst\b", r"\bcgst\b", r"\bsgst\b", r"\bgst\b", r"\btax\b", r"\bvat\b"]),
-                        ("TAXABLE_BASE", [r"\btaxable\s*amount\b", r"\btaxable\s*value\b", r"\btaxable\b"]),
-                        ("TAX_AMOUNT", [r"\btax\s*amount\b", r"\bgst\s*amount\b"]),
-                        ("AMOUNT", [r"\bline\s*amount\b", r"\btotal\s*amount\b", r"\bitem\s*amount\b", r"\bline\s*total\b", r"\btotal\s*price\b", r"\bextended\s*amount\b", r"\btotal\s*mrp\b", r"\bamount\b", r"\btotal\b"]),
+                        ("TAXABLE_BASE", [r"\btaxable\s*amount\b", r"\btaxable\s*value\b", r"\btaxable\s*amt\b", r"\btaxable\b"]),
+                        ("TAX_AMOUNT", [r"\btax\s*amount\b", r"\bgst\s*amount\b", r"\btax\s*amt\b"]),
+                        ("AMOUNT", [r"\bline\s*amount\b", r"\btotal\s*amount\b", r"\bitem\s*amount\b", r"\bline\s*total\b", r"\btotal\s*price\b", r"\bextended\s*amount\b", r"\btotal\s*mrp\b", r"\bnet\s*amount\b", r"\bamount\b", r"\btotal\b"]),
                     ]:
                         for pat in pats:
-                            m = re.search(pat, plow)
-                            if m:
-                                kw_positions.append((m.start(), c_type))
-                                break
+                            for m in re.finditer(pat, plow):
+                                c_range = set(range(m.start(), m.end()))
+                                if not c_range.intersection(claimed_chars):
+                                    claimed_chars.update(c_range)
+                                    kw_positions.append((m.start(), c_type))
+                                    break
                     kw_positions.sort()
                     header_col_types = [c for _, c in kw_positions]
                     break
@@ -1333,32 +1403,34 @@ def validate_and_correct_items(items: List[Dict[str, Any]]) -> List[Dict[str, An
             tax_amount=raw_tax_amt,
         )
 
-        # --- MATHEMATICAL SELF-CORRECTION & INVERSION CHECK ---
-
         # RULE A: Inversion detection (Rate and Total were swapped by OCR when qty > 1)
         if cost_price and line_total and qty and qty > 1 and cost_price > line_total:
             if abs(cost_price - (line_total * qty)) <= max(2.0, cost_price * 0.05):
                 cost_price, line_total = line_total, cost_price
 
-        # RULE B: Recover missing Qty if line_total and cost_price are present but qty is missing/1
-        if cost_price and line_total and cost_price > 0 and (qty is None or qty <= 1) and line_total > cost_price:
-            ratio = line_total / cost_price
-            if ratio >= 1.4 and abs(ratio - round(ratio)) < 0.15:
-                qty = float(round(ratio))
+        # --- MATHEMATICAL VALIDATION SIGNAL (WITHOUT OVERWRITING DATA) ---
+        math_verified = False
+        math_discrepancy = False
 
-        # RULE C: Check if quantity was written into product name (e.g. "Tata Salt (10)")
-        if qty is None or qty <= 1:
-            name_qty_match = re.search(
-                r"[\(\[\{x\*\-]\s*(\d+(?:\.\d+)?)\s*(?:pcs|pkts|packs|units|nos|qty|bottles|boxes|cans)?\s*[\)\]\}]?$",
-                clean_name,
-                re.IGNORECASE,
-            )
-            if name_qty_match:
-                extracted_name_qty = float(name_qty_match.group(1))
-                if 1.0 < extracted_name_qty <= 500:
-                    qty = extracted_name_qty
+        if cost_price and line_total and qty and cost_price > 0 and line_total > 0 and qty > 0:
+            expected_line = qty * cost_price
+            diff_pretax = abs(expected_line - line_total)
+            rel_diff_pretax = diff_pretax / line_total
 
-        # RULE D: Ensure qty fallback
+            rel_diff_tax = 1.0
+            if tax_rate is not None and tax_rate > 0:
+                expected_with_tax = expected_line * (1.0 + (tax_rate / 100.0))
+                diff_tax = abs(expected_with_tax - line_total)
+                rel_diff_tax = diff_tax / line_total
+
+            if rel_diff_pretax <= 0.03 or (tax_rate is not None and rel_diff_tax <= 0.03):
+                math_verified = True
+            elif rel_diff_pretax > 0.15 and (tax_rate is None or rel_diff_tax > 0.15):
+                # Discrepancy signal: flags review needed, does NOT overwrite original data
+                math_discrepancy = True
+
+        # Rule D: Ensure qty fallback for system persistence if none was extractable
+        has_extracted_qty = (qty_num is not None and qty_num > 0)
         if qty is None or qty <= 0:
             qty = 1.0
 
@@ -1394,16 +1466,27 @@ def validate_and_correct_items(items: List[Dict[str, Any]]) -> List[Dict[str, An
             tax_amt = round(parse_num(raw_tax_amt) or 0.0, 2)
 
         # --- FIELD-LEVEL CONFIDENCE SCORES ---
+        qty_conf = 0.95 if has_extracted_qty else 0.40
+        cost_conf = 0.95 if (cost_price is not None and cost_price > 0) else 0.40
+
+        if math_verified:
+            qty_conf = max(qty_conf, 0.98)
+            cost_conf = max(cost_conf, 0.98)
+        elif math_discrepancy:
+            qty_conf = min(qty_conf, 0.65)
+            cost_conf = min(cost_conf, 0.65)
+
         field_conf = {
             "name": 0.95 if len(clean_name) >= 3 else 0.40,
-            "qty": 0.95 if (qty_num is not None and qty_num > 0) else 0.50,
-            "cost_price": 0.95 if (cost_price is not None and cost_price > 0) else 0.40,
-            "tax": tax_confidence,
+            "qty": round(qty_conf, 2),
+            "cost_price": round(cost_conf, 2),
+            "tax": round(tax_confidence, 2),
             "total_mrp": 0.95 if (final_total_mrp is not None and not is_taxable_only) else 0.30,
         }
 
         # Determine if row needs manual review:
         # Flag if tax cannot be determined reliably OR if amount/TOTAL MRP could not be extracted from invoice
+        # OR if qty/cost_price is low confidence or has math discrepancy
         needs_review = (
             final_total_mrp is None
             or is_taxable_only
@@ -1411,6 +1494,8 @@ def validate_and_correct_items(items: List[Dict[str, Any]]) -> List[Dict[str, An
             or tax_percent_str == "Needs Review"
             or any(score < 0.70 for score in field_conf.values())
             or final_cost is None
+            or not has_extracted_qty
+            or math_discrepancy
         )
 
         overall_conf = statistics.mean(field_conf.values())
@@ -1420,11 +1505,14 @@ def validate_and_correct_items(items: List[Dict[str, Any]]) -> List[Dict[str, An
         if expiry and not re.match(r"^\d{4}-\d{2}-\d{2}$", str(expiry).strip()):
             expiry = None
 
+        mrp_unit_val = clean_numeric_value(item.get("mrp_unit"), field_type="price") if item.get("mrp_unit") is not None else None
+
         corrected.append({
             # Standard project schema
             "name": clean_name,
             "qty": formatted_qty,
             "cost_price": final_cost,
+            "mrp_unit": mrp_unit_val,
             "tax_rate": tax_rate,
             "tax_percent": tax_percent_str,
             "tax_amount": tax_amt,
@@ -1433,6 +1521,8 @@ def validate_and_correct_items(items: List[Dict[str, Any]]) -> List[Dict[str, An
             "is_tax_inclusive": is_tax_inclusive,
             "mrp": final_total_mrp,
             "line_total": final_total_mrp,
+            "pack_size": item.get("pack_size"),
+            "free_qty": item.get("free_qty"),
             "expiry_date": expiry,
             "confidence": round(overall_conf, 2),
             "field_confidence": field_conf,
@@ -1490,36 +1580,76 @@ HEADER_COLUMN_PATTERNS: Dict[str, List[str]] = {
         r"\bparticulars\b",
         r"\bitem\s*name\b",
         r"\bproduct\s*name\b",
+        r"\bproducts\b",
+        r"\bitems\b",
         r"\bproduct\b",
         r"\bitem\b",
-        r"\bitems\b",
-        r"\bproducts\b",
+    ],
+    "PACK_SIZE": [
+        r"\bpack\s*size\b",
+        r"\bpacking\b",
+        r"\bpkg\b",
+        r"\bpack\b",
+        r"\buom\b",
+        r"\bunit\s*of\s*measure\b",
+    ],
+    "FREE_QTY": [
+        r"\bfree\s*qty\b",
+        r"\bfree\s*quantity\b",
+        r"\bfr\s*qty\b",
+        r"\bsch\s*qty\b",
+        r"\bscheme\s*qty\b",
+        r"\bfree\b",
     ],
     "QTY": [
         r"\border\s*qty\b",
+        r"\bbilled\s*qty\b",
         r"\bquantity\s*ordered\b",
         r"\bitem\s*quantity\b",
-        r"\bbilled\s*qty\b",
         r"\bquantities\b",
         r"\bquantity\b",
         r"\bqty\.?\b",
+        r"\bno\.?\s*of\s*items\b",
+        r"\bpieces\b",
+        r"\bpcs\.?\b",
         r"\bnos\.?\b",
         r"\bunits\b",
-        r"\bpcs\.?\b",
         r"\bcount\b",
+        r"\bno\.?\b",
+    ],
+    "MRP": [
+        r"\bunit\s*mrp\b",
+        r"\bmrp\s*/\s*unit\b",
+        r"\bm\.?r\.?p\.?\b",
+        r"\bmax(?:imum)?\s*retail\s*price\b",
     ],
     "UNIT_COST": [
         r"\bprice\s*per\s*unit\b",
         r"\brate\s*per\s*unit\b",
         r"\bcost\s*per\s*unit\b",
         r"\bper\s*unit\s*price\b",
+        r"\bbasic\s*rate\b",
+        r"\bbasic\s*price\b",
+        r"\bitem\s*rate\b",
         r"\bunit\s*price\b",
         r"\bunit\s*cost\b",
-        r"\bbasic\s*rate\b",
-        r"\bitem\s*rate\b",
         r"\brate\b",
         r"\bprice\b",
         r"\bcost\b",
+        r"\bptr\b",
+        r"\bpts\b",
+        r"\bw/?p\b",
+        r"\bd/?p\b",
+    ],
+    "DISCOUNT": [
+        r"\bdiscount\s*%\b",
+        r"\bdisc\s*%\b",
+        r"\bdisc(?:ount)?\s*amt\b",
+        r"\bdiscount\b",
+        r"\bdisc\.?\b",
+        r"\bcd\s*%\b",
+        r"\btd\s*%\b",
+        r"\bscheme\b",
     ],
     "TAX": [
         r"\btax\s*percentage\b",
@@ -1546,23 +1676,29 @@ HEADER_COLUMN_PATTERNS: Dict[str, List[str]] = {
         r"\bitem\s*total\b",
         r"\btotal\s*price\b",
         r"\bextended\s*amount\b",
+        r"\bnet\s*amount\b",
+        r"\bnet\s*amt\b",
+        r"\bbill\s*amount\b",
         r"\btotal\s*mrp\b",
         r"\bamount\b",
         r"\btotal\b",
-        r"\bnet\s*amount\b",
-        r"\bnet\s*amt\b",
     ],
     "TAXABLE_BASE": [
         r"\btaxable\s*value\b",
         r"\btaxable\s*amount\b",
         r"\btaxable\s*amt\b",
         r"\btaxable\b",
+        r"\bassessable\s*value\b",
+        r"\bnet\s*value\b",
     ],
     "TAX_AMOUNT": [
         r"\btax\s*amount\b",
         r"\bgst\s*amount\b",
         r"\btax\s*amt\b",
         r"\btotal\s*tax\b",
+        r"\bcgst\s*amt\b",
+        r"\bsgst\s*amt\b",
+        r"\bigst\s*amt\b",
     ],
     "HSN": [
         r"\bhsn/sac\b",
@@ -1571,11 +1707,24 @@ HEADER_COLUMN_PATTERNS: Dict[str, List[str]] = {
         r"\bsac\b",
         r"\bcode\b",
     ],
+    "BATCH": [
+        r"\bbatch\s*no\.?\b",
+        r"\bbatch\b",
+        r"\blot\s*no\.?\b",
+        r"\blot\b",
+    ],
+    "EXPIRY": [
+        r"\bexp(?:iry)?\s*date\b",
+        r"\bexp\.?\s*dt\.?\b",
+        r"\bexpiry\b",
+        r"\bexp\b",
+    ],
     "S_NO": [
         r"\bsr\.?\s*no\.?\b",
         r"\bs\.?\s*no\.?\b",
         r"\bsl\.?\s*no\.?\b",
-        r"\bno\.?\b",
+        r"\bsn\.?\b",
+        r"\bs\.?n\.?\b",
     ],
 }
 
@@ -1587,59 +1736,153 @@ def _match_header_words_in_line(
     """
     Identifies which header column categories are present in a line of OCR words,
     and returns list of (col_name, x_min, x_max).
+    Claims matching words to prevent cross-column overlaps.
     """
-    line_text = " ".join(w["text"] for w in words).lower()
+    if not words:
+        return []
+
+    words_sorted = sorted(words, key=lambda w: w["x"])
+    line_text = " ".join(w["text"] for w in words_sorted).lower()
     matched_cols: List[Tuple[str, float, float]] = []
+    claimed_word_indices: Set[int] = set()
+
+    # Pre-calculate word character spans in line_text
+    word_spans = []
+    curr_pos = 0
+    for w in words_sorted:
+        w_len = len(w["text"])
+        word_spans.append((curr_pos, curr_pos + w_len))
+        curr_pos += w_len + 1
+
+    # Find position of DESCRIPTION if any, to disambiguate "No." (S_NO vs QTY)
+    desc_x: Optional[float] = None
+    for w in words_sorted:
+        if any(re.search(p, w["text"].lower()) for p in [r"\bdescription\b", r"\bparticulars\b", r"\bitem\b", r"\bproduct\b"]):
+            desc_x = w["x"]
+            break
 
     for col_name, pat_list in patterns.items():
         found = False
         for pat in pat_list:
-            m = re.search(pat, line_text)
-            if m:
+            for m in re.finditer(pat, line_text):
                 start_char, end_char = m.start(), m.end()
-                curr_char = 0
-                matching_words = []
-                for w in words:
-                    w_len = len(w["text"])
-                    w_start = curr_char
-                    w_end = curr_char + w_len
-                    if not (w_end <= start_char or w_start >= end_char):
-                        matching_words.append(w)
-                    curr_char += w_len + 1
+                matching_indices = [
+                    i for i, (ws, we) in enumerate(word_spans)
+                    if not (we <= start_char or ws >= end_char)
+                ]
+                if not matching_indices:
+                    continue
+                # If any word is already claimed, skip this match
+                if any(i in claimed_word_indices for i in matching_indices):
+                    continue
 
-                if matching_words:
-                    # Ensure multi-word column header phrases are physically contiguous
-                    # and not spanning across separate table column gaps
-                    words_in_phrase = sorted(matching_words, key=lambda item: item["x"])
-                    is_contiguous = True
-                    for i in range(len(words_in_phrase) - 1):
-                        gap = words_in_phrase[i + 1]["x"] - (words_in_phrase[i]["x"] + words_in_phrase[i]["w"])
-                        max_allowed_gap = max(25.0, words_in_phrase[i].get("h", 15.0) * 1.8)
-                        if gap > max_allowed_gap:
-                            is_contiguous = False
-                            break
-                    if not is_contiguous:
+                # Ensure multi-word column header phrases are physically contiguous
+                words_in_phrase = [words_sorted[i] for i in matching_indices]
+                is_contiguous = True
+                for i in range(len(words_in_phrase) - 1):
+                    gap = words_in_phrase[i + 1]["x"] - (words_in_phrase[i]["x"] + words_in_phrase[i]["w"])
+                    max_allowed_gap = max(25.0, words_in_phrase[i].get("h", 15.0) * 1.8)
+                    if gap > max_allowed_gap:
+                        is_contiguous = False
+                        break
+                if not is_contiguous:
+                    continue
+
+                # Disambiguate "no." / "nos."
+                match_text = m.group(0).strip(".:- ")
+                if match_text in ("no", "nos", "no."):
+                    x_pos = min(w["x"] for w in words_in_phrase)
+                    if col_name == "S_NO" and desc_x is not None and x_pos > desc_x:
+                        # "No." after description represents Quantity
+                        continue
+                    if col_name == "QTY" and desc_x is not None and x_pos < desc_x:
+                        # "No." before description represents Serial Number
                         continue
 
-                    x_min = min(w["x"] for w in matching_words)
-                    x_max = max(w["x"] + w["w"] for w in matching_words)
-                    matched_cols.append((col_name, x_min, x_max))
-                    found = True
-                    break
+                claimed_word_indices.update(matching_indices)
+                x_min = min(w["x"] for w in words_in_phrase)
+                x_max = max(w["x"] + w["w"] for w in words_in_phrase)
+                matched_cols.append((col_name, x_min, x_max))
+                found = True
+                break
+            if found:
+                break
 
-        if not found and col_name in ("QTY", "UNIT_COST", "TAX", "TOTAL_MRP"):
-            for w in words:
-                wt = w["text"].lower().strip(".:-")
-                for pat in pat_list:
-                    clean_pat = pat.replace(r"\b", "").replace(r"\.?\b", "").strip()
-                    if wt == clean_pat or re.fullmatch(clean_pat, wt):
-                        matched_cols.append((col_name, w["x"], w["x"] + w["w"]))
-                        found = True
-                        break
-                if found:
-                    break
-
+    matched_cols.sort(key=lambda item: (item[1] + item[2]) / 2.0)
     return matched_cols
+
+
+def extract_cell_numeric(
+    cell_words: List[Dict[str, Any]],
+    col_center: float,
+    field_type: str = "number",
+) -> Optional[float]:
+    """
+    Extracts a single reliable numeric value from words falling into a column interval.
+    - Prevents concatenation of separate numbers within the same cell.
+    - If multiple numeric tokens exist, prioritizes the one closest to the column center.
+    - Resolves split tokens (e.g., thousands comma or currency prefix).
+    - Preserves decimal precision and handles Indian number formatting.
+    """
+    if not cell_words:
+        return None
+
+    # First test if all words in cell form a single number (e.g. ["₹", "1,250.50"] or ["10", "PCS"])
+    joined_text = " ".join(w["text"] for w in cell_words).strip()
+
+    # If only 1 word, parse directly
+    if len(cell_words) == 1:
+        return clean_numeric_value(cell_words[0]["text"], field_type=field_type)
+
+    # Check if words form a single split number (e.g. "1," and "250.50" or "Rs." and "500.00")
+    compact_text = re.sub(r"(?<=\d)[,\.]\s+(?=\d)", "", joined_text)
+    compact_num = clean_numeric_value(compact_text, field_type=field_type)
+
+    # Parse individual candidates
+    candidates: List[Tuple[float, float, Dict[str, Any]]] = []
+    for w in cell_words:
+        val = clean_numeric_value(w["text"], field_type=field_type)
+        if val is not None:
+            cx = w.get("cx", w["x"] + w["w"] / 2.0)
+            dist = abs(cx - col_center)
+            candidates.append((dist, val, w))
+
+    if candidates:
+        candidates.sort(key=lambda item: item[0])
+        # If there's only 1 valid numeric token among unit/currency symbols, return it
+        if len(candidates) == 1:
+            return candidates[0][1]
+
+        # If multiple candidates exist, prefer the one closest to col_center
+        if field_type == "qty":
+            valid_qty = [c for c in candidates if 0.01 <= c[1] <= 50000]
+            if valid_qty:
+                return valid_qty[0][1]
+        elif field_type == "price":
+            valid_price = [c for c in candidates if c[1] > 0]
+            if valid_price:
+                return valid_price[0][1]
+        return candidates[0][1]
+
+    # Fallback to compact or joined text
+    return compact_num or clean_numeric_value(joined_text, field_type=field_type)
+
+
+def extract_cell_tax(cell_words: List[Dict[str, Any]]) -> Optional[str]:
+    """Extracts a tax percentage representation from words in the tax column."""
+    if not cell_words:
+        return None
+    joined = " ".join(w["text"] for w in cell_words).strip()
+    m_pct = re.search(r"(\d+(?:\.\d+)?)\s*%", joined)
+    if m_pct:
+        return f"{m_pct.group(1)}%"
+    m_num = re.search(r"\b(\d+(?:\.\d+)?)\b", joined)
+    if m_num:
+        val = float(m_num.group(1))
+        if val in (0, 0.0, 0.1, 0.25, 1.5, 3.0, 5.0, 6.0, 9.0, 12.0, 14.0, 18.0, 28.0):
+            return f"{m_num.group(1)}%"
+        return m_num.group(1)
+    return joined if joined else None
 
 
 def detect_spatial_table_and_extract_items(
@@ -1649,19 +1892,18 @@ def detect_spatial_table_and_extract_items(
 ) -> List[Dict[str, Any]]:
     """
     2D Spatial Table & Column Detector using OCR word coordinates and bounding boxes:
-    - Clusters words into horizontal visual lines using vertical centers (cy).
+    - Clusters words into horizontal visual lines using vertical centers (cy) with anti-drift bounding.
     - Detects the table header row (supports single and multi-line headers).
     - Computes horizontal column boundary intervals [x_left, x_right] for each field.
-    - Handles reordered columns (e.g. Layout A: Description|Qty|Rate|GST|Amount,
-      Layout B: Item|Unit Price|Quantity|IGST|Total, Layout C: Product|QTY|Price per Unit|Tax %|Line Amount).
+    - Extracts distinct columns: QTY, UNIT_COST, MRP, TAX, TOTAL_MRP, PACK_SIZE, FREE_QTY.
+    - Picks numeric tokens closest to column centers to eliminate adjacent column bleed.
     - Associates words with table rows and handles multiline description wrapping without row splitting.
-    - Accurately distinguishes line totals from taxable base, tax amount, and HSN codes.
     - Preserves original OCR text and page number.
     """
     if not words or len(words) < 4:
         return []
 
-    # 1. Compute cy and group words into lines
+    # 1. Compute cy and group words into lines with anchor-based clustering to prevent downward drift
     for w in words:
         if "cy" not in w:
             w["cy"] = w["y"] + (w["h"] / 2.0)
@@ -1670,25 +1912,25 @@ def detect_spatial_table_and_extract_items(
 
     heights = [w["h"] for w in words if w.get("h", 0) > 0]
     med_h = statistics.median(heights) if heights else 15.0
-    y_threshold = max(8.0, med_h * 0.85)
+    line_tolerance = max(6.0, med_h * 0.65)
 
     words_sorted = sorted(words, key=lambda w: w["cy"])
     lines_of_words: List[List[Dict[str, Any]]] = []
     curr_line: List[Dict[str, Any]] = []
-    curr_cy: Optional[float] = None
+    curr_anchor_cy: Optional[float] = None
 
     for w in words_sorted:
-        if curr_cy is None:
+        if curr_anchor_cy is None:
             curr_line = [w]
-            curr_cy = w["cy"]
-        elif abs(w["cy"] - curr_cy) <= y_threshold:
+            curr_anchor_cy = w["cy"]
+        elif abs(w["cy"] - curr_anchor_cy) <= line_tolerance and (max(item["cy"] for item in curr_line + [w]) - min(item["cy"] for item in curr_line + [w])) <= med_h * 0.95:
             curr_line.append(w)
-            curr_cy = sum(item["cy"] for item in curr_line) / len(curr_line)
+            curr_anchor_cy = sum(item["cy"] for item in curr_line) / len(curr_line)
         else:
             curr_line.sort(key=lambda item: item["x"])
             lines_of_words.append(curr_line)
             curr_line = [w]
-            curr_cy = w["cy"]
+            curr_anchor_cy = w["cy"]
     if curr_line:
         curr_line.sort(key=lambda item: item["x"])
         lines_of_words.append(curr_line)
@@ -1718,7 +1960,7 @@ def detect_spatial_table_and_extract_items(
                     is_2line = True
 
         effective_cols = detected_2line if is_2line else detected
-        core_categories = {"QTY", "UNIT_COST", "TAX", "TOTAL_MRP", "TAXABLE_BASE"}
+        core_categories = {"QTY", "UNIT_COST", "TAX", "TOTAL_MRP", "MRP", "TAXABLE_BASE"}
         matched_core = sum(1 for col_name, _, _ in effective_cols if col_name in core_categories)
 
         if matched_core >= 2 and len(effective_cols) > max_matched_cols:
@@ -1730,12 +1972,14 @@ def detect_spatial_table_and_extract_items(
     if best_header_idx is None or max_matched_cols < 2:
         return []
 
-    # 3. Establish Column Boundaries
+    # 3. Establish Column Boundaries and Centers
     cols_sorted = sorted(best_header_cols, key=lambda c: (c[1] + c[2]) / 2.0)
     col_intervals: List[Tuple[str, float, float]] = []
+    col_centers: Dict[str, float] = {}
     num_cols = len(cols_sorted)
 
     for idx, (col_name, x_min, x_max) in enumerate(cols_sorted):
+        col_centers[col_name] = (x_min + x_max) / 2.0
         if idx == 0:
             left_bound = 0.0
         elif cols_sorted[idx - 1][0] == "DESCRIPTION":
@@ -1773,6 +2017,7 @@ def detect_spatial_table_and_extract_items(
 
     unit_suffix_pattern = re.compile(r"^\d+(\.\d+)?(kg|g|gm|gms|l|ltr|ltrs|ml|pcs|pkt|pkts|box)$", re.IGNORECASE)
     unit_word_pattern = re.compile(r"^(kg|g|gm|gms|l|ltr|ltrs|ml|pcs|pkt|pkts|box)$", re.IGNORECASE)
+    pending_desc_prefix: Optional[str] = None
 
     for l_idx in range(start_row, len(lines_of_words)):
         row_words = lines_of_words[l_idx]
@@ -1800,12 +2045,12 @@ def detect_spatial_table_and_extract_items(
                     break
 
         num_fields_present = sum(
-            1 for c_type in ["QTY", "UNIT_COST", "TOTAL_MRP", "TAXABLE_BASE"]
+            1 for c_type in ["QTY", "UNIT_COST", "TOTAL_MRP", "TAXABLE_BASE", "MRP"]
             if cell_words.get(c_type)
         )
         desc_words = cell_words.get("DESCRIPTION", [])
 
-        # Wrapped description from row above: Combine continuation lines with the correct product instead of creating separate products
+        # Wrapped description from row above: Combine continuation lines with the correct product
         if num_fields_present == 0 and desc_words and extracted_items:
             continuation_text = " ".join(w["text"] for w in desc_words).strip()
             if continuation_text and not any(k in continuation_text.lower() for k in ["total", "gstin", "invoice", "bank", "terms", "signat"]):
@@ -1814,44 +2059,55 @@ def detect_spatial_table_and_extract_items(
                     extracted_items[-1]["name"] = combined_name
             continue
 
+        # Wrapped description before row
+        if num_fields_present == 0 and desc_words:
+            cand_pending = " ".join(w["text"] for w in desc_words).strip()
+            if cand_pending and not any(k in cand_pending.lower() for k in ["total", "gstin", "invoice", "bank", "terms"]):
+                pending_desc_prefix = cand_pending
+            continue
+
         if num_fields_present == 0 and not desc_words:
             continue
 
         raw_desc = " ".join(w["text"] for w in desc_words).strip()
         if not raw_desc:
             first_num_left = min(
-                (c[1] for c in col_intervals if c[0] in ["QTY", "UNIT_COST", "TOTAL_MRP"] and cell_words.get(c[0])),
+                (c[1] for c in col_intervals if c[0] in ["QTY", "UNIT_COST", "TOTAL_MRP", "MRP"] and cell_words.get(c[0])),
                 default=float('inf'),
             )
             left_words = [w for w in row_words if w["cx"] < first_num_left]
             raw_desc = " ".join(w["text"] for w in left_words).strip()
+
+        if pending_desc_prefix:
+            raw_desc = f"{pending_desc_prefix} {raw_desc}".strip()
+            pending_desc_prefix = None
 
         clean_name = clean_product_name(raw_desc)
         # Verify genuine product name: Exclude metadata, company names, headers, taxes, etc.
         if not clean_name or len(clean_name) < 2 or not is_genuine_product_name(clean_name):
             continue
 
-        raw_qty_str = " ".join(w["text"] for w in cell_words.get("QTY", [])).strip()
-        raw_cost_str = " ".join(w["text"] for w in cell_words.get("UNIT_COST", [])).strip()
-        raw_tax_str = " ".join(w["text"] for w in cell_words.get("TAX", [])).strip()
-        raw_mrp_str = " ".join(w["text"] for w in cell_words.get("TOTAL_MRP", [])).strip()
-        raw_taxable_str = " ".join(w["text"] for w in cell_words.get("TAXABLE_BASE", [])).strip()
-        raw_taxamt_str = " ".join(w["text"] for w in cell_words.get("TAX_AMOUNT", [])).strip()
-
-        qty_val = clean_numeric_value(raw_qty_str) if raw_qty_str else 1.0
-        cost_val = clean_numeric_value(raw_cost_str) if raw_cost_str else None
-        mrp_val = clean_numeric_value(raw_mrp_str) if raw_mrp_str else None
-        taxable_val = clean_numeric_value(raw_taxable_str) if raw_taxable_str else None
-        taxamt_val = clean_numeric_value(raw_taxamt_str) if raw_taxamt_str else None
+        qty_val = extract_cell_numeric(cell_words.get("QTY", []), col_centers.get("QTY", 0.0), field_type="qty")
+        cost_val = extract_cell_numeric(cell_words.get("UNIT_COST", []), col_centers.get("UNIT_COST", 0.0), field_type="price")
+        mrp_unit_val = extract_cell_numeric(cell_words.get("MRP", []), col_centers.get("MRP", 0.0), field_type="price")
+        tax_val = extract_cell_tax(cell_words.get("TAX", []))
+        amt_val = extract_cell_numeric(cell_words.get("TOTAL_MRP", []), col_centers.get("TOTAL_MRP", 0.0), field_type="amount")
+        taxable_val = extract_cell_numeric(cell_words.get("TAXABLE_BASE", []), col_centers.get("TAXABLE_BASE", 0.0), field_type="amount")
+        taxamt_val = extract_cell_numeric(cell_words.get("TAX_AMOUNT", []), col_centers.get("TAX_AMOUNT", 0.0), field_type="amount")
+        pack_size_val = " ".join(w["text"] for w in cell_words.get("PACK_SIZE", [])).strip() or None
+        free_qty_val = extract_cell_numeric(cell_words.get("FREE_QTY", []), col_centers.get("FREE_QTY", 0.0), field_type="qty")
 
         extracted_items.append({
             "name": clean_name,
-            "qty": qty_val or 1.0,
+            "qty": qty_val,
             "cost_price": cost_val,
-            "tax": raw_tax_str if raw_tax_str else None,
-            "amount": mrp_val,
+            "mrp_unit": mrp_unit_val,
+            "tax": tax_val,
+            "amount": amt_val,
             "taxable_amount": taxable_val,
             "tax_amount": taxamt_val,
+            "pack_size": pack_size_val,
+            "free_qty": free_qty_val,
             "page": page_num,
             "raw_text": row_text,
         })
@@ -2120,36 +2376,46 @@ async def extract_with_local_ocr(
                 raw_name = clean_product_name(" ".join(name_tokens))
                 if len(raw_name) < 2 or not is_genuine_product_name(raw_name):
                     continue
-                qty = 1
-                rate = 0.0
-                line_tot = 0.0
-                if len(num_vals) >= 3:
-                    n1, n2, n3 = num_vals[-3], num_vals[-2], num_vals[-1]
-                    if n1 * n2 == n3 or abs(n1 * n2 - n3) <= max(2.0, n3 * 0.05):
-                        qty = int(n1) if n1.is_integer() else 1
+                if len(num_vals) >= 4:
+                    qty = num_vals[0] if (0.01 <= num_vals[0] <= 5000) else 1.0
+                    rate = num_vals[1]
+                    line_tot = num_vals[3]
+                elif len(num_vals) == 3:
+                    n1, n2, n3 = num_vals[0], num_vals[1], num_vals[2]
+                    if abs(n1 * n2 - n3) <= max(2.0, n3 * 0.05):
+                        qty = n1
                         rate = n2
                         line_tot = n3
                     else:
-                        qty = int(n1) if (n1.is_integer() and 1 <= n1 <= 1000) else 1
+                        qty = n1 if (0.01 <= n1 <= 1000) else 1.0
                         rate = n2
                         line_tot = n3
                 elif len(num_vals) == 2:
                     n1, n2 = num_vals[0], num_vals[1]
-                    rate = min(n1, n2)
-                    line_tot = max(n1, n2)
-                    qty = max(1, int(round(line_tot / rate))) if rate > 0 else 1
+                    if n1 == n2:
+                        qty = 1.0
+                        rate = n1
+                        line_tot = n2
+                    elif 0 < n1 <= 500:
+                        qty = n1
+                        rate = None
+                        line_tot = n2
+                    else:
+                        qty = 1.0
+                        rate = n1
+                        line_tot = n2
                 elif len(num_vals) == 1:
-                    qty = 1
+                    qty = 1.0
                     line_tot = num_vals[0]
-                    rate = num_vals[0]
+                    rate = None
                 norm_name = raw_name.lower()
-                if norm_name not in seen_names and (rate > 0 or line_tot > 0):
+                if norm_name not in seen_names and (line_tot is not None and line_tot > 0 or (rate is not None and rate > 0)):
                     seen_names.add(norm_name)
                     raw_items.append({
                         "name": raw_name,
-                        "qty": max(1, qty),
-                        "cost_price": round(rate, 2),
-                        "line_total": round(line_tot, 2),
+                        "qty": qty,
+                        "cost_price": round(rate, 2) if rate is not None else None,
+                        "line_total": round(line_tot, 2) if line_tot is not None else None,
                         "confidence": 0.88,
                         "page": page_num,
                         "raw_text": line,
@@ -2219,8 +2485,8 @@ INVOICE_EXTRACTION_PROMPT = (
     "CRITICAL RULES FOR ACCURATE EXTRACTION:\n"
     "1. Read every single genuine product line item row in the product table. Do NOT extract company names, customer names, addresses, invoice numbers, dates, GSTIN/HSN codes, table column headers, subtotals, grand totals, taxes, bank details, terms, or signatures as product items.\n"
     "2. description (Product / Description): Clean product name with weight/pack size (e.g. 'Tata Salt 1kg', 'Fortune Oil 1L'). Combine multiline continuation rows into the single product description.\n"
-    "3. quantity (QTY): Standardize from 'Qty', 'Qty.', 'Quantity', 'Quantities', 'Quantity Ordered', 'Order Qty', 'Item Quantity', 'Nos', 'Units', 'PCS', 'Billed Qty'. Support whole and decimal quantities (e.g. 1, 5, 12, 2.5, 0.75). NEVER leave quantity as 0 or null.\n"
-    "4. unit_price (UNIT COST): The pre-tax price per unit from 'Rate', 'Price', 'Price per Unit', 'Rate per Unit', 'Unit Price', 'Cost per Unit', 'Basic Rate', 'Item Rate'. Distinguish unit price from line total.\n"
+    "3. quantity (QTY): Extract the billed/ordered quantity from 'Qty', 'Qty.', 'Quantity', 'Quantities', 'Quantity Ordered', 'Order Qty', 'Item Quantity', 'Nos', 'Units', 'PCS', 'Billed Qty'. Support single/multi-digit whole numbers and legitimate fractional decimal quantities (e.g. 1, 10, 25, 2.5, 0.75). Do NOT confuse quantity with HSN codes, SKU/item numbers, pack sizes, or MRP. Do NOT extract pack-size numbers or weight numbers (e.g. '10x100g' or '500g') into quantity. Keep pack size in description. NEVER leave quantity as 0 or null.\n"
+    "4. unit_price (UNIT COST): The pre-tax unit cost/rate per unit from 'Rate', 'Rate per Unit', 'Basic Rate', 'Price per Unit', 'Unit Cost', 'Unit Price', 'Cost per Unit', 'Basic Price', 'Item Rate', 'Price'. Preserve decimal precision. Do NOT confuse unit cost with MRP, selling price, discount, taxable amount, tax amount, or line total. If both MRP and Unit Cost (Rate) appear on the invoice, extract the Unit Cost (Rate) into unit_price.\n"
     "5. tax_rate / tax_percent (TAX): The tax rate percentage (e.g. 18.0 / '18%', 5.0 / '5%', 12.0 / '12%', 28.0 / '28%', 0.0 / '0%') from 'Tax', 'Tax %', 'GST', 'GST %', 'IGST', 'IGST %', 'CGST', 'CGST %', 'SGST', 'SGST %', 'VAT', 'VAT %', 'Tax Rate', 'GST Rate'.\n"
     "   - If separate CGST and SGST rates are present (e.g. CGST 9% and SGST 9%), COMBINE them into a unified tax rate of 18.0 ('18%').\n"
     "   - If an IGST rate is present (e.g. 18%), use it as the unified tax rate.\n"
