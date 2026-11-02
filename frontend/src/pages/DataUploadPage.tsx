@@ -437,13 +437,12 @@ export function DataUploadPage() {
             </div>
           </div>
           <div className="text-2xl font-bold text-[#0F172A] dark:text-white tabular-nums font-data">
-            {counts.products > 0 ? counts.products.toLocaleString() : '1,482'}
+            {counts.products.toLocaleString()}
           </div>
           <div className="mt-2.5 flex items-center gap-1.5">
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-[#D1FAE5] text-[#065F46] border border-[#A7F3D0] dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800">
-              ↑ +38 this month
+            <span className="text-[11px] text-[#64748B] dark:text-slate-400">
+              {counts.products === 1 ? 'product recorded' : 'products recorded'}
             </span>
-            <span className="text-[11px] text-[#64748B] dark:text-slate-400">across 6 aisles</span>
           </div>
         </div>
 
@@ -456,13 +455,16 @@ export function DataUploadPage() {
             </div>
           </div>
           <div className="text-2xl font-bold text-[#D97706] tabular-nums font-data">
-            {lowStockCount || 14}
+            {lowStockCount}
           </div>
           <div className="mt-2.5 flex items-center gap-1.5">
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-[#FEF3C7] text-[#B45309] border border-[#FDE68A] dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800">
-              Urgent PO Required
+            <span className="text-[11px] text-[#64748B] dark:text-slate-400">
+              {lowStockCount > 0
+                ? 'products below reorder level'
+                : counts.products > 0
+                  ? 'No products below reorder level'
+                  : 'Add products to track stock levels'}
             </span>
-            <span className="text-[11px] text-[#64748B] dark:text-slate-400">below 2-day buffer</span>
           </div>
         </div>
 
@@ -475,12 +477,9 @@ export function DataUploadPage() {
             </div>
           </div>
           <div className="text-2xl font-bold text-[#0F172A] dark:text-white tabular-nums font-data">
-            {totalStockValuation > 0 ? formatINR(totalStockValuation) : '₹1,24,209.00'}
+            {formatINR(totalStockValuation)}
           </div>
           <div className="mt-2.5 flex items-center gap-1.5">
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-[#D1FAE5] text-[#065F46] border border-[#A7F3D0] dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800">
-              ↑ +8.4%
-            </span>
             <span className="text-[11px] text-[#64748B] dark:text-slate-400">at cost price ledger</span>
           </div>
         </div>
@@ -494,13 +493,10 @@ export function DataUploadPage() {
             </div>
           </div>
           <div className="text-2xl font-bold text-[#0F172A] dark:text-white tabular-nums font-data">
-            3 <span className="text-base font-normal text-[#64748B] dark:text-slate-400">POs</span>
+            0 <span className="text-base font-normal text-[#64748B] dark:text-slate-400">POs</span>
           </div>
           <div className="mt-2.5 flex items-center gap-1.5">
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-[#EBF3FF] text-[#136DEC] border border-[#BFDBFE] dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800">
-              ETA: Today 5 PM
-            </span>
-            <span className="text-[11px] text-[#64748B] dark:text-slate-400">Amul, ITC, HUL</span>
+            <span className="text-[11px] text-[#64748B] dark:text-slate-400">No incoming orders recorded</span>
           </div>
         </div>
       </div>

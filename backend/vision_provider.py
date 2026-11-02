@@ -4,7 +4,7 @@ Isolates vision model extraction logic into a single swappable, resilient file.
 Features:
 - Camera EXIF rotation correction & image contrast enhancement pipeline
 - Reference-grade extraction prompt: plain numbers, strict JSON, no markdown fences, no preamble
-- Multi-provider AI Vision: supports Anthropic Claude (Claude 3.5 Sonnet / Haiku) & Google Gemini (1.5/2.0 Flash)
+- Multi-provider AI Vision: supports Anthropic Claude (Claude 3.5 Sonnet / Haiku) & Google Gemini Flash
 - Flexible schema ingestion: accepts description/name, quantity/qty, unit_price/cost_price, amount/line_total
 - Mathematical cross-validation and self-correction (Unit Cost vs Line Total vs MRP)
 - Offline Windows Native OCR fallback when no API key is configured or offline
@@ -52,10 +52,9 @@ ANTHROPIC_MODELS = [
 ]
 
 GEMINI_MODELS = [
+    "gemini-3.8-flash",
+    "gemini-3.5-flash-lite",
     "gemini-2.5-flash",
-    "gemini-2.0-flash",
-    "gemini-1.5-flash",
-    "gemini-1.5-pro",
 ]
 
 class VisionError(Exception):
@@ -2635,7 +2634,7 @@ async def extract_invoice_from_image(
     1. Preprocesses image: fixes EXIF rotation, normalizes dimensions, enhances contrast.
     2. Identifies provider:
        - Anthropic Claude (Claude 3.5 Sonnet / Haiku) if ANTHROPIC_API_KEY / sk-ant- key
-       - Google Gemini (Gemini 1.5/2.0 Flash) if GEMINI_API_KEY / AIza key
+       - Google Gemini (Gemini 3.x Flash with supported stable fallbacks) if GEMINI_API_KEY / AIza key
     3. Prompts model with strict reference schema: plain numbers, no currency symbols or markdown preamble.
     4. Cross-validates mathematics (Unit Cost vs Line Total vs MRP) and auto-corrects.
     5. Falls back to local Windows OCR if no API key is configured or offline.

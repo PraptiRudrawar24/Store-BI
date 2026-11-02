@@ -23,8 +23,10 @@ def create_test_image_bytes(format="JPEG"):
     img.save(buf, format=format)
     return buf.getvalue()
 
-def test_extract_invoice_mock_mode_when_no_api_key():
+def test_extract_invoice_mock_mode_when_no_api_key(monkeypatch):
     """When GEMINI_API_KEY is not set, returns clearly labeled mock extraction result."""
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     img_bytes = create_test_image_bytes("PNG")
     files = {"file": ("test_invoice.png", img_bytes, "image/png")}
 
@@ -177,6 +179,64 @@ def test_extract_invoice_api_failure_handling(monkeypatch):
     assert res.status_code == 502
     assert "Vision extraction failed" in res.json()["detail"]
     assert "timed out" in res.json()["detail"]
+
+
+def test_gemini_model_fallback_skips_unavailable_model(monkeypatch):
+    """Uses current supported Gemini models and falls through when one is unavailable."""
+    import vision_provider
+
+    calls = []
+
+    class MockResponse:
+        def __init__(self, status_code, payload):
+            self.status_code = status_code
+            self._payload = payload
+            self.text = str(payload)
+
+        def json(self):
+            return self._payload
+
+    class MockAsyncClient:
+        def __init__(self, timeout):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, traceback):
+            return None
+
+        async def post(self, url, headers, json):
+            calls.append(url)
+            if len(calls) == 1:
+                return MockResponse(404, {"error": {"message": "model not found"}})
+            return MockResponse(200, {
+                "candidates": [{
+                    "content": {"parts": [{"text": '{"items": []}'}]},
+                }],
+            })
+
+    async def no_local_ocr(*args, **kwargs):
+        return None
+
+    monkeypatch.setenv("GEMINI_API_KEY", "test-gemini-key")
+    monkeypatch.setattr(vision_provider.httpx, "AsyncClient", MockAsyncClient)
+    monkeypatch.setattr(vision_provider, "is_pdf", lambda *args, **kwargs: False)
+    monkeypatch.setattr(
+        vision_provider,
+        "preprocess_image_for_ocr",
+        lambda image_bytes: (b"processed-image", "image/jpeg", (1, 1)),
+    )
+    monkeypatch.setattr(vision_provider, "extract_with_local_ocr", no_local_ocr)
+
+    result = vision_provider.extract_invoice_from_image_sync(b"source-image", "image/jpeg")
+
+    assert "gemini-1.5-" not in " ".join(vision_provider.GEMINI_MODELS)
+    assert len(calls) == 2
+    assert f"/{vision_provider.GEMINI_MODELS[0]}:generateContent" in calls[0]
+    assert f"/{vision_provider.GEMINI_MODELS[1]}:generateContent" in calls[1]
+    assert result["ocr_engine"] == f"Gemini Vision AI ({vision_provider.GEMINI_MODELS[1]})"
+
 
 def test_extract_invoice_bad_json_handling(monkeypatch):
     """Invalid JSON returned by LLM must return friendly HTTP 422 with detail."""
@@ -362,4 +422,3 @@ async def test_extract_with_local_ocr_synthetic_invoice():
         assert "BALAJI" in res["supplier"].upper()
         assert len(res["items"]) >= 1
         assert res["ocr_engine"] == "Windows Native OCR"
-
