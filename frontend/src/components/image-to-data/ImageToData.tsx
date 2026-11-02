@@ -350,7 +350,7 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
           tax_input_str: taxPercentStr,
           tax_amount: taxAmt,
           base_amount: baseAmt,
-          mrp: lineTotal,
+          mrp: item.mrp ?? null,
           line_total: lineTotal,
           selling_price: defaultSelling,
           category: match ? match.product.category : 'Grocery',
@@ -385,11 +385,28 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
       name: '',
       qty: 1,
       cost_price: 0,
+      mrp_unit: null,
+      pack_size: null,
+      free_qty: null,
+      hsn_code: null,
+      batch_number: null,
+      discount: null,
+      discount_percent: null,
+      discount_amount: null,
       tax_rate: 0,
       tax_percent: '0%',
       tax_input_str: '0%',
       tax_amount: 0,
+      cgst_rate: null,
+      sgst_rate: null,
+      igst_rate: null,
+      cgst_amount: null,
+      sgst_amount: null,
+      igst_amount: null,
       base_amount: 0,
+      taxable_amount: null,
+      unit_of_measure: null,
+      other_fields: {},
       mrp: 0,
       line_total: 0,
       selling_price: 0,
@@ -546,6 +563,29 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
         qty: item.qty,
         cost_price: item.cost_price || 0,
         selling_price: item.selling_price || 0,
+        mrp_unit: item.mrp_unit ?? null,
+        pack_size: item.pack_size ?? null,
+        free_qty: item.free_qty ?? null,
+        hsn_code: item.hsn_code ?? null,
+        batch_number: item.batch_number ?? null,
+        discount: item.discount ?? null,
+        discount_percent: item.discount_percent ?? null,
+        discount_amount: item.discount_amount ?? null,
+        tax_rate: item.tax_rate ?? null,
+        tax_percent: item.tax_percent ?? null,
+        tax_amount: item.tax_amount ?? null,
+        cgst_rate: item.cgst_rate ?? null,
+        sgst_rate: item.sgst_rate ?? null,
+        igst_rate: item.igst_rate ?? null,
+        cgst_amount: item.cgst_amount ?? null,
+        sgst_amount: item.sgst_amount ?? null,
+        igst_amount: item.igst_amount ?? null,
+        base_amount: item.base_amount ?? null,
+        taxable_amount: item.taxable_amount ?? null,
+        line_total: item.line_total ?? null,
+        unit_of_measure: item.unit_of_measure ?? null,
+        is_tax_inclusive: item.is_tax_inclusive ?? false,
+        other_fields: item.other_fields ?? {},
         category: item.category || 'Grocery',
         expiry_date: item.expiry_date || null,
         action: item.action,
@@ -558,6 +598,9 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
         invoice_number: invoiceNumber.trim() || undefined,
         invoice_date: invoiceDate || undefined,
         currency: currency || 'INR',
+        subtotal: subtotal ?? undefined,
+        tax: tax ?? undefined,
+        total: total ?? undefined,
         items: payloadItems,
       });
 
@@ -1034,10 +1077,19 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                     <TableRow>
                       <TableHead className="w-10 text-center">#</TableHead>
                       <TableHead className="min-w-[190px]">Product / Description</TableHead>
+                      <TableHead className="min-w-[105px]">HSN / SAC</TableHead>
+                      <TableHead className="min-w-[105px]">Batch / Lot</TableHead>
                       <TableHead className="w-24 min-w-[85px] text-center">QTY</TableHead>
-                      <TableHead className="w-32 min-w-[130px]">UNIT COST (₹)</TableHead>
+                      <TableHead className="w-24 min-w-[85px] text-center">Free QTY</TableHead>
+                      <TableHead className="min-w-[100px]">Pack / UOM</TableHead>
+                      <TableHead className="w-32 min-w-[130px]">UNIT RATE (₹)</TableHead>
+                      <TableHead className="w-32 min-w-[130px]">MRP / UNIT (₹)</TableHead>
+                      <TableHead className="w-28 min-w-[110px]">Discount %</TableHead>
+                      <TableHead className="w-32 min-w-[130px]">Discount Amt (₹)</TableHead>
                       <TableHead className="w-28 min-w-[110px] text-center">TAX</TableHead>
-                      <TableHead className="w-32 min-w-[130px]">TOTAL MRP (₹)</TableHead>
+                      <TableHead className="w-32 min-w-[130px]">Taxable Amt (₹)</TableHead>
+                      <TableHead className="w-32 min-w-[130px]">Tax Amt (₹)</TableHead>
+                      <TableHead className="w-36 min-w-[140px]">TOTAL MRP / LINE AMOUNT (₹)</TableHead>
                       <TableHead className="w-32 min-w-[130px]">Sell Price (₹)</TableHead>
                       <TableHead className="w-32">Category</TableHead>
                       <TableHead className="w-32">Expiry</TableHead>
@@ -1056,6 +1108,15 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                         !item.selling_price || item.selling_price <= 0;
                       const isTaxReview =
                         item.tax_rate === null || item.tax_percent === 'Needs Review';
+                      const taxComponents: Array<{
+                        label: string;
+                        rate: number | null | undefined;
+                        amount: number | null | undefined;
+                      }> = [
+                        { label: 'CGST', rate: item.cgst_rate, amount: item.cgst_amount },
+                        { label: 'SGST', rate: item.sgst_rate, amount: item.sgst_amount },
+                        { label: 'IGST', rate: item.igst_rate, amount: item.igst_amount },
+                      ];
                       const hasAmberFlag =
                         item.needs_review || isLowConfidence || isLowQtyConfidence || isLowCostConfidence || isMissingPrice || isMissingSellPrice || isTaxReview;
 
@@ -1087,7 +1148,35 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                                   Check spelling ({Math.round(item.confidence * 100)}%)
                                 </span>
                               )}
+                              {item.other_fields && Object.keys(item.other_fields).length > 0 && (
+                                <div className="flex flex-col gap-0.5 text-[10px] text-text-medium">
+                                  {Object.entries(item.other_fields).map(([label, value]) => (
+                                    <span key={label}>
+                                      <strong>{label}:</strong>{' '}
+                                      {typeof value === 'string' ? value : JSON.stringify(value)}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
+                          </TableCell>
+
+                          <TableCell>
+                            <Input
+                              value={item.hsn_code || ''}
+                              onChange={(e) => handleUpdateItemField(item.id, 'hsn_code', e.target.value || null)}
+                              placeholder="HSN / SAC"
+                              className="h-11 min-h-[44px] text-xs"
+                            />
+                          </TableCell>
+
+                          <TableCell>
+                            <Input
+                              value={item.batch_number || ''}
+                              onChange={(e) => handleUpdateItemField(item.id, 'batch_number', e.target.value || null)}
+                              placeholder="Batch / lot"
+                              className="h-11 min-h-[44px] text-xs"
+                            />
                           </TableCell>
 
                           {/* QTY - Supports Whole Numbers & Decimals (e.g. 1, 5, 2.5, 0.75) */}
@@ -1121,6 +1210,30 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                             </div>
                           </TableCell>
 
+                          <TableCell className="px-2 py-2 w-24 min-w-[85px]">
+                            <Input
+                              type="number"
+                              step="any"
+                              min="0"
+                              placeholder="0"
+                              value={item.free_qty ?? ''}
+                              onChange={(e) => {
+                                const raw = e.target.value;
+                                handleUpdateItemField(item.id, 'free_qty', raw ? parseFloat(raw) : null);
+                              }}
+                              className="h-11 min-h-[44px] text-xs tabular-nums text-center px-2"
+                            />
+                          </TableCell>
+
+                          <TableCell>
+                            <Input
+                              value={item.pack_size || item.unit_of_measure || ''}
+                              onChange={(e) => handleUpdateItemField(item.id, 'pack_size', e.target.value || null)}
+                              placeholder="e.g. 1 kg"
+                              className="h-11 min-h-[44px] text-xs"
+                            />
+                          </TableCell>
+
                           {/* UNIT COST - Price per Unit before Tax */}
                           <TableCell className="px-2 py-2 min-w-[130px]">
                             <div className="flex flex-col gap-1">
@@ -1151,6 +1264,54 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                             </div>
                           </TableCell>
 
+                          <TableCell className="px-2 py-2 min-w-[130px]">
+                            <Input
+                              isCurrency={true}
+                              placeholder="Not printed"
+                              value={item.mrp_unit ?? ''}
+                              onChange={(e) => {
+                                const raw = e.target.value.replace(/[^0-9.]/g, '');
+                                handleUpdateItemField(item.id, 'mrp_unit', raw ? parseFloat(raw) : null);
+                              }}
+                              className="h-11 min-h-[44px] text-xs tabular-nums pl-6 pr-2"
+                            />
+                          </TableCell>
+
+                          <TableCell className="px-2 py-2 min-w-[110px]">
+                            <Input
+                              type="number"
+                              step="any"
+                              min="0"
+                              placeholder="Not printed"
+                              value={item.discount_percent ?? ''}
+                              onChange={(e) => {
+                                const raw = e.target.value;
+                                handleUpdateItemField(item.id, 'discount_percent', raw ? parseFloat(raw) : null);
+                              }}
+                              className="h-11 min-h-[44px] text-xs tabular-nums px-2"
+                            />
+                          </TableCell>
+
+                          <TableCell className="px-2 py-2 min-w-[130px]">
+                            <div className="flex flex-col gap-0.5">
+                              <Input
+                                isCurrency={true}
+                                placeholder="Not printed"
+                                value={item.discount_amount ?? ''}
+                                onChange={(e) => {
+                                  const raw = e.target.value.replace(/[^0-9.]/g, '');
+                                  handleUpdateItemField(item.id, 'discount_amount', raw ? parseFloat(raw) : null);
+                                }}
+                                className="h-11 min-h-[44px] text-xs tabular-nums pl-6 pr-2"
+                              />
+                              {item.discount !== null && item.discount !== undefined && (
+                                <span className="text-[10px] text-text-medium">
+                                  Printed: {String(item.discount)}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+
                           {/* TAX - Percentage Rate (e.g. 18%, 5%, 0% or Needs Review) */}
                           <TableCell className="px-2 py-2 w-28 min-w-[110px]">
                             <div className="flex flex-col gap-0.5">
@@ -1166,18 +1327,54 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                                     : 'tabular-nums'
                                 }`}
                               />
-                              {isTaxReview ? (
+                              {isTaxReview && (
                                 <span className="text-[10px] text-amber-700 font-semibold text-center">
                                   Needs Review
                                 </span>
-                              ) : (
-                                <span className="text-[10px] text-text-medium text-center font-mono">
-                                  {item.tax_amount !== null && item.tax_amount !== undefined
-                                    ? `+₹${item.tax_amount.toFixed(2)}`
-                                    : '0% tax'}
-                                </span>
                               )}
+                              <div className="flex flex-col text-[10px] text-text-medium text-center font-mono">
+                                {taxComponents.some(({ rate, amount }) =>
+                                  rate !== null && rate !== undefined || amount !== null && amount !== undefined
+                                )
+                                  ? taxComponents
+                                      .filter(({ rate, amount }) =>
+                                        rate !== null && rate !== undefined || amount !== null && amount !== undefined
+                                      )
+                                      .map(({ label, rate, amount }) => (
+                                        <span key={label}>
+                                          {label} {rate !== null && rate !== undefined ? `${rate}%` : ''}
+                                          {amount !== null && amount !== undefined ? ` ₹${amount.toFixed(2)}` : ''}
+                                        </span>
+                                      ))
+                                  : <span>{item.tax_amount !== null && item.tax_amount !== undefined ? `+₹${item.tax_amount.toFixed(2)}` : '0% tax'}</span>}
+                              </div>
                             </div>
+                          </TableCell>
+
+                          <TableCell className="px-2 py-2 min-w-[130px]">
+                            <Input
+                              isCurrency={true}
+                              placeholder="Not printed"
+                              value={item.taxable_amount ?? ''}
+                              onChange={(e) => {
+                                const raw = e.target.value.replace(/[^0-9.]/g, '');
+                                handleUpdateItemField(item.id, 'taxable_amount', raw ? parseFloat(raw) : null);
+                              }}
+                              className="h-11 min-h-[44px] text-xs tabular-nums pl-6 pr-2"
+                            />
+                          </TableCell>
+
+                          <TableCell className="px-2 py-2 min-w-[130px]">
+                            <Input
+                              isCurrency={true}
+                              placeholder="Not printed"
+                              value={item.tax_amount ?? ''}
+                              onChange={(e) => {
+                                const raw = e.target.value.replace(/[^0-9.]/g, '');
+                                handleUpdateItemField(item.id, 'tax_amount', raw ? parseFloat(raw) : null);
+                              }}
+                              className="h-11 min-h-[44px] text-xs tabular-nums pl-6 pr-2"
+                            />
                           </TableCell>
 
                           {/* TOTAL MRP - Original Extracted Product Line Amount */}
@@ -1200,7 +1397,7 @@ export function ImageToData({ onDataSaved, onNavigateToEntered }: ImageToDataPro
                               />
                               <span className="text-[10px] text-text-medium font-mono">
                                 {item.line_total !== null && item.line_total !== undefined && item.line_total > 0
-                                  ? 'Invoice line amount'
+                                  ? 'Printed total for this quantity'
                                   : 'Needs Review'}
                               </span>
                             </div>

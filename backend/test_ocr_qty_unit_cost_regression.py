@@ -133,6 +133,64 @@ def test_mrp_and_unit_cost_together_distinct_mapping():
     assert acc["total_mrp"] == 100.0
 
 
+def test_invoice_row_preserves_rate_mrp_and_other_printed_columns():
+    corrected = vision_provider.validate_and_correct_items([{
+        "Description": "Toor Dal 1kg",
+        "Qty": 10,
+        "Rate": 20.0,
+        "MRP": 25.0,
+        "Amount": 200.0,
+        "Discount %": "5%",
+        "HSN Code": "0713",
+        "Batch No": "B-104",
+        "Expiry Date": "2027-12-31",
+        "Supplier Ref": "PO-71",
+    }])
+
+    assert len(corrected) == 1
+    item = corrected[0]
+    assert item["cost_price"] == 20.0
+    assert item["unit_price"] == 20.0
+    assert item["mrp_unit"] == 25.0
+    assert item["line_total"] == 200.0
+    assert item["discount_percent"] == 5.0
+    assert item["hsn_code"] == "0713"
+    assert item["batch_number"] == "B-104"
+    assert item["expiry_date"] == "2027-12-31"
+    assert item["other_fields"] == {"Supplier Ref": "PO-71"}
+
+
+def test_spatial_ocr_keeps_separate_cgst_and_sgst_columns():
+    words = [
+        {"text": "Description", "x": 40, "y": 100, "w": 80, "h": 16},
+        {"text": "Qty", "x": 220, "y": 100, "w": 30, "h": 16},
+        {"text": "Rate", "x": 320, "y": 100, "w": 35, "h": 16},
+        {"text": "MRP", "x": 420, "y": 100, "w": 35, "h": 16},
+        {"text": "CGST", "x": 520, "y": 100, "w": 40, "h": 16},
+        {"text": "SGST", "x": 620, "y": 100, "w": 40, "h": 16},
+        {"text": "Amount", "x": 730, "y": 100, "w": 50, "h": 16},
+        {"text": "Test Product", "x": 40, "y": 140, "w": 90, "h": 16},
+        {"text": "1", "x": 225, "y": 140, "w": 10, "h": 16},
+        {"text": "100.00", "x": 320, "y": 140, "w": 45, "h": 16},
+        {"text": "120.00", "x": 420, "y": 140, "w": 45, "h": 16},
+        {"text": "9%", "x": 525, "y": 140, "w": 25, "h": 16},
+        {"text": "9%", "x": 625, "y": 140, "w": 25, "h": 16},
+        {"text": "118.00", "x": 730, "y": 140, "w": 45, "h": 16},
+    ]
+
+    raw_items = vision_provider.detect_spatial_table_and_extract_items(words)
+    validated = vision_provider.validate_and_correct_items(raw_items)
+
+    assert len(validated) == 1
+    item = validated[0]
+    assert item["cost_price"] == 100.0
+    assert item["mrp_unit"] == 120.0
+    assert item["line_total"] == 118.0
+    assert item["cgst_rate"] == 9.0
+    assert item["sgst_rate"] == 9.0
+    assert item["tax_rate"] == 18.0
+
+
 def test_pack_size_distinct_from_quantity():
     """
     Scenario: Invoice contains both Pack size column and Billed Qty column, plus pack in name.

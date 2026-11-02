@@ -13,6 +13,7 @@ export function GoogleCallbackPage() {
 
   const [status, setStatus] = React.useState<'loading' | 'success' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = React.useState<string>('');
+  const callbackRequest = React.useRef<ReturnType<typeof api.googleCallback> | null>(null);
 
   React.useEffect(() => {
     let isMounted = true;
@@ -40,13 +41,28 @@ export function GoogleCallbackPage() {
       }
 
       try {
+        let expectedState: string | undefined;
         let storedVerifier: string | undefined = undefined;
         try {
+          expectedState = sessionStorage.getItem('store_bi_oauth_state') || undefined;
           storedVerifier = sessionStorage.getItem('store_bi_oauth_verifier') || undefined;
         } catch {
           // ignore
         }
-        const response = await api.googleCallback({ code, state, code_verifier: storedVerifier });
+
+        if (!expectedState || expectedState !== state) {
+          throw new Error('Your Google sign-in session expired or did not match. Please start again from the login page.');
+        }
+
+        if (!callbackRequest.current) {
+          callbackRequest.current = api.googleCallback({
+            code,
+            state,
+            expected_state: expectedState,
+            code_verifier: storedVerifier,
+          });
+        }
+        const response = await callbackRequest.current;
         if (isMounted) {
           setStatus('success');
           await refreshUser();

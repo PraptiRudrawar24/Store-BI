@@ -1353,7 +1353,9 @@ def validate_and_correct_items(items: List[Dict[str, Any]]) -> List[Dict[str, An
         sgst_val = item.get("sgst_rate") or item.get("sgst") or item.get("sgst_") or item.get("sgst_percentage")
         igst_val = item.get("igst_rate") or item.get("igst") or item.get("igst_") or item.get("igst_percentage")
         vat_val = item.get("vat_rate") or item.get("vat") or item.get("vat_") or item.get("vat_percentage")
-        raw_tax_amt = item.get("tax_amount") or item.get("gst_amount")
+        raw_tax_amt = item.get("tax_amount")
+        if raw_tax_amt is None:
+            raw_tax_amt = item.get("gst_amount")
 
         # Check tax-inclusive status
         is_tax_inclusive = bool(
@@ -1460,10 +1462,11 @@ def validate_and_correct_items(items: List[Dict[str, Any]]) -> List[Dict[str, An
 
         base_amt = round(formatted_qty * final_cost, 2) if final_cost is not None else None
         tax_amt: Optional[float] = None
-        if tax_rate is not None and base_amt is not None:
+        reported_tax_amt = clean_numeric_value(raw_tax_amt, field_type="amount") if raw_tax_amt is not None else None
+        if reported_tax_amt is not None:
+            tax_amt = round(reported_tax_amt, 2)
+        elif tax_rate is not None and base_amt is not None:
             tax_amt = round(base_amt * (tax_rate / 100.0), 2)
-        elif raw_tax_amt is not None:
-            tax_amt = round(parse_num(raw_tax_amt) or 0.0, 2)
 
         # --- FIELD-LEVEL CONFIDENCE SCORES ---
         qty_conf = 0.95 if has_extracted_qty else 0.40
@@ -1505,7 +1508,77 @@ def validate_and_correct_items(items: List[Dict[str, Any]]) -> List[Dict[str, An
         if expiry and not re.match(r"^\d{4}-\d{2}-\d{2}$", str(expiry).strip()):
             expiry = None
 
-        mrp_unit_val = clean_numeric_value(item.get("mrp_unit"), field_type="price") if item.get("mrp_unit") is not None else None
+        raw_mrp_unit = next(
+            (
+                item.get(key)
+                for key in ("mrp_unit", "unit_mrp", "mrp_per_unit")
+                if item.get(key) is not None
+            ),
+            None,
+        )
+        if raw_mrp_unit is None and item.get("mrp") is not None and any(
+            item.get(key) is not None
+            for key in ("amount", "total_amount", "item_amount", "line_amount", "line_total", "total_price", "total")
+        ):
+            raw_mrp_unit = item.get("mrp")
+        mrp_unit_val = clean_numeric_value(raw_mrp_unit, field_type="price")
+
+        hsn_code = item.get("hsn_code") or item.get("hsn_sac") or item.get("hsn") or item.get("sac")
+        batch_number = item.get("batch_number") or item.get("batch_no") or item.get("batch") or item.get("lot_number") or item.get("lot")
+        discount_raw = item.get("discount")
+        discount_percent = next(
+            (
+                clean_numeric_value(item.get(key), field_type="price")
+                for key in ("discount_percent", "discount_rate", "discount_percentage")
+                if item.get(key) is not None
+            ),
+            None,
+        )
+        discount_amount = next(
+            (
+                clean_numeric_value(item.get(key), field_type="amount")
+                for key in ("discount_amount", "discount_amt")
+                if item.get(key) is not None
+            ),
+            None,
+        )
+        if discount_raw is not None:
+            if discount_percent is None and "%" in str(discount_raw):
+                discount_percent = clean_numeric_value(discount_raw, field_type="price")
+            elif discount_amount is None and "%" not in str(discount_raw):
+                discount_amount = clean_numeric_value(discount_raw, field_type="amount")
+
+        known_item_fields = {
+            "name", "description", "item_name", "particulars", "product_name", "item", "product",
+            "product_description", "qty", "quantity", "quantities", "quantity_ordered", "order_qty",
+            "item_quantity", "billed_qty", "pcs", "units", "nos", "count", "item_qty", "pack",
+            "pkts", "cases", "qnty", "qty_", "cost_price", "unit_price", "unit_cost", "price_per_unit",
+            "rate", "price", "rate_per_unit", "cost_per_unit", "basic_rate", "item_rate",
+            "per_unit_price", "wp", "tax_rate", "tax_percent", "tax", "gst", "tax_percentage",
+            "gst_rate", "tax_rate_percent", "applicable_tax", "applicable_gst", "tax_", "gst_",
+            "cgst_rate", "cgst", "cgst_", "cgst_percentage", "sgst_rate", "sgst", "sgst_",
+            "sgst_percentage", "igst_rate", "igst", "igst_", "igst_percentage", "vat_rate", "vat",
+            "vat_", "vat_percentage", "tax_amount", "gst_amount", "is_tax_inclusive", "tax_inclusive",
+            "cgst_amount", "sgst_amount", "igst_amount",
+            "amount", "total_amount", "item_amount", "line_amount", "line_total", "total_price",
+            "extended_amount", "total", "total_mrp", "mrp", "mrp_unit", "unit_mrp", "mrp_per_unit",
+            "net_amount", "value", "item_total", "taxable_amount", "taxable_value", "taxable_amt",
+            "base_amount", "pack_size", "free_qty", "expiry_date", "page", "raw_text", "confidence",
+            "field_confidence", "needs_review", "hsn_code", "hsn_sac", "hsn", "sac", "batch_number",
+            "batch_no", "batch", "lot_number", "lot", "discount", "discount_percent", "discount_rate",
+            "discount_percentage", "discount_amount", "discount_amt", "unit_of_measure", "other_fields",
+        }
+        other_fields = item.get("other_fields")
+        if not isinstance(other_fields, dict):
+            other_fields = {}
+        else:
+            other_fields = dict(other_fields)
+        if item.get("expiry_date") and expiry is None:
+            other_fields["Expiry Date"] = str(item.get("expiry_date"))
+        for key, value in raw_item.items():
+            normalized_key = re.sub(r"[^a-z0-9]+", "_", str(key).lower()).strip("_")
+            if normalized_key not in known_item_fields and value is not None:
+                other_fields[str(key)] = value
 
         corrected.append({
             # Standard project schema
@@ -1513,17 +1586,30 @@ def validate_and_correct_items(items: List[Dict[str, Any]]) -> List[Dict[str, An
             "qty": formatted_qty,
             "cost_price": final_cost,
             "mrp_unit": mrp_unit_val,
+            "pack_size": item.get("pack_size"),
+            "free_qty": parse_num(item.get("free_qty")) if item.get("free_qty") is not None else None,
+            "hsn_code": str(hsn_code).strip() if hsn_code is not None else None,
+            "batch_number": str(batch_number).strip() if batch_number is not None else None,
+            "discount": discount_raw,
+            "discount_percent": discount_percent,
+            "discount_amount": discount_amount,
             "tax_rate": tax_rate,
             "tax_percent": tax_percent_str,
             "tax_amount": tax_amt,
+            "cgst_rate": clean_numeric_value(cgst_val, field_type="price") if cgst_val is not None else None,
+            "sgst_rate": clean_numeric_value(sgst_val, field_type="price") if sgst_val is not None else None,
+            "igst_rate": clean_numeric_value(igst_val, field_type="price") if igst_val is not None else None,
+            "cgst_amount": clean_numeric_value(item.get("cgst_amount"), field_type="amount") if item.get("cgst_amount") is not None else None,
+            "sgst_amount": clean_numeric_value(item.get("sgst_amount"), field_type="amount") if item.get("sgst_amount") is not None else None,
+            "igst_amount": clean_numeric_value(item.get("igst_amount"), field_type="amount") if item.get("igst_amount") is not None else None,
             "base_amount": base_amt,
             "taxable_amount": taxable_amt,
+            "unit_of_measure": item.get("unit_of_measure") or item.get("uom"),
             "is_tax_inclusive": is_tax_inclusive,
             "mrp": final_total_mrp,
             "line_total": final_total_mrp,
-            "pack_size": item.get("pack_size"),
-            "free_qty": item.get("free_qty"),
             "expiry_date": expiry,
+            "other_fields": other_fields,
             "confidence": round(overall_conf, 2),
             "field_confidence": field_conf,
             "needs_review": needs_review,
@@ -1657,17 +1743,17 @@ HEADER_COLUMN_PATTERNS: Dict[str, List[str]] = {
         r"\btax\s*rate\b",
         r"\bgst\s*%\b",
         r"\btax\s*%\b",
-        r"\bigst\s*%\b",
-        r"\bcgst\s*%\b",
-        r"\bsgst\s*%\b",
         r"\bvat\s*%\b",
-        r"\bigst\b",
-        r"\bcgst\b",
-        r"\bsgst\b",
         r"\bgst\b",
         r"\btax\b",
         r"\bvat\b",
     ],
+    "CGST_AMOUNT": [r"\bcgst\s*(?:amount|amt)\b"],
+    "SGST_AMOUNT": [r"\bsgst\s*(?:amount|amt)\b"],
+    "IGST_AMOUNT": [r"\bigst\s*(?:amount|amt)\b"],
+    "CGST": [r"\bcgst\s*%?\b"],
+    "SGST": [r"\bsgst\s*%?\b"],
+    "IGST": [r"\bigst\s*%?\b"],
     "TOTAL_MRP": [
         r"\bline\s*amount\b",
         r"\bline\s*total\b",
@@ -1696,9 +1782,6 @@ HEADER_COLUMN_PATTERNS: Dict[str, List[str]] = {
         r"\bgst\s*amount\b",
         r"\btax\s*amt\b",
         r"\btotal\s*tax\b",
-        r"\bcgst\s*amt\b",
-        r"\bsgst\s*amt\b",
-        r"\bigst\s*amt\b",
     ],
     "HSN": [
         r"\bhsn/sac\b",
@@ -2045,7 +2128,10 @@ def detect_spatial_table_and_extract_items(
                     break
 
         num_fields_present = sum(
-            1 for c_type in ["QTY", "UNIT_COST", "TOTAL_MRP", "TAXABLE_BASE", "MRP"]
+            1 for c_type in [
+                "QTY", "UNIT_COST", "TOTAL_MRP", "TAXABLE_BASE", "MRP", "TAX",
+                "CGST", "SGST", "IGST", "CGST_AMOUNT", "SGST_AMOUNT", "IGST_AMOUNT", "TAX_AMOUNT",
+            ]
             if cell_words.get(c_type)
         )
         desc_words = cell_words.get("DESCRIPTION", [])
@@ -2091,11 +2177,22 @@ def detect_spatial_table_and_extract_items(
         cost_val = extract_cell_numeric(cell_words.get("UNIT_COST", []), col_centers.get("UNIT_COST", 0.0), field_type="price")
         mrp_unit_val = extract_cell_numeric(cell_words.get("MRP", []), col_centers.get("MRP", 0.0), field_type="price")
         tax_val = extract_cell_tax(cell_words.get("TAX", []))
+        cgst_rate_val = extract_cell_tax(cell_words.get("CGST", []))
+        sgst_rate_val = extract_cell_tax(cell_words.get("SGST", []))
+        igst_rate_val = extract_cell_tax(cell_words.get("IGST", []))
         amt_val = extract_cell_numeric(cell_words.get("TOTAL_MRP", []), col_centers.get("TOTAL_MRP", 0.0), field_type="amount")
         taxable_val = extract_cell_numeric(cell_words.get("TAXABLE_BASE", []), col_centers.get("TAXABLE_BASE", 0.0), field_type="amount")
         taxamt_val = extract_cell_numeric(cell_words.get("TAX_AMOUNT", []), col_centers.get("TAX_AMOUNT", 0.0), field_type="amount")
+        cgst_amount_val = extract_cell_numeric(cell_words.get("CGST_AMOUNT", []), col_centers.get("CGST_AMOUNT", 0.0), field_type="amount")
+        sgst_amount_val = extract_cell_numeric(cell_words.get("SGST_AMOUNT", []), col_centers.get("SGST_AMOUNT", 0.0), field_type="amount")
+        igst_amount_val = extract_cell_numeric(cell_words.get("IGST_AMOUNT", []), col_centers.get("IGST_AMOUNT", 0.0), field_type="amount")
         pack_size_val = " ".join(w["text"] for w in cell_words.get("PACK_SIZE", [])).strip() or None
         free_qty_val = extract_cell_numeric(cell_words.get("FREE_QTY", []), col_centers.get("FREE_QTY", 0.0), field_type="qty")
+        discount_val = " ".join(w["text"] for w in cell_words.get("DISCOUNT", [])).strip() or None
+        hsn_code_val = " ".join(w["text"] for w in cell_words.get("HSN", [])).strip() or None
+        batch_number_val = " ".join(w["text"] for w in cell_words.get("BATCH", [])).strip() or None
+        expiry_val = " ".join(w["text"] for w in cell_words.get("EXPIRY", [])).strip() or None
+        serial_number_val = " ".join(w["text"] for w in cell_words.get("S_NO", [])).strip() or None
 
         extracted_items.append({
             "name": clean_name,
@@ -2103,11 +2200,22 @@ def detect_spatial_table_and_extract_items(
             "cost_price": cost_val,
             "mrp_unit": mrp_unit_val,
             "tax": tax_val,
+            "cgst_rate": cgst_rate_val,
+            "sgst_rate": sgst_rate_val,
+            "igst_rate": igst_rate_val,
             "amount": amt_val,
             "taxable_amount": taxable_val,
             "tax_amount": taxamt_val,
+            "cgst_amount": cgst_amount_val,
+            "sgst_amount": sgst_amount_val,
+            "igst_amount": igst_amount_val,
             "pack_size": pack_size_val,
             "free_qty": free_qty_val,
+            "discount": discount_val,
+            "hsn_code": hsn_code_val,
+            "batch_number": batch_number_val,
+            "expiry_date": expiry_val,
+            "other_fields": {"serial_number": serial_number_val} if serial_number_val else {},
             "page": page_num,
             "raw_text": row_text,
         })
@@ -2471,14 +2579,29 @@ INVOICE_EXTRACTION_PROMPT = (
     '      "description": string,\n'
     '      "quantity": number,\n'
     '      "unit_price": number,\n'
+    '      "mrp_unit": number or null,\n'
+    '      "pack_size": string or null,\n'
+    '      "free_qty": number or null,\n'
+    '      "hsn_code": string or null,\n'
+    '      "batch_number": string or null,\n'
+    '      "expiry_date": string or null,\n'
+    '      "discount": number or string or null,\n'
+    '      "discount_percent": number or null,\n'
+    '      "discount_amount": number or null,\n'
     '      "tax_rate": number or null,\n'
     '      "tax_percent": string,\n'
     '      "cgst_rate": number or null,\n'
     '      "sgst_rate": number or null,\n'
     '      "igst_rate": number or null,\n'
+    '      "cgst_amount": number or null,\n'
+    '      "sgst_amount": number or null,\n'
+    '      "igst_amount": number or null,\n'
+    '      "taxable_amount": number or null,\n'
+    '      "tax_amount": number or null,\n'
+    '      "unit_of_measure": string or null,\n'
     '      "is_tax_inclusive": boolean,\n'
     '      "amount": number,\n'
-    '      "expiry_date": string\n'
+    '      "other_fields": { "printed column name": "printed value" }\n'
     '    }\n'
     '  ]\n'
     "}\n\n"
@@ -2486,17 +2609,19 @@ INVOICE_EXTRACTION_PROMPT = (
     "1. Read every single genuine product line item row in the product table. Do NOT extract company names, customer names, addresses, invoice numbers, dates, GSTIN/HSN codes, table column headers, subtotals, grand totals, taxes, bank details, terms, or signatures as product items.\n"
     "2. description (Product / Description): Clean product name with weight/pack size (e.g. 'Tata Salt 1kg', 'Fortune Oil 1L'). Combine multiline continuation rows into the single product description.\n"
     "3. quantity (QTY): Extract the billed/ordered quantity from 'Qty', 'Qty.', 'Quantity', 'Quantities', 'Quantity Ordered', 'Order Qty', 'Item Quantity', 'Nos', 'Units', 'PCS', 'Billed Qty'. Support single/multi-digit whole numbers and legitimate fractional decimal quantities (e.g. 1, 10, 25, 2.5, 0.75). Do NOT confuse quantity with HSN codes, SKU/item numbers, pack sizes, or MRP. Do NOT extract pack-size numbers or weight numbers (e.g. '10x100g' or '500g') into quantity. Keep pack size in description. NEVER leave quantity as 0 or null.\n"
-    "4. unit_price (UNIT COST): The pre-tax unit cost/rate per unit from 'Rate', 'Rate per Unit', 'Basic Rate', 'Price per Unit', 'Unit Cost', 'Unit Price', 'Cost per Unit', 'Basic Price', 'Item Rate', 'Price'. Preserve decimal precision. Do NOT confuse unit cost with MRP, selling price, discount, taxable amount, tax amount, or line total. If both MRP and Unit Cost (Rate) appear on the invoice, extract the Unit Cost (Rate) into unit_price.\n"
-    "5. tax_rate / tax_percent (TAX): The tax rate percentage (e.g. 18.0 / '18%', 5.0 / '5%', 12.0 / '12%', 28.0 / '28%', 0.0 / '0%') from 'Tax', 'Tax %', 'GST', 'GST %', 'IGST', 'IGST %', 'CGST', 'CGST %', 'SGST', 'SGST %', 'VAT', 'VAT %', 'Tax Rate', 'GST Rate'.\n"
+    "4. unit_price (UNIT COST / RATE): Extract the per-unit purchase rate from the invoice's 'Rate', 'Rate per Unit', 'Basic Rate', 'Price per Unit', 'Unit Cost', 'Unit Price', 'Cost per Unit', 'Basic Price', 'Item Rate', or 'Price' column. Preserve decimal precision. Do NOT confuse it with MRP, discount, taxable amount, tax amount, or line amount. Always extract this when printed.\n"
+    "5. mrp_unit: Extract the separate per-unit MRP / Maximum Retail Price when present. It is not the unit purchase rate and is not the extended line amount. Keep it separate from unit_price and amount.\n"
+    "6. tax_rate / tax_percent (TAX): The tax rate percentage (e.g. 18.0 / '18%', 5.0 / '5%', 12.0 / '12%', 28.0 / '28%', 0.0 / '0%') from 'Tax', 'Tax %', 'GST', 'GST %', 'IGST', 'IGST %', 'CGST', 'CGST %', 'SGST', 'SGST %', 'VAT', 'VAT %', 'Tax Rate', 'GST Rate'. Preserve separately printed CGST/SGST/IGST rates and tax amounts.\n"
     "   - If separate CGST and SGST rates are present (e.g. CGST 9% and SGST 9%), COMBINE them into a unified tax rate of 18.0 ('18%').\n"
     "   - If an IGST rate is present (e.g. 18%), use it as the unified tax rate.\n"
     "   - If an item is exempt or explicitly 0% tax, set tax_rate: 0.0 and tax_percent: '0%'.\n"
     "   - If the tax rate cannot be determined reliably, set tax_rate: null and tax_percent: 'Needs Review'. Do NOT silently assume 0%.\n"
     "   - If unit price is already tax-inclusive, set is_tax_inclusive: true.\n"
-    "6. amount (TOTAL MRP): CRITICAL. Extract the original product-line amount directly from the invoice row from 'Amount', 'Total', 'Total Amount', 'Item Amount', 'Line Amount', 'Line Total', 'Total Price', or 'Extended Amount'. Do NOT calculate, estimate, or overwrite it with a formula (do not multiply quantity by unit price or add tax). Extract the exact printed final product amount. If not visible or uncertain, set amount: null.\n"
-    "7. total / invoice_grand_total: Inspect the lower summary/footer section near the bottom of the invoice to find the printed final invoice grand total (labeled 'Grand Total', 'Invoice Total', 'Total Amount', 'Net Total', 'Net Payable', 'Amount Payable', 'Total Payable', 'Total Due', 'Final Amount', 'Total Including Tax'). Strictly distinguish from Subtotal, Taxable Amount, Total Tax, Discount, Amount Paid, and Balance Due. Do not confuse Grand Total with Amount Paid or Balance Due. If not printed, set to null.\n"
-    "8. Numbers must be plain numeric values without currency symbols (like ₹, $, Rs) and without commas.\n"
-    "9. Respond with ONLY the raw JSON object, without any markdown code fence (no ```json)."
+    "7. amount (TOTAL LINE AMOUNT): Extract the original extended product-line amount directly from the row, typically quantity multiplied by rate and adjusted by printed tax/discount. Keep it separate from unit MRP and unit rate. Do NOT calculate, estimate, or overwrite it; transcribe the printed amount. If not visible, set amount: null.\n"
+    "8. Extract all other printed product-row fields when present, including HSN/SAC, batch/lot, expiry, pack/UOM, free or scheme quantity, discount (preserve whether it is a percent or amount), taxable amount, tax amounts, and any additional columns. Put values for any additional printed columns not represented above in other_fields using their exact column labels. Never silently omit printed row values.\n"
+    "9. total / invoice_grand_total: Inspect the lower summary/footer section near the bottom of the invoice to find the printed final invoice grand total (labeled 'Grand Total', 'Invoice Total', 'Total Amount', 'Net Total', 'Net Payable', 'Amount Payable', 'Total Payable', 'Total Due', 'Final Amount', 'Total Including Tax'). Strictly distinguish from Subtotal, Taxable Amount, Total Tax, Discount, Amount Paid, and Balance Due. Do not confuse Grand Total with Amount Paid or Balance Due. If not printed, set to null.\n"
+    "10. Numbers must be plain numeric values without currency symbols (like ₹, $, Rs) and without commas.\n"
+    "11. Respond with ONLY the raw JSON object, without any markdown code fence (no ```json)."
 )
 
 
@@ -2575,7 +2700,7 @@ async def extract_invoice_from_image(
                         },
                         json={
                             "model": model_name,
-                            "max_tokens": 2500,
+                            "max_tokens": 4096,
                             "messages": [
                                 {
                                     "role": "user",
@@ -2673,6 +2798,7 @@ async def extract_invoice_from_image(
             "generationConfig": {
                 "response_mime_type": "application/json",
                 "temperature": 0.1,
+                "maxOutputTokens": 4096,
             },
         }
 

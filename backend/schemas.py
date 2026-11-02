@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 import re
 
 # --- Auth & OTP Schemas ---
@@ -142,6 +142,7 @@ class GoogleAuthUrlResponse(BaseModel):
 class GoogleCallbackRequest(BaseModel):
     code: str
     state: str
+    expected_state: Optional[str] = None
     code_verifier: Optional[str] = None
 
 class GoogleTokenRequest(BaseModel):
@@ -463,10 +464,25 @@ class ExtractedInvoiceItem(BaseModel):
     quantity: Optional[float] = None
     cost_price: Optional[float] = None
     unit_price: Optional[float] = None
+    mrp_unit: Optional[float] = None
+    pack_size: Optional[str] = None
+    free_qty: Optional[float] = None
+    hsn_code: Optional[str] = None
+    batch_number: Optional[str] = None
+    discount: Optional[Any] = None
+    discount_percent: Optional[float] = None
+    discount_amount: Optional[float] = None
     tax_rate: Optional[float] = None
     tax_percent: Optional[str] = None
     tax_amount: Optional[float] = None
+    cgst_rate: Optional[float] = None
+    sgst_rate: Optional[float] = None
+    igst_rate: Optional[float] = None
+    cgst_amount: Optional[float] = None
+    sgst_amount: Optional[float] = None
+    igst_amount: Optional[float] = None
     base_amount: Optional[float] = None
+    unit_of_measure: Optional[str] = None
     is_tax_inclusive: bool = False
     expiry_date: Optional[str] = None
     confidence: float = 0.90
@@ -476,6 +492,7 @@ class ExtractedInvoiceItem(BaseModel):
     line_total: Optional[float] = None
     amount: Optional[float] = None
     taxable_amount: Optional[float] = None
+    other_fields: Dict[str, Any] = Field(default_factory=dict)
     page: Optional[int] = 1
     raw_text: Optional[str] = None
 
@@ -503,6 +520,29 @@ class ConfirmInvoiceItem(BaseModel):
     qty: float = 1.0
     cost_price: Optional[float] = 0.0
     selling_price: Optional[float] = 0.0
+    mrp_unit: Optional[float] = None
+    pack_size: Optional[str] = None
+    free_qty: Optional[float] = None
+    hsn_code: Optional[str] = None
+    batch_number: Optional[str] = None
+    discount: Optional[Any] = None
+    discount_percent: Optional[float] = None
+    discount_amount: Optional[float] = None
+    tax_rate: Optional[float] = None
+    tax_percent: Optional[str] = None
+    tax_amount: Optional[float] = None
+    cgst_rate: Optional[float] = None
+    sgst_rate: Optional[float] = None
+    igst_rate: Optional[float] = None
+    cgst_amount: Optional[float] = None
+    sgst_amount: Optional[float] = None
+    igst_amount: Optional[float] = None
+    base_amount: Optional[float] = None
+    taxable_amount: Optional[float] = None
+    line_total: Optional[float] = None
+    unit_of_measure: Optional[str] = None
+    is_tax_inclusive: bool = False
+    other_fields: Dict[str, Any] = Field(default_factory=dict)
     category: Optional[str] = "Grocery"
     expiry_date: Optional[date] = None
     action: str = "create"  # "update" or "create"
@@ -515,6 +555,10 @@ class ConfirmInvoiceRequest(BaseModel):
     invoice_date: Optional[str] = None
     date: Optional[str] = None
     currency: Optional[str] = "INR"
+    subtotal: Optional[float] = None
+    tax: Optional[float] = None
+    total: Optional[float] = None
+    invoice_grand_total: Optional[float] = None
     items: List[ConfirmInvoiceItem]
 
 
@@ -1331,12 +1375,33 @@ class InvoiceItemDetail(BaseModel):
     qty: float = 1.0
     cost_price: Optional[float] = 0.0
     selling_price: Optional[float] = 0.0
+    mrp_unit: Optional[float] = None
+    pack_size: Optional[str] = None
+    free_qty: Optional[float] = None
+    hsn_code: Optional[str] = None
+    batch_number: Optional[str] = None
+    discount: Optional[Any] = None
+    discount_percent: Optional[float] = None
+    discount_amount: Optional[float] = None
     category: Optional[str] = "Grocery"
     expiry_date: Optional[str] = None
     tax_rate: Optional[float] = None
+    tax_percent: Optional[str] = None
     tax_amount: Optional[float] = None
+    cgst_rate: Optional[float] = None
+    sgst_rate: Optional[float] = None
+    igst_rate: Optional[float] = None
+    cgst_amount: Optional[float] = None
+    sgst_amount: Optional[float] = None
+    igst_amount: Optional[float] = None
+    base_amount: Optional[float] = None
+    taxable_amount: Optional[float] = None
     line_total: Optional[float] = None
+    unit_of_measure: Optional[str] = None
+    is_tax_inclusive: bool = False
+    other_fields: Dict[str, Any] = Field(default_factory=dict)
     action: Optional[str] = "create"
+    matched_product_id: Optional[int] = None
 
 
 class InvoiceResponse(BaseModel):
@@ -1344,8 +1409,8 @@ class InvoiceResponse(BaseModel):
     shop_id: Optional[int] = None
     invoice_number: Optional[str] = None
     supplier_name: Optional[str] = None
-    invoice_date: Optional[str] = None
-    created_at: Optional[str] = None
+    invoice_date: Optional[date] = None
+    created_at: Optional[datetime] = None
     currency: Optional[str] = "INR"
     subtotal: Optional[float] = None
     tax_amount: Optional[float] = None
@@ -1958,11 +2023,6 @@ class InAppNotificationItem(BaseModel):
     is_read: bool = False
     link: Optional[str] = None
     created_at: str
-
-
-
-
-
 
 
 

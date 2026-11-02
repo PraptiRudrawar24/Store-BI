@@ -17,7 +17,7 @@ Built strictly around utilitarian high-clarity minimalism, Inter typography, Ind
 - **Multi-Modal Data Ingestion (`/upload`)**:
   - **Quick Manual Entry**: Fast single-item forms for products, checkout sales (Cash, UPI, Card), and operational expenses.
   - **Spreadsheet Bulk Import**: Downloadable CSV templates for catalog items and historical transaction ledgers.
-  - **AI Bill & Invoice OCR**: Upload photos of printed distributor invoices or handwritten counter slips. Powered by Google Gemini Vision to extract item names, wholesale costs, selling prices, and quantities automatically.
+  - **AI Bill & Invoice OCR**: Upload photos of printed distributor invoices or handwritten counter slips. Extracts item names, billed/free quantities, unit rates, per-unit MRP, line amounts, tax and discount details, HSN/SAC, batch, expiry, and other printed columns for review before inventory updates.
 
 - **Deep Retail Analytics Suite (`/analytics`)**:
   - **Sales Analytics**: Daily, weekly, and monthly revenue curves, busiest transaction hours, best & slowest sales days.
@@ -78,6 +78,13 @@ ADMIN_EMAIL=admin@storebi.com
 # Backend Server Port (Default: 8000)
 PORT=8000
 ```
+
+For Google sign-in, set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `backend/.env`.
+In the matching Google Cloud OAuth **Web application** client, register the frontend origin
+and exact callback URI used by the app. With the default local frontend port, these are
+`http://localhost:5173` and `http://localhost:5173/auth/google/callback`. If Vite uses
+another port, update `FRONTEND_URL` and `GOOGLE_REDIRECT_URI` in `backend/.env` and register
+that exact origin and callback in Google Cloud. The sign-in flow requests account selection.
 
 ---
 

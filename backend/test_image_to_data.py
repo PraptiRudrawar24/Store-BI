@@ -120,6 +120,47 @@ def test_confirm_extracted_invoice_updates_existing_and_creates_new():
     assert oil["cost_price"] == 130.0
     assert oil["selling_price"] == 155.0
 
+
+def test_confirmed_invoice_keeps_extracted_line_fields_and_printed_totals():
+    response = client.post("/api/confirm-extracted-invoice", json={
+        "supplier": "Invoice Supplier",
+        "invoice_number": "INV-206",
+        "invoice_date": "2026-10-12",
+        "currency": "INR",
+        "subtotal": 200.0,
+        "tax": 10.0,
+        "total": 210.0,
+        "items": [{
+            "name": "Toor Dal 1kg",
+            "qty": 10,
+            "cost_price": 20.0,
+            "selling_price": 25.0,
+            "mrp_unit": 25.0,
+            "line_total": 210.0,
+            "tax_rate": 5.0,
+            "tax_amount": 10.0,
+            "taxable_amount": 200.0,
+            "hsn_code": "0713",
+            "batch_number": "B-104",
+            "discount": "5%",
+            "other_fields": {"Supplier Ref": "PO-71"},
+        }],
+    })
+
+    assert response.status_code == 200
+    invoice = client.get(f"/invoices/{response.json()['invoice_id']}").json()
+    assert invoice["total_amount"] == 210.0
+    assert invoice["subtotal"] == 200.0
+    assert invoice["tax_amount"] == 10.0
+    item = invoice["items"][0]
+    assert item["cost_price"] == 20.0
+    assert item["mrp_unit"] == 25.0
+    assert item["line_total"] == 210.0
+    assert item["hsn_code"] == "0713"
+    assert item["batch_number"] == "B-104"
+    assert item["other_fields"] == {"Supplier Ref": "PO-71"}
+
+
 def test_extract_invoice_api_failure_handling(monkeypatch):
     """API failures from LLM/network must return friendly HTTP 502 with detail."""
     import vision_provider
@@ -223,6 +264,52 @@ def test_extract_invoice_reference_schema_mapping(monkeypatch):
     assert item1["amount"] == 4500.0
 
 
+def test_extract_invoice_response_keeps_distinct_rate_mrp_and_invoice_fields(monkeypatch):
+    import vision_provider
+
+    async def mock_extraction(*args, **kwargs):
+        return {
+            "supplier": "Invoice Supplier",
+            "invoice_number": "INV-205",
+            "invoice_date": "2026-10-12",
+            "currency": "INR",
+            "items": vision_provider.validate_and_correct_items([{
+                "description": "Toor Dal 1kg",
+                "quantity": 10,
+                "rate": 20.0,
+                "mrp": 25.0,
+                "amount": 200.0,
+                "taxable_amount": 190.0,
+                "tax_amount": 9.5,
+                "discount": "5%",
+                "hsn_code": "0713",
+                "batch_number": "B-104",
+                "expiry_date": "2027-12-31",
+                "custom_invoice_column": "PO-71",
+            }]),
+            "is_mock": False,
+        }
+
+    monkeypatch.setattr(vision_provider, "extract_invoice_from_image", mock_extraction)
+    response = client.post(
+        "/api/extract-invoice",
+        files={"file": ("invoice.jpg", create_test_image_bytes(), "image/jpeg")},
+    )
+
+    assert response.status_code == 200
+    item = response.json()["items"][0]
+    assert item["cost_price"] == item["unit_price"] == 20.0
+    assert item["mrp_unit"] == 25.0
+    assert item["line_total"] == item["amount"] == 200.0
+    assert item["taxable_amount"] == 190.0
+    assert item["tax_amount"] == 9.5
+    assert item["discount_percent"] == 5.0
+    assert item["hsn_code"] == "0713"
+    assert item["batch_number"] == "B-104"
+    assert item["expiry_date"] == "2027-12-31"
+    assert item["other_fields"] == {"custom_invoice_column": "PO-71"}
+
+
 def test_validate_and_correct_items_swapped_rate_and_total():
     """When OCR inverts Unit Rate and Row Total (cost_price > line_total when qty > 1), it must self-correct."""
     import vision_provider
@@ -275,6 +362,4 @@ async def test_extract_with_local_ocr_synthetic_invoice():
         assert "BALAJI" in res["supplier"].upper()
         assert len(res["items"]) >= 1
         assert res["ocr_engine"] == "Windows Native OCR"
-
-
 

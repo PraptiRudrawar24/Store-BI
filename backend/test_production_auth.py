@@ -1,6 +1,7 @@
 import os
 import sys
 import pytest
+from urllib.parse import parse_qs, urlparse
 from datetime import datetime, timedelta
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
@@ -11,6 +12,7 @@ os.environ["SECRET_KEY"] = "test-secret-key-for-unit-testing-32-chars"
 os.environ["FRONTEND_URL"] = "http://localhost:5173"
 
 from main import app
+import main
 from database import Base, engine, get_db, SessionLocal
 import models
 import security
@@ -274,6 +276,8 @@ def test_google_auth_url_construction():
     assert "code_challenge=" in data["url"]
     assert "code_challenge_method=S256" in data["url"]
     assert "state=" in data["url"]
+    auth_params = parse_qs(urlparse(data["url"]).query)
+    assert auth_params["prompt"] == ["select_account"]
     assert security.OAUTH_STATE_COOKIE in res.cookies
     assert security.OAUTH_VERIFIER_COOKIE in res.cookies
 
@@ -282,10 +286,50 @@ def test_google_callback_csrf_state_validation():
     """Rejects callback requests if state cookie does not match callback state."""
     res = client.post("/auth/google/callback", json={
         "code": "test_auth_code_123",
-        "state": "unmatched_fraudulent_state"
+        "state": "unmatched_fraudulent_state",
+        "expected_state": "different_browser_state",
+        "code_verifier": "a" * 43,
     })
     assert res.status_code == 400
     assert "OAuth state validation failed" in res.json()["detail"]
+
+
+def test_google_callback_accepts_matching_browser_state_without_server_cache(monkeypatch):
+    """Allows a legitimate PKCE callback when its process-local state cache is unavailable."""
+    state = "browser_session_state_123"
+    verifier = "a" * 43
+    main._oauth_state_store.pop(state, None)
+
+    class MockResponse:
+        status_code = 400
+
+    class MockAsyncClient:
+        def __init__(self, timeout):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, traceback):
+            return None
+
+        async def post(self, url, data):
+            assert data["code_verifier"] == verifier
+            return MockResponse()
+
+    monkeypatch.setattr("main.httpx.AsyncClient", MockAsyncClient)
+    os.environ["GOOGLE_CLIENT_ID"] = "test-client-id"
+    os.environ["GOOGLE_CLIENT_SECRET"] = "test-client-secret"
+
+    res = client.post("/auth/google/callback", json={
+        "code": "test_auth_code_123",
+        "state": state,
+        "expected_state": state,
+        "code_verifier": verifier,
+    })
+
+    assert res.status_code == 400
+    assert "Failed to exchange authorization code" in res.json()["detail"]
 
 
 # ==============================================================================

@@ -5,6 +5,7 @@ import itertools
 import csv
 import io
 import random
+import re
 import uuid
 import httpx
 from datetime import datetime, timedelta, date
@@ -836,10 +837,17 @@ async def google_oauth_callback(
     saved_state = request.cookies.get(security.OAUTH_STATE_COOKIE)
     cached_verifier = validate_and_consume_oauth_state(payload.state)
 
+    verifier_valid = bool(
+        payload.code_verifier
+        and 43 <= len(payload.code_verifier) <= 128
+        and re.fullmatch(r"[A-Za-z0-9._~-]+", payload.code_verifier)
+    )
     state_valid = False
     if saved_state and saved_state == payload.state:
         state_valid = True
     elif cached_verifier is not None:
+        state_valid = True
+    elif payload.expected_state == payload.state and verifier_valid:
         state_valid = True
 
     if not state_valid:
@@ -5205,19 +5213,44 @@ def confirm_extracted_invoice(payload: schemas.ConfirmInvoiceRequest, request: R
 
     # Calculate invoice totals and items snapshot for persistence
     total_invoice_amt = 0.0
+    total_tax_amt = 0.0
     items_snapshot = []
     for item, clean_name in valid_items:
         line_cost = item.cost_price if item.cost_price is not None and item.cost_price > 0 else 0.0
         line_qty = float(item.qty)
-        line_total = round(line_cost * line_qty, 2)
+        line_total = item.line_total if item.line_total is not None else round(line_cost * line_qty, 2)
         total_invoice_amt += line_total
+        total_tax_amt += item.tax_amount or 0.0
         items_snapshot.append({
             "name": clean_name,
             "qty": line_qty,
             "cost_price": item.cost_price,
             "selling_price": item.selling_price,
+            "mrp_unit": item.mrp_unit,
+            "pack_size": item.pack_size,
+            "free_qty": item.free_qty,
+            "hsn_code": item.hsn_code,
+            "batch_number": item.batch_number,
+            "discount": item.discount,
+            "discount_percent": item.discount_percent,
+            "discount_amount": item.discount_amount,
             "category": item.category or "Grocery",
             "expiry_date": str(item.expiry_date) if item.expiry_date else None,
+            "tax_rate": item.tax_rate,
+            "tax_percent": item.tax_percent,
+            "tax_amount": item.tax_amount,
+            "cgst_rate": item.cgst_rate,
+            "sgst_rate": item.sgst_rate,
+            "igst_rate": item.igst_rate,
+            "cgst_amount": item.cgst_amount,
+            "sgst_amount": item.sgst_amount,
+            "igst_amount": item.igst_amount,
+            "base_amount": item.base_amount,
+            "taxable_amount": item.taxable_amount,
+            "line_total": line_total,
+            "unit_of_measure": item.unit_of_measure,
+            "is_tax_inclusive": item.is_tax_inclusive,
+            "other_fields": item.other_fields,
             "action": item.action,
             "matched_product_id": item.matched_product_id,
         })
@@ -5241,8 +5274,14 @@ def confirm_extracted_invoice(payload: schemas.ConfirmInvoiceRequest, request: R
         invoice_number=inv_num,
         supplier_name=supp_name,
         invoice_date=inv_date,
-        total_amount=round(total_invoice_amt, 2),
-        tax_amount=0.0,
+        currency=payload.currency or "INR",
+        subtotal=payload.subtotal,
+        total_amount=(
+            payload.invoice_grand_total
+            if payload.invoice_grand_total is not None
+            else payload.total if payload.total is not None else round(total_invoice_amt, 2)
+        ),
+        tax_amount=payload.tax if payload.tax is not None else round(total_tax_amt, 2),
         items_count=len(valid_items),
         items_json=json.dumps(items_snapshot),
         notes=f"Vision OCR: {created_count} added, {updated_count} updated",
@@ -5324,9 +5363,33 @@ def get_invoice_detail(invoice_id: int, request: Request, db: Session = Depends(
                         qty=float(item.get("qty", 1.0)),
                         cost_price=float(item.get("cost_price", 0.0) or 0.0),
                         selling_price=float(item.get("selling_price", 0.0) or 0.0),
+                        mrp_unit=item.get("mrp_unit"),
+                        pack_size=item.get("pack_size"),
+                        free_qty=item.get("free_qty"),
+                        hsn_code=item.get("hsn_code"),
+                        batch_number=item.get("batch_number"),
+                        discount=item.get("discount"),
+                        discount_percent=item.get("discount_percent"),
+                        discount_amount=item.get("discount_amount"),
                         category=item.get("category", "Grocery"),
                         expiry_date=item.get("expiry_date"),
+                        tax_rate=item.get("tax_rate"),
+                        tax_percent=item.get("tax_percent"),
+                        tax_amount=item.get("tax_amount"),
+                        cgst_rate=item.get("cgst_rate"),
+                        sgst_rate=item.get("sgst_rate"),
+                        igst_rate=item.get("igst_rate"),
+                        cgst_amount=item.get("cgst_amount"),
+                        sgst_amount=item.get("sgst_amount"),
+                        igst_amount=item.get("igst_amount"),
+                        base_amount=item.get("base_amount"),
+                        taxable_amount=item.get("taxable_amount"),
+                        line_total=item.get("line_total"),
+                        unit_of_measure=item.get("unit_of_measure"),
+                        is_tax_inclusive=item.get("is_tax_inclusive", False),
+                        other_fields=item.get("other_fields") or {},
                         action=item.get("action", "create"),
+                        matched_product_id=item.get("matched_product_id"),
                     ))
         except Exception:
             pass
@@ -5336,8 +5399,12 @@ def get_invoice_detail(invoice_id: int, request: Request, db: Session = Depends(
         invoice_number=invoice.invoice_number,
         supplier_name=invoice.supplier_name,
         invoice_date=invoice.invoice_date,
+        currency=invoice.currency,
+        subtotal=invoice.subtotal,
         total_amount=invoice.total_amount or 0.0,
         tax_amount=invoice.tax_amount or 0.0,
+        ocr_engine=invoice.ocr_engine,
+        status=invoice.status,
         items_count=invoice.items_count or 0,
         notes=invoice.notes,
         created_at=invoice.created_at,
@@ -10626,7 +10693,3 @@ def get_admin_scheduler_status(
             "provider": "Development Audit Console",
             "description": "Email delivery service running in local development mode. Generated reports are audited and logged in ReportExecutionLog.",
         }
-
-
-
-

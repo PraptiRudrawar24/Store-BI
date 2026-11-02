@@ -461,8 +461,31 @@ export interface InvoiceItemDetail {
   qty: number;
   cost_price: number;
   selling_price: number;
+  mrp_unit?: number | null;
+  pack_size?: string | null;
+  free_qty?: number | null;
+  hsn_code?: string | null;
+  batch_number?: string | null;
+  discount?: number | string | null;
+  discount_percent?: number | null;
+  discount_amount?: number | null;
   category?: string | null;
   expiry_date?: string | null;
+  tax_rate?: number | null;
+  tax_percent?: string | null;
+  tax_amount?: number | null;
+  cgst_rate?: number | null;
+  sgst_rate?: number | null;
+  igst_rate?: number | null;
+  cgst_amount?: number | null;
+  sgst_amount?: number | null;
+  igst_amount?: number | null;
+  base_amount?: number | null;
+  taxable_amount?: number | null;
+  line_total?: number | null;
+  unit_of_measure?: string | null;
+  is_tax_inclusive?: boolean;
+  other_fields?: Record<string, unknown>;
   action?: string;
   matched_product_id?: number | null;
 }
@@ -472,6 +495,8 @@ export interface InvoiceRecord {
   invoice_number?: string | null;
   supplier_name?: string | null;
   invoice_date?: string | null;
+  currency?: string | null;
+  subtotal?: number | null;
   total_amount: number;
   tax_amount: number;
   items_count: number;
@@ -1341,7 +1366,12 @@ export const api = {
     return data;
   },
 
-  googleCallback: async (payload: { code: string; state: string; code_verifier?: string }): Promise<AuthResponse> => {
+  googleCallback: async (payload: {
+    code: string;
+    state: string;
+    expected_state?: string;
+    code_verifier?: string;
+  }): Promise<AuthResponse> => {
     let verifier = payload.code_verifier;
     if (!verifier) {
       try {
@@ -3262,10 +3292,25 @@ export interface ExtractedInvoiceItem {
   quantity?: number;
   cost_price?: number | null;
   unit_price?: number | null;
+  mrp_unit?: number | null;
+  pack_size?: string | null;
+  free_qty?: number | null;
+  hsn_code?: string | null;
+  batch_number?: string | null;
+  discount?: number | string | null;
+  discount_percent?: number | null;
+  discount_amount?: number | null;
   tax_rate?: number | null;
   tax_percent?: string | null;
   tax_amount?: number | null;
+  cgst_rate?: number | null;
+  sgst_rate?: number | null;
+  igst_rate?: number | null;
+  cgst_amount?: number | null;
+  sgst_amount?: number | null;
+  igst_amount?: number | null;
   base_amount?: number | null;
+  unit_of_measure?: string | null;
   is_tax_inclusive?: boolean;
   mrp?: number | null;
   line_total?: number | null;
@@ -3275,6 +3320,7 @@ export interface ExtractedInvoiceItem {
   field_confidence?: Record<string, number>;
   needs_review?: boolean;
   taxable_amount?: number | null;
+  other_fields?: Record<string, unknown>;
   page?: number;
   raw_text?: string | null;
 }
@@ -3304,6 +3350,29 @@ export interface ConfirmInvoiceItemPayload {
   qty: number;
   cost_price?: number | null;
   selling_price?: number | null;
+  mrp_unit?: number | null;
+  pack_size?: string | null;
+  free_qty?: number | null;
+  hsn_code?: string | null;
+  batch_number?: string | null;
+  discount?: number | string | null;
+  discount_percent?: number | null;
+  discount_amount?: number | null;
+  tax_rate?: number | null;
+  tax_percent?: string | null;
+  tax_amount?: number | null;
+  cgst_rate?: number | null;
+  sgst_rate?: number | null;
+  igst_rate?: number | null;
+  cgst_amount?: number | null;
+  sgst_amount?: number | null;
+  igst_amount?: number | null;
+  base_amount?: number | null;
+  taxable_amount?: number | null;
+  line_total?: number | null;
+  unit_of_measure?: string | null;
+  is_tax_inclusive?: boolean;
+  other_fields?: Record<string, unknown>;
   category?: string;
   expiry_date?: string | null;
   action: 'update' | 'create';
@@ -3316,6 +3385,10 @@ export interface ConfirmInvoiceRequestPayload {
   invoice_number?: string | null;
   invoice_date?: string | null;
   currency?: string | null;
+  subtotal?: number | null;
+  tax?: number | null;
+  total?: number | null;
+  invoice_grand_total?: number | null;
   items: ConfirmInvoiceItemPayload[];
 }
 
@@ -4121,4 +4194,3 @@ export interface OperationalAlertsResponse {
   info_count: number;
   alerts: OperationalAlertItem[];
 }
-
