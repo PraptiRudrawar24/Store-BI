@@ -1,4 +1,5 @@
 import os
+import sys
 import calendar
 from datetime import datetime, timedelta
 from typing import Optional, Tuple
@@ -8,7 +9,23 @@ from sqlalchemy.orm import Session
 import models
 from database import get_db
 
-SECRET_KEY = os.getenv("STORE_BI_SECRET_KEY", "store_bi_super_secret_jwt_key_retail_2026")
+_configured_secret = os.getenv("STORE_BI_SECRET_KEY") or os.getenv("SECRET_KEY")
+_is_production = os.getenv("ENVIRONMENT", "development").strip().lower() == "production"
+
+if _is_production and "pytest" not in sys.modules:
+    if (
+        not _configured_secret
+        or len(_configured_secret) < 32
+        or any(
+            marker in _configured_secret.lower()
+            for marker in ("your_", "placeholder", "change-me", "local-development", "development_only")
+        )
+    ):
+        raise RuntimeError(
+            "Set STORE_BI_SECRET_KEY to a random secret of at least 32 characters in production."
+        )
+
+SECRET_KEY = _configured_secret or "store_bi_development_only_secret"
 ALGORITHM = "HS256"
 COOKIE_NAME = "store_bi_session"
 ACCESS_TOKEN_EXPIRE_DAYS = 7
@@ -162,25 +179,6 @@ def ensure_admin_account(db: Session):
     if not admin_email:
         return
     shop = db.query(models.Shop).filter(models.Shop.email.ilike(admin_email)).first()
-    if shop:
-        if not getattr(shop, "is_admin", False):
-            shop.is_admin = True
-            db.commit()
-    else:
-        admin_shop = models.Shop(
-            name="Store BI Operations",
-            owner_name="Platform Admin",
-            phone="9999999999",
-            email=admin_email,
-            is_admin=True,
-            onboarding_completed=True,
-            onboarding_step=4,
-            category="Operations",
-            city="Headquarters",
-            state="Maharashtra",
-            plan_name="Enterprise Admin",
-            is_paid=True,
-            status="active",
-        )
-        db.add(admin_shop)
+    if shop and not getattr(shop, "is_admin", False):
+        shop.is_admin = True
         db.commit()

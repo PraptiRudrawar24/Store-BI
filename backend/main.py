@@ -25,6 +25,25 @@ try:
 except ImportError:
     pass
 
+def is_production_environment() -> bool:
+    return os.environ.get("ENVIRONMENT", "development").strip().lower() == "production"
+
+if is_production_environment() and "pytest" not in sys.modules:
+    if not os.environ.get("ADMIN_EMAIL", "").strip():
+        raise RuntimeError("ADMIN_EMAIL must be configured for production.")
+    has_resend = bool(
+        os.environ.get("RESEND_API_KEY", "").strip()
+        and os.environ.get("RESEND_FROM_EMAIL", "").strip()
+    )
+    has_smtp = bool(
+        os.environ.get("SMTP_HOST", "").strip()
+        and os.environ.get("SMTP_FROM_EMAIL", "").strip()
+    )
+    if not (has_resend or has_smtp):
+        raise RuntimeError(
+            "Configure a production email provider and sender address."
+        )
+
 import models
 import schemas
 import vision_provider
@@ -185,7 +204,10 @@ cors_origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
-frontend_url = os.environ.get("FRONTEND_URL", "").strip().rstrip("/")
+frontend_url = (
+    os.environ.get("FRONTEND_URL")
+    or os.environ.get("RENDER_EXTERNAL_URL", "")
+).strip().rstrip("/")
 if frontend_url and frontend_url not in cors_origins:
     cors_origins.append(frontend_url)
 
@@ -207,7 +229,17 @@ if os.path.exists(_admin_portal_dir):
 
 @app.get("/")
 def read_root():
+    frontend_index = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "frontend", "dist", "index.html")
+    )
+    if os.path.isfile(frontend_index):
+        return FileResponse(frontend_index)
     return {"message": "Store BI API is running", "product": "Store BI"}
+
+
+@app.get("/health", include_in_schema=False)
+def health_check():
+    return {"status": "ok"}
 
 
 
@@ -220,6 +252,12 @@ def send_otp(payload: schemas.SendOTPRequest):
     Sends a mock OTP in development mode.
     Always accepts requests for valid 10-digit mobile numbers.
     """
+    if is_production_environment():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Phone OTP sign-in is unavailable. Use email/password or Google sign-in.",
+        )
+
     return {
         "success": True,
         "phone": payload.phone,
@@ -239,6 +277,12 @@ def verify_otp(
     Verifies OTP, signs up or logs in user, starts 5-day trial on first signup,
     and sets an httpOnly session cookie containing the JWT.
     """
+    if is_production_environment():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Phone OTP sign-in is unavailable. Use email/password or Google sign-in.",
+        )
+
     if not payload.otp or len(payload.otp) != 6 or not payload.otp.isdigit():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -273,8 +317,6 @@ def verify_otp(
     if payload.email and not shop.email:
         shop.email = payload.email
     if admin_email and ((shop.email or "").strip().lower() == admin_email or (payload.email or "").strip().lower() == admin_email):
-        shop.is_admin = True
-    elif shop.phone == "9999999999":
         shop.is_admin = True
     db.commit()
     db.refresh(shop)
@@ -770,7 +812,11 @@ def get_google_auth_url(response: Response):
     client_id = os.environ.get("GOOGLE_CLIENT_ID", "").strip()
     redirect_uri = os.environ.get("GOOGLE_REDIRECT_URI", "").strip()
     if not redirect_uri:
-        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173").rstrip("/")
+        frontend_url = (
+            os.environ.get("FRONTEND_URL")
+            or os.environ.get("RENDER_EXTERNAL_URL")
+            or "http://localhost:5173"
+        ).rstrip("/")
         redirect_uri = f"{frontend_url}/auth/google/callback"
 
     if not client_id:
@@ -867,7 +913,11 @@ async def google_oauth_callback(
     client_secret = os.environ.get("GOOGLE_CLIENT_SECRET", "").strip()
     redirect_uri = os.environ.get("GOOGLE_REDIRECT_URI", "").strip()
     if not redirect_uri:
-        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173").rstrip("/")
+        frontend_url = (
+            os.environ.get("FRONTEND_URL")
+            or os.environ.get("RENDER_EXTERNAL_URL")
+            or "http://localhost:5173"
+        ).rstrip("/")
         redirect_uri = f"{frontend_url}/auth/google/callback"
 
     token_url = "https://oauth2.googleapis.com/token"
@@ -6525,6 +6575,9 @@ def admin_dev_login(
     Development login helper: Logs in or initializes the platform admin account
     configured via ADMIN_EMAIL without requiring a password.
     """
+    if is_production_environment():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found.")
+
     admin_email = os.environ.get("ADMIN_EMAIL", "admin@storebi.com").strip().lower()
     shop = db.query(models.Shop).filter(models.Shop.email.ilike(admin_email)).first()
     if not shop:
@@ -7000,6 +7053,9 @@ def get_subscription_payment_qr_image():
     Safely serves the existing 'Payment Scanner.jpeg' from the project root.
     Does not expose sensitive credentials, secrets, or unrelated files.
     """
+    if is_production_environment():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found.")
+
     root_candidate = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "Payment Scanner.jpeg"))
     if os.path.exists(root_candidate):
         return FileResponse(
@@ -7026,6 +7082,9 @@ def get_subscription_qr_info():
     Payee: CHAITANYA GURUNATH SIRSAT, VPA: chaitanyasirsat@sbi, Org: 159002 (SBI).
     Prepopulates amount ₹1,299.00 in the UPI intent URI for mobile UPI app handoff.
     """
+    if is_production_environment():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found.")
+
     base_price = 1299.0
     return {
         "success": True,
@@ -7050,7 +7109,14 @@ def get_subscription_qr_info():
 def get_razorpay_client():
     key_id = os.getenv("RAZORPAY_KEY_ID", "").strip()
     key_secret = os.getenv("RAZORPAY_KEY_SECRET", "").strip()
-    is_placeholder = not key_id or not key_secret or "placeholder" in key_id.lower() or "your_" in key_id.lower()
+    is_placeholder = (
+        not key_id
+        or not key_secret
+        or "placeholder" in key_id.lower()
+        or "your_" in key_id.lower()
+        or "placeholder" in key_secret.lower()
+        or "your_" in key_secret.lower()
+    )
     if is_placeholder:
         return None, key_id, key_secret
     try:
@@ -7070,7 +7136,7 @@ def create_subscription_order(
     """
     Creates a validated payment order for the 'All-Features Pro' monthly subscription (₹1,299).
     Price is securely controlled by the backend and cannot be tampered with by the frontend.
-    Creates an order in Razorpay if configured, or falls back to test mode order.
+    Creates an order in Razorpay if configured, or falls back to test mode order in development.
     Persists the transaction in the database.
     """
     base_price = 1299.0
@@ -7103,6 +7169,17 @@ def create_subscription_order(
     amount_paise = int(round(final_price * 100))
 
     rzp_client, key_id, key_secret = get_razorpay_client()
+    if is_production_environment() and (
+        not rzp_client
+        or not key_id
+        or not key_secret
+        or key_id.startswith("rzp_test_")
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Live Razorpay credentials are required to accept subscription payments.",
+        )
+
     is_test_mode = False
     is_configured = False
 
@@ -7164,6 +7241,8 @@ def create_subscription_order(
         "upi_intent_uri": qr_intent_uri,
         "instructions": f"Scan this QR code using your UPI app to pay ₹{final_price:,.0f}.",
     }
+    if is_production_environment():
+        qr_info = None
 
     return {
         "success": True,
@@ -7231,6 +7310,17 @@ def verify_subscription_payment(
 
     # 4. Signature verification
     rzp_client, key_id, key_secret = get_razorpay_client()
+    if is_production_environment() and (
+        tx.is_test_mode
+        or not rzp_client
+        or not key_id
+        or not key_secret
+        or key_id.startswith("rzp_test_")
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Live Razorpay payment verification is not configured.",
+        )
     effective_secret = key_secret if (key_secret and "placeholder" not in key_secret.lower()) else "test_secret_storebi_mock"
 
     data_to_sign = f"{payload.razorpay_order_id}|{payload.razorpay_payment_id}"
@@ -7347,6 +7437,12 @@ def submit_upi_payment_reference(
     - Does NOT activate solely on submission without valid reference or verification.
     """
     import re
+    if is_production_environment():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Manual UPI references cannot be verified automatically. Use Razorpay checkout.",
+        )
+
     # 1. Lookup payment transaction
     tx = db.query(models.PaymentTransaction).filter(
         models.PaymentTransaction.order_id == payload.order_id
@@ -10693,3 +10789,12 @@ def get_admin_scheduler_status(
             "provider": "Development Audit Console",
             "description": "Email delivery service running in local development mode. Generated reports are audited and logged in ReportExecutionLog.",
         }
+
+
+_frontend_dist_dir = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+)
+if os.path.isfile(os.path.join(_frontend_dist_dir, "index.html")):
+    from fastapi.staticfiles import StaticFiles
+
+    app.mount("/", StaticFiles(directory=_frontend_dist_dir, html=True), name="frontend")

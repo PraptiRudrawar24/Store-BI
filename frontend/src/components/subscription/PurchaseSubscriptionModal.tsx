@@ -835,14 +835,16 @@ export function PurchaseSubscriptionModal({ isOpen, onClose, initialStep = 'sele
                 >
                   Back
                 </button>
-                <button
-                  type="button"
-                  onClick={handleSimulateTestPayment}
-                  className="flex-1 py-2.5 px-4 rounded-[6px] bg-primary hover:bg-primary-hover text-primary-foreground text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-raised"
-                >
-                  <Zap className="w-3.5 h-3.5" />
-                  <span>Simulate Test Payment</span>
-                </button>
+                {import.meta.env.DEV && (
+                  <button
+                    type="button"
+                    onClick={handleSimulateTestPayment}
+                    className="flex-1 py-2.5 px-4 rounded-[6px] bg-primary hover:bg-primary-hover text-primary-foreground text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-raised"
+                  >
+                    <Zap className="w-3.5 h-3.5" />
+                    <span>Simulate Test Payment</span>
+                  </button>
+                )}
               </div>
             </div>
           )}

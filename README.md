@@ -46,7 +46,7 @@ Built strictly around utilitarian high-clarity minimalism, Inter typography, Ind
 |---|---|
 | **Frontend** | React 19, TypeScript, Vite, Tailwind CSS, Recharts, Lucide Icons, React Router |
 | **Backend** | FastAPI, Python 3.12, SQLAlchemy, Pydantic, Uvicorn |
-| **Database** | SQLite (`storebi.db`) with zero-start schema |
+| **Database** | SQLite for local development; PostgreSQL for public production deployments |
 | **AI / Vision** | Google Gemini 2.5 Flash (`google-genai`) for multi-modal invoice & handwriting OCR |
 | **Styling** | Custom Store BI design system adhering to `/design/DESIGN.md` |
 
@@ -69,8 +69,8 @@ Create a `.env` file in the `backend/` directory based on `backend/.env.example`
 # Google Gemini API Key for bill/invoice OCR extraction
 GEMINI_API_KEY=your_gemini_api_key_here
 
-# JWT Secret Key (Optional, auto-generated if omitted)
-SECRET_KEY=your_custom_jwt_secret_key_here
+# Local-only JWT secret; Render generates a separate production secret
+STORE_BI_SECRET_KEY=local-development-secret-change-before-deploying
 
 # Default Platform Administrator Email
 ADMIN_EMAIL=admin@storebi.com
@@ -126,7 +126,7 @@ python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 - API Documentation: [http://localhost:8000/docs](http://localhost:8000/docs)
-- Health check: [http://localhost:8000/](http://localhost:8000/)
+- Health check: [http://localhost:8000/health](http://localhost:8000/health)
 
 ### 2. Frontend Development Server (React + Vite)
 
@@ -239,3 +239,15 @@ cd backend
 .\venv\Scripts\python.exe -m pytest test_payments.py -v
 ```
 Tests assert integer paise calculations, intra/inter-state GST math, settlement CSV matching, duplicate upload rejection, refund balance boundary validation, HMAC webhook signature verification, webhook duplicate suppression, and merchant RBAC isolation.
+
+## Public deployment (Render)
+
+The Render Blueprint in `render.yaml` deploys the frontend and API together on one HTTPS origin and provisions PostgreSQL for shared, persistent merchant data. It uses paid Render plans (`starter` web service and `basic-256mb` PostgreSQL); review the current Render pricing before creating the Blueprint.
+
+1. Push this repository to a Git provider and create a Render Blueprint from it.
+2. Set `ADMIN_EMAIL` to an address you control, and configure `RESEND_API_KEY` plus a verified `RESEND_FROM_EMAIL` so registration and password-reset links can be delivered.
+3. Optionally add Google OAuth credentials. Register the deployed origin and callback in Google Cloud: `https://store-bi.onrender.com` and `https://store-bi.onrender.com/auth/google/callback`. If you change the Render service name, update `FRONTEND_URL` and `GOOGLE_REDIRECT_URI` in `render.yaml` and the Google OAuth client.
+4. Add live `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET` before enabling subscriptions. Without live credentials, paid checkout is unavailable in production; test payment simulation and unverified UPI references are disabled.
+5. After deployment, register using the configured `ADMIN_EMAIL` to create the platform admin account. Email verification is required. The public URL will be the Render service URL (for the included name, `https://store-bi.onrender.com`); no custom domain is required.
+
+The production database starts empty and is not seeded with demo/test data. The local SQLite database is intentionally excluded from the Docker image; if it contains data you need to keep, migrate it separately before directing users to the public deployment. Local `start.bat` / `start.ps1` remain development launchers.

@@ -6,7 +6,11 @@ from typing import Optional
 import httpx
 
 def get_frontend_url() -> str:
-    return os.environ.get("FRONTEND_URL", "http://localhost:5173").rstrip("/")
+    return (
+        os.environ.get("FRONTEND_URL")
+        or os.environ.get("RENDER_EXTERNAL_URL")
+        or "http://localhost:5173"
+    ).rstrip("/")
 
 def send_email(to_email: str, subject: str, html_body: str, text_body: str) -> bool:
     """
@@ -75,6 +79,9 @@ def send_email(to_email: str, subject: str, html_body: str, text_body: str) -> b
             print(f"[EmailService Error] SMTP exception: {e}")
 
     # 3. Development Fallback (Local evaluation when SMTP/Resend is not yet configured)
+    if os.environ.get("ENVIRONMENT", "development").strip().lower() == "production":
+        raise RuntimeError("Transactional email delivery failed; check the configured email provider.")
+
     print("\n" + "=" * 60)
     print(f"[STORE BI TRANSACTIONAL EMAIL]")
     print(f"To:      {to_email}")

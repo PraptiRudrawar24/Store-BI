@@ -68,18 +68,23 @@ export function AdminGuard() {
                 <span className="text-amber-600 font-medium">Standard Store Owner</span>
               </div>
 
-              <div className="flex flex-col gap-2.5 w-full mt-2">
-                <Button
-                  variant="primary"
-                  fullWidth
-                  onClick={handleQuickDevAdminLogin}
-                  disabled={loggingInAdmin}
-                  className="gap-2"
-                >
-                  <KeyRound className="w-4 h-4" />
-                  <span>{loggingInAdmin ? 'Elevating...' : 'Log in as Platform Admin'}</span>
-                </Button>
+              <p className="text-sm text-text-medium mt-3">
+                Sign in with the designated platform administrator account to access this portal.
+              </p>
 
+              <div className="flex flex-col gap-2.5 w-full mt-4">
+                {import.meta.env.DEV && (
+                  <Button
+                    variant="primary"
+                    fullWidth
+                    onClick={handleQuickDevAdminLogin}
+                    disabled={loggingInAdmin}
+                    className="gap-2"
+                  >
+                    <KeyRound className="w-4 h-4" />
+                    <span>{loggingInAdmin ? 'Elevating...' : 'Log in as Platform Admin'}</span>
+                  </Button>
+                )}
                 <Button
                   variant="secondary"
                   fullWidth

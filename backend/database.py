@@ -10,17 +10,39 @@ if "pytest" in sys.modules or os.environ.get("TESTING") == "1" or os.environ.get
     test_db_path = os.path.join(BACKEND_DIR, "test_storebi.db").replace("\\", "/")
     SQLALCHEMY_DATABASE_URL = f"sqlite:///{test_db_path}"
 else:
-    prod_db_path = os.path.join(BACKEND_DIR, "storebi.db").replace("\\", "/")
-    SQLALCHEMY_DATABASE_URL = f"sqlite:///{prod_db_path}"
+    SQLALCHEMY_DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
+    is_production = os.environ.get("ENVIRONMENT", "development").strip().lower() == "production"
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
+    if not SQLALCHEMY_DATABASE_URL:
+        if is_production:
+            raise RuntimeError("DATABASE_URL must point to a persistent production database.")
+        prod_db_path = os.path.join(BACKEND_DIR, "storebi.db").replace("\\", "/")
+        SQLALCHEMY_DATABASE_URL = f"sqlite:///{prod_db_path}"
+
+    if is_production and not SQLALCHEMY_DATABASE_URL.startswith(("postgres://", "postgresql://", "postgresql+")):
+        raise RuntimeError("Production deployments must use PostgreSQL via DATABASE_URL.")
+
+    if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
+        SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace(
+            "postgres://", "postgresql+psycopg://", 1
+        )
+    elif SQLALCHEMY_DATABASE_URL.startswith("postgresql://"):
+        SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace(
+            "postgresql://", "postgresql+psycopg://", 1
+        )
+
+connect_args = {"check_same_thread": False} if SQLALCHEMY_DATABASE_URL.startswith("sqlite:") else {}
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args=connect_args, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
 def migrate_db():
+    if engine.dialect.name == "postgresql":
+        return
+    if engine.dialect.name != "sqlite":
+        raise RuntimeError(f"Database migrations are not supported for {engine.dialect.name}.")
+
     from sqlalchemy import text
     with engine.connect() as conn:
         try:

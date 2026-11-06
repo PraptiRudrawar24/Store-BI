@@ -72,7 +72,11 @@ def get_cookie_security_config() -> dict:
     - In development (HTTP localhost): secure=False to allow local browser cookies
     """
     env = os.environ.get("ENVIRONMENT", "development").lower()
-    frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+    frontend_url = (
+        os.environ.get("FRONTEND_URL")
+        or os.environ.get("RENDER_EXTERNAL_URL")
+        or "http://localhost:5173"
+    )
     explicit_secure = os.environ.get("COOKIE_SECURE", "").lower()
 
     if explicit_secure in ("true", "1", "yes"):
@@ -132,7 +136,11 @@ def is_safe_redirect_url(target: Optional[str]) -> bool:
     target = target.strip()
     if target.startswith("/") and not target.startswith("//") and not target.startswith("/\\"):
         return True
-    frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173").rstrip("/")
+    frontend_url = (
+        os.environ.get("FRONTEND_URL")
+        or os.environ.get("RENDER_EXTERNAL_URL")
+        or "http://localhost:5173"
+    ).rstrip("/")
     if target.startswith(frontend_url):
         return True
     return False

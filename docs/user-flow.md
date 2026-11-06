@@ -60,16 +60,17 @@ sequenceDiagram
     actor Merchant as Store Owner
     participant Client as Frontend (React + Vite)
     participant Auth as Backend Auth API
-    participant DB as SQLite Database
+    participant DB as PostgreSQL (production) / SQLite (local)
 
-    Merchant->>Client: Enters 10-digit mobile number
-    Client->>Auth: POST /api/auth/send-otp
-    Auth-->>Client: OTP dispatched (default: 123456)
-    Merchant->>Client: Enters 6-digit OTP
-    Client->>Auth: POST /api/auth/verify-otp
-    Auth->>DB: Check if shop exists
+    Merchant->>Client: Registers with email/password or Google
+    Client->>Auth: Register or authenticate
+    Auth->>DB: Create or locate merchant shop
+    alt Email/password registration
+        Auth-->>Merchant: Email verification link
+        Merchant->>Auth: Verify email address
+    end
+    Auth-->>Client: Secure session cookie + redirect to /onboarding
     alt New Merchant
-        Auth-->>Client: JWT cookie + redirect to /onboarding
         Merchant->>Client: Step 1: Store name & category
         Merchant->>Client: Step 2: Location (City, State, Pincode)
         Merchant->>Client: Step 3: Business profile (GSTIN, volume, method)
@@ -82,6 +83,8 @@ sequenceDiagram
     end
     Client->>Merchant: Renders clean zero-state dashboard (₹0 sales, empty state CTAs)
 ```
+
+The fixed-code phone OTP endpoints and passwordless admin login are local-development helpers only; production rejects them. Production signup requires a configured transactional email provider for verification.
 
 ---
 
