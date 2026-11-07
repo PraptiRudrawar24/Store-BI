@@ -240,14 +240,14 @@ cd backend
 ```
 Tests assert integer paise calculations, intra/inter-state GST math, settlement CSV matching, duplicate upload rejection, refund balance boundary validation, HMAC webhook signature verification, webhook duplicate suppression, and merchant RBAC isolation.
 
-## Public deployment (Render)
+## Public deployment (Vercel frontend + Render API)
 
-The Render Blueprint in `render.yaml` deploys the frontend and API together on one HTTPS origin and provisions PostgreSQL for shared, persistent merchant data. It uses paid Render plans (`starter` web service and `basic-256mb` PostgreSQL); review the current Render pricing before creating the Blueprint.
+The frontend is hosted at `https://store-bi.vercel.app`; the FastAPI backend and PostgreSQL database are hosted on Render at `https://store-bi.onrender.com`. The Render Blueprint in `render.yaml` provisions the API and database. It uses paid Render plans (`starter` web service and `basic-256mb` PostgreSQL); review current Render pricing before creating the Blueprint.
 
-1. Push this repository to a Git provider and create a Render Blueprint from it.
-2. Set `ADMIN_EMAIL` to an address you control, and configure `RESEND_API_KEY` plus a verified `RESEND_FROM_EMAIL` so registration and password-reset links can be delivered.
-3. Optionally add Google OAuth credentials. Register the deployed origin and callback in Google Cloud: `https://store-bi.onrender.com` and `https://store-bi.onrender.com/auth/google/callback`. If you change the Render service name, update `FRONTEND_URL` and `GOOGLE_REDIRECT_URI` in `render.yaml` and the Google OAuth client.
+1. In Vercel, set `VITE_API_BASE_URL` to `https://store-bi.onrender.com` for the Production environment, then redeploy so the API URL is compiled into the frontend.
+2. Push this repository to a Git provider and create a Render Blueprint from it. Set `ADMIN_EMAIL` to an address you control, and configure `RESEND_API_KEY` plus a verified `RESEND_FROM_EMAIL` so registration and password-reset links can be delivered.
+3. Optionally add Google OAuth credentials in Render. In Google Cloud, add `https://store-bi.vercel.app` as an authorized JavaScript origin and `https://store-bi.vercel.app/auth/google/callback` as an authorized redirect URI. These values must match `FRONTEND_URL` and `GOOGLE_REDIRECT_URI` in `render.yaml`.
 4. Add live `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and `RAZORPAY_WEBHOOK_SECRET` before enabling subscriptions. Without live credentials, paid checkout is unavailable in production; test payment simulation and unverified UPI references are disabled.
-5. After deployment, register using the configured `ADMIN_EMAIL` to create the platform admin account. Email verification is required. The public URL will be the Render service URL (for the included name, `https://store-bi.onrender.com`); no custom domain is required.
+5. After deployment, register using the configured `ADMIN_EMAIL` to create the platform admin account. Email verification is required. The public website URL is `https://store-bi.vercel.app`.
 
 The production database starts empty and is not seeded with demo/test data. The local SQLite database is intentionally excluded from the Docker image; if it contains data you need to keep, migrate it separately before directing users to the public deployment. Local `start.bat` / `start.ps1` remain development launchers.
